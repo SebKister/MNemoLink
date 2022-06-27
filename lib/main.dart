@@ -2,10 +2,15 @@ import 'dart:ffi';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:file_picker/file_picker.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_libserialport/flutter_libserialport.dart';
-import "./cardlisttile.dart";
+import 'package:mnemolink/excelexport.dart';
 import 'dart:convert' show utf8;
+import './section.dart';
+import './shot.dart';
+import './sectionlist.dart';
 
 void main() {
   runApp(const MyApp());
@@ -20,15 +25,6 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or simply save your changes to "hot reload" in a Flutter IDE).
-        // Notice that the counter didn't reset back to zero; the application
-        // is not restarted.
         primarySwatch: Colors.blue,
       ),
       home: const MyHomePage(title: 'MNemo Link'),
@@ -38,15 +34,6 @@ class MyApp extends StatelessWidget {
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({Key? key, required this.title}) : super(key: key);
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
 
   final String title;
 
@@ -58,13 +45,34 @@ class _MyHomePageState extends State<MyHomePage> {
   String mnemoPortAddress = "";
   SerialPort? mnemoPort;
   bool connected = false;
-  String CLIHistory = "";
+  List<String> CLIHistory = [""];
   var transferBuffer = List<int>.empty(growable: true);
+  SectionList sections = new SectionList();
+  var cliScrollController = new ScrollController();
+  bool commandSent = false;
+  UnitType unitType = UnitType.METRIC;
 
   @override
   void initState() {
     super.initState();
     initMnemoPort();
+
+    cliScrollController.addListener(() {
+      if (cliScrollController.hasClients && commandSent) {
+        final position = cliScrollController.position.maxScrollExtent;
+        cliScrollController.jumpTo(position);
+        commandSent = false;
+      }
+    });
+
+    @override
+    void didUpdateWidget(MyHomePage oldWidget) {
+      super.didUpdateWidget(oldWidget);
+      if (cliScrollController.hasClients) {
+        final position = cliScrollController.position.maxScrollExtent;
+        cliScrollController.jumpTo(position);
+      }
+    }
   }
 
   String getMnemoAddress() {
@@ -86,71 +94,348 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
-  void onReadData() {}
+  void onReadData() {
+    executeCLI("getdata");
+  }
+
+  int readByteFromEEProm(int adresse) {
+    return transferBuffer.elementAt(adresse);
+  }
+
+  int readIntFromEEProm(int adresse) {
+    final bytes = Uint8List.fromList(
+        [transferBuffer[adresse], transferBuffer[adresse + 1]]);
+    final byteData = ByteData.sublistView(bytes);
+    return byteData.getInt16(0);
+  }
+
+  void analyzeTransferBuffer() {
+    int currentMemory = transferBuffer.length;
+    int cursor = 0;
+
+    while (cursor < currentMemory - 2) {
+      Section section = new Section();
+
+      int fileVersion = 0;
+
+      while (fileVersion != 2) {
+        fileVersion = readByteFromEEProm(cursor);
+        cursor++;
+      }
+      int year = 0;
+
+      while (year != 16 &&
+          year != 17 &&
+          year != 18 &&
+          year != 19 &&
+          year != 20 &&
+          year != 21 &&
+          year != 22 &&
+          year != 23) {
+        year = readByteFromEEProm(cursor);
+        cursor++;
+      }
+
+      year += 2000;
+
+      int month = readByteFromEEProm(cursor);
+      cursor++;
+      int day = readByteFromEEProm(cursor);
+      cursor++;
+      int hour = readByteFromEEProm(cursor);
+      cursor++;
+      int minute = readByteFromEEProm(cursor);
+      cursor++;
+      DateTime dateSection = DateTime(year, month, day, hour, minute);
+      //  LocalDateTime dateSection = LocalDateTime.now();
+      section.setDateSurey(dateSection);
+      // Read section type and name
+      StringBuffer stbuilder = new StringBuffer();
+      stbuilder.write(utf8.decode([readByteFromEEProm(cursor++)]));
+      stbuilder.write(utf8.decode([readByteFromEEProm(cursor++)]));
+      stbuilder.write(utf8.decode([readByteFromEEProm(cursor++)]));
+      section.setName(stbuilder.toString());
+      // Read Direction  0 for In 1 for Out
+
+      int directionIndex = readByteFromEEProm(cursor++);
+      if (directionIndex == 0 || directionIndex == 1) {
+        section.setDirection(SurveyDirection.values[directionIndex]);
+      } else {
+        break;
+      }
+
+      double conversionFactor = 0.0;
+      if (unitType == UnitType.METRIC) {
+        conversionFactor = 1.0;
+      } else {
+        conversionFactor = 3.28084;
+      }
+
+      Shot shot;
+      do {
+        shot = new Shot.zero();
+        int typeShot = 0;
+
+        typeShot = readByteFromEEProm(cursor++);
+
+        if (typeShot > 3 || typeShot < 0) {
+          break;
+        }
+
+        shot.setTypeShot(TypeShot.values[typeShot]);
+        // cursor++;
+        shot.setHeadingIn(readIntFromEEProm(cursor));
+        cursor = cursor + 2;
+
+        shot.setHeadingOut(readIntFromEEProm(cursor));
+        cursor = cursor + 2;
+
+        shot.setLength(readIntFromEEProm(cursor) * conversionFactor / 100.0);
+        cursor = cursor + 2;
+
+        shot.setDepthIn(readIntFromEEProm(cursor) * conversionFactor / 100.0);
+        cursor = cursor + 2;
+
+        shot.setDepthOut(readIntFromEEProm(cursor) * conversionFactor / 100.0);
+        cursor = cursor + 2;
+
+        shot.setPitchIn(readIntFromEEProm(cursor));
+        cursor = cursor + 2;
+
+        shot.setPitchOut(readIntFromEEProm(cursor));
+        cursor = cursor + 2;
+
+        shot.setMarkerIndex(readByteFromEEProm(cursor++));
+
+        section.getShots().add(shot);
+      } while (shot.getTypeShot() != TypeShot.EOC);
+
+      setState(() {
+        sections.getSections().add(section);
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
       appBar: AppBar(
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
         title: Text(widget.title),
+        actions: [
+          Container(
+            padding: EdgeInsets.all(10),
+            child: Row(
+              children: connected
+                  ? [
+                      Column(
+                        children: [
+                          Text("MNemo Connected on $mnemoPortAddress"),
+                          Text(
+                              style: TextStyle(fontSize: 12),
+                              ' SN ${mnemoPort?.serialNumber}')
+                        ],
+                      )
+                    ]
+                  : [Text("Mnemo Not detected")],
+            ),
+          )
+        ],
       ),
       body: Column(
-        // Column is also a layout widget. It takes a list of children and
-        // arranges them vertically. By default, it sizes itself to fit its
-        // children horizontally, and tries to be as tall as its parent.
-        //
-        // Invoke "debug painting" (press "p" in the console, choose the
-        // "Toggle Debug Paint" action from the Flutter Inspector in Android
-        // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
-        // to see the wireframe for each widget.
-        //
-        // Column has various properties to control how it sizes itself and
-        // how it positions its children. Here we use mainAxisAlignment to
-        // center the children vertically; the main axis here is the vertical
-        // axis because Columns are vertical (the cross axis would be
-        // horizontal).
         mainAxisAlignment: MainAxisAlignment.start,
         children: (!connected)
             ? <Widget>[const Text("Click on connect")]
             : <Widget>[
-                ExpansionTile(
-                    title: Text("MNemo Connected on $mnemoPortAddress"),
-                    children: [
-                      CardListTile('Serial Number', mnemoPort?.serialNumber),
-                    ]),
-                ExpansionTile(
-                    title: Row(children: <Widget>[
-                      const Text("Data"),
-                      IconButton(
-                          onPressed: onReadData,
-                          icon: const Icon(Icons.refresh)),
-                    ]),
-                    children: const [Text("DataList")]),
-                ExpansionTile(title: const Text("CLI"), children: [
-                  Row(children: <Widget>[
-                    SizedBox(
-                      width: 200,
-                      child: TextField(
-                        onSubmitted: executeCLI,
-                      ),
+                // Generated code for this TabBar Widget...
+                Expanded(
+                  child: DefaultTabController(
+                    length: 3,
+                    initialIndex: 0,
+                    child: Column(
+                      children: [
+                        const TabBar(
+                          labelColor: Colors.blueGrey,
+                          tabs: [
+                            Tab(
+                              text: 'Data',
+                            ),
+                            Tab(
+                              text: 'Settings',
+                            ),
+                            Tab(
+                              text: 'CLI',
+                            ),
+                          ],
+                        ),
+                        Expanded(
+                          child: TabBarView(
+                            children: [
+                              Column(children: [
+                                AppBar(
+                                  actions: [
+                                    IconButton(
+                                      onPressed: onReadData,
+                                      icon: const Icon(Icons.refresh),
+                                      tooltip: "Read Data from Device",
+                                    ),
+                                    IconButton(
+                                      onPressed: onSaveDMP,
+                                      icon: const Icon(Icons.save),
+                                      tooltip: "Save as DMP",
+                                    ),
+                                    IconButton(
+                                      onPressed: onExportXLS,
+                                      icon: const Icon(Icons.save_alt),
+                                      tooltip: "Export as XLS",
+                                    ),
+                                  ],
+                                  backgroundColor: Colors.white30,
+                                ),
+                                Expanded(
+                                  child: Container(
+                                    decoration: const BoxDecoration(
+                                        color: Colors.black26),
+                                    child: ListView(
+                                      padding: EdgeInsets.all(20),
+                                      shrinkWrap: true,
+                                      scrollDirection: Axis.vertical,
+                                      children: sections
+                                          .getSections()
+                                          .map(
+                                            (e) => Card(
+                                              child: ListTile(
+                                                title: Text(e.name),
+                                                subtitle:
+                                                    Text("#${e.shots.length}"),
+                                                trailing: Text(
+                                                    DateFormat('yyyy-MM-dd')
+                                                        .format(e.dateSurey)),
+                                              ),
+                                            ),
+                                          )
+                                          .toList(),
+                                    ),
+                                  ),
+                                ),
+                              ]),
+                              const Text(
+                                'Tab View 2',
+                              ),
+                              SizedBox(
+                                width: 100,
+                                height: 100,
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.max,
+                                  children: [
+                                    AppBar(
+                                      title: Container(
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.max,
+                                          children: [
+                                            Container(
+                                              child: const Padding(
+                                                padding: EdgeInsetsDirectional
+                                                    .fromSTEB(20, 0, 0, 0),
+                                                child: Text(
+                                                  'Command',
+                                                  style: TextStyle(
+                                                      color: Colors.blueGrey),
+                                                ),
+                                              ),
+                                            ),
+                                            Expanded(
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsetsDirectional
+                                                        .fromSTEB(20, 0, 0, 0),
+                                                child: TextFormField(
+                                                  onFieldSubmitted:
+                                                      (_command) async {
+                                                    executeCLI(_command);
+                                                  },
+                                                  autofocus: true,
+                                                  obscureText: false,
+                                                  decoration:
+                                                      const InputDecoration(
+                                                    hintText:
+                                                        '[Enter Command or type listcommands]',
+                                                    enabledBorder:
+                                                        UnderlineInputBorder(
+                                                      borderSide: BorderSide(
+                                                        color:
+                                                            Color(0x00000000),
+                                                        width: 1,
+                                                      ),
+                                                      borderRadius:
+                                                          BorderRadius.only(
+                                                        topLeft:
+                                                            Radius.circular(
+                                                                4.0),
+                                                        topRight:
+                                                            Radius.circular(
+                                                                4.0),
+                                                      ),
+                                                    ),
+                                                    focusedBorder:
+                                                        UnderlineInputBorder(
+                                                      borderSide: BorderSide(
+                                                        color:
+                                                            Color(0x00000000),
+                                                        width: 1,
+                                                      ),
+                                                      borderRadius:
+                                                          BorderRadius.only(
+                                                        topLeft:
+                                                            Radius.circular(
+                                                                4.0),
+                                                        topRight:
+                                                            Radius.circular(
+                                                                4.0),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      actions: [
+                                        IconButton(
+                                            onPressed: onReadData,
+                                            icon: const Icon(Icons.refresh))
+                                      ],
+                                      backgroundColor: Colors.white30,
+                                    ),
+                                    Expanded(
+                                      child: Container(
+                                        decoration: const BoxDecoration(
+                                            color: Colors.black26),
+                                        child: ListView(
+                                          controller: cliScrollController,
+                                          padding: EdgeInsets.all(20),
+                                          shrinkWrap: true,
+                                          scrollDirection: Axis.vertical,
+                                          children: CLIHistory.map(
+                                            (e) => Card(
+                                              child: ListTile(
+                                                title: Text(e),
+                                              ),
+                                            ),
+                                          ).toList(),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                  ]),
-                  Row(children: <Widget>[
-                    SingleChildScrollView(
-                      scrollDirection: Axis.vertical,
-                      padding: const EdgeInsets.all(10.0),
-                      child: Text(CLIHistory),
-                    ),
-                  ]),
-                ]),
+                  ),
+                )
               ],
       ),
 
@@ -172,13 +457,13 @@ class _MyHomePageState extends State<MyHomePage> {
         utf8.decode(commandnl.runes.toList()).runes.toList());
     int? nbwritten = mnemoPort?.write(uint8list);
 
-    setState(() => CLIHistory +=
-        (nbwritten == commandnl.length) ? commandnl : "Error $commandnl");
+    setState(() => CLIHistory.add(
+        (nbwritten == commandnl.length) ? command : "Error $command"));
 
     switch (command) {
       case "getdata":
+        sections.getSections().clear();
         waitAnswer();
-
         analyzeTransferBuffer();
 
         break;
@@ -195,33 +480,19 @@ class _MyHomePageState extends State<MyHomePage> {
         startCodeInt.add(date.minute);
         var uint8list2 = Uint8List.fromList(startCodeInt);
         int? nbwritten = mnemoPort?.write(uint8list2);
-        setState(() => CLIHistory +=
-            (nbwritten == 5) ? "DateTime$date\n" : "Error in DateTime\n");
+        setState(() => CLIHistory.add(
+            (nbwritten == 5) ? "DateTime$date\n" : "Error in DateTime\n"));
 
         break;
 
-      case "picbootmode":
-
-      case "picprog":
-
-      case "help":
-        break;
-      case "getpicinfo":
-
-      case "listwifinet":
-      case "listcommands":
-
-      case "getclickthreshold":
-
-      case "getunclickdelta":
-
-      case "getstabilizationfactor":
+      default:
         waitAnswer();
         displayAnswer();
 
         break;
     }
 
+    commandSent = true;
     mnemoPort?.close();
   }
 
@@ -255,10 +526,41 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  void analyzeTransferBuffer() {}
-
   void displayAnswer() {
-    setState(() => CLIHistory += utf8.decode(transferBuffer));
+    setState(() => CLIHistory.add(utf8.decode(transferBuffer)));
+  }
+
+  Future<void> onSaveDMP() async {
+// Lets the user pick one file; files with any file extension can be selected
+    var result = await FilePicker.platform.saveFile(dialogTitle: "Save as DMP");
+
+// The result will be null, if the user aborted the dialog
+    if (result != null) {
+      File file = File(result);
+      if (!result.toLowerCase().endsWith('.dmp')) result += ".dmp";
+      var sink = file.openWrite();
+      transferBuffer.forEach((element) {
+        (element >= 0 && element <= 127)
+            ? sink.write("$element;")
+            : sink.write("${-(256 - element)};");
+      });
+
+      await sink.flush();
+      await sink.close();
+    }
+  }
+
+  Future<void> onExportXLS() async {
+    // Lets the user pick one file; files with any file extension can be selected
+    var result = await FilePicker.platform.saveFile(dialogTitle: "Save as DMP");
+
+// The result will be null, if the user aborted the dialog
+    if (result != null) {
+      if (!result.toLowerCase().endsWith('.xlsx')) result += ".xlsx";
+
+      File file = File(result);
+      exportAsExcel(sections, file, unitType);
+    }
   }
 }
 
