@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_libserialport/flutter_libserialport.dart';
 import 'package:mnemolink/excelexport.dart';
+import 'package:mnemolink/settingcard.dart';
 import 'dart:convert' show utf8;
 import './section.dart';
 import './shot.dart';
@@ -242,9 +243,14 @@ class _MyHomePageState extends State<MyHomePage> {
         ],
       ),
       body: Column(
-        mainAxisAlignment: MainAxisAlignment.start,
+        mainAxisAlignment:
+            (!connected) ? MainAxisAlignment.center : MainAxisAlignment.start,
         children: (!connected)
-            ? <Widget>[const Text("Click on connect")]
+            ? <Widget>[
+                const Center(
+                  child: Text("Click on connect"),
+                ),
+              ]
             : <Widget>[
                 // Generated code for this TabBar Widget...
                 Expanded(
@@ -318,8 +324,27 @@ class _MyHomePageState extends State<MyHomePage> {
                                   ),
                                 ),
                               ]),
-                              const Text(
-                                'Tab View 2',
+                              Column(
+                                children: [
+                                  SettingCard(
+                                    name: "Date & Time",
+                                    subtitle:
+                                        "Synchronize date and time with the computer",
+                                    icon: Icons.timer,
+                                    actionWidget: SettingActionButton(
+                                        "SYNC NOW",
+                                        () => executeCLI("syncdatetime")),
+                                  ),
+                                  SettingCard(
+                                    name: "Stabilization",
+                                    subtitle:
+                                    "How much stability is required to get a compass reading",
+                                    icon: Icons.timer,
+                                    actionWidget: SettingActionRadioList(
+                                        "SYNC NOW",{"LOW" : 50,"MID" : 100,"HIGH" :220},
+                                            (e) => executeCLI("setstabilizationfactor $e")),
+                                  )
+                                ],
                               ),
                               SizedBox(
                                 width: 100,
@@ -562,7 +587,13 @@ class _MyHomePageState extends State<MyHomePage> {
       exportAsExcel(sections, file, unitType);
     }
   }
+
+  void onSyncDateTime() {
+    executeCLI("syncdatetime");
+  }
 }
+
+
 
 extension IntToString on int {
   String toHex() => '0x${toRadixString(16)}';
