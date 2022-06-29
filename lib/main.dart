@@ -1,11 +1,10 @@
 import 'dart:io';
 import 'dart:typed_data';
-
 import 'package:file_picker/file_picker.dart';
-import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_libserialport/flutter_libserialport.dart';
 import 'package:mnemolink/excelexport.dart';
+import 'package:mnemolink/sectioncard.dart';
 import 'package:mnemolink/settingcard.dart';
 import 'dart:convert' show utf8;
 import './section.dart';
@@ -13,7 +12,6 @@ import './shot.dart';
 import './sectionlist.dart';
 
 void main() {
-
   runApp(const MyApp());
 }
 
@@ -48,8 +46,8 @@ class _MyHomePageState extends State<MyHomePage> {
   bool connected = false;
   List<String> CLIHistory = [""];
   var transferBuffer = List<int>.empty(growable: true);
-  SectionList sections =  SectionList();
-  var cliScrollController =  ScrollController();
+  SectionList sections = SectionList();
+  var cliScrollController = ScrollController();
   bool commandSent = false;
   UnitType unitType = UnitType.METRIC;
   int stabilizationFactor = 0;
@@ -116,7 +114,7 @@ class _MyHomePageState extends State<MyHomePage> {
     int cursor = 0;
 
     while (cursor < currentMemory - 2) {
-      Section section =  Section();
+      Section section = Section();
 
       int fileVersion = 0;
 
@@ -152,7 +150,7 @@ class _MyHomePageState extends State<MyHomePage> {
       //  LocalDateTime dateSection = LocalDateTime.now();
       section.setDateSurey(dateSection);
       // Read section type and name
-      StringBuffer stbuilder =  StringBuffer();
+      StringBuffer stbuilder = StringBuffer();
       stbuilder.write(utf8.decode([readByteFromEEProm(cursor++)]));
       stbuilder.write(utf8.decode([readByteFromEEProm(cursor++)]));
       stbuilder.write(utf8.decode([readByteFromEEProm(cursor++)]));
@@ -175,7 +173,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
       Shot shot;
       do {
-        shot =  Shot.zero();
+        shot = Shot.zero();
         int typeShot = 0;
 
         typeShot = readByteFromEEProm(cursor++);
@@ -309,16 +307,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                       children: sections
                                           .getSections()
                                           .map(
-                                            (e) => Card(
-                                              child: ListTile(
-                                                title: Text(e.name),
-                                                subtitle:
-                                                    Text("#${e.shots.length}"),
-                                                trailing: Text(
-                                                    DateFormat('yyyy-MM-dd')
-                                                        .format(e.dateSurey)),
-                                              ),
-                                            ),
+                                            (e) => SectionCard(e),
                                           )
                                           .toList(),
                                     ),
@@ -432,7 +421,8 @@ class _MyHomePageState extends State<MyHomePage> {
                                                   },
                                                   icon:
                                                       factorySettingsLockSlider
-                                                          ? const Icon(Icons.lock)
+                                                          ? const Icon(
+                                                              Icons.lock)
                                                           : const Icon(
                                                               Icons.lock_open)),
                                             ],
@@ -498,7 +488,8 @@ class _MyHomePageState extends State<MyHomePage> {
                                                   },
                                                   icon: factorySettingsLock
                                                       ? const Icon(Icons.lock)
-                                                      : const Icon(Icons.lock_open)),
+                                                      : const Icon(
+                                                          Icons.lock_open)),
                                             ],
                                           ),
                                         ],
@@ -538,35 +529,29 @@ class _MyHomePageState extends State<MyHomePage> {
                                                   enabledBorder:
                                                       UnderlineInputBorder(
                                                     borderSide: BorderSide(
-                                                      color:
-                                                          Color(0x00000000),
+                                                      color: Color(0x00000000),
                                                       width: 1,
                                                     ),
                                                     borderRadius:
                                                         BorderRadius.only(
                                                       topLeft:
-                                                          Radius.circular(
-                                                              4.0),
+                                                          Radius.circular(4.0),
                                                       topRight:
-                                                          Radius.circular(
-                                                              4.0),
+                                                          Radius.circular(4.0),
                                                     ),
                                                   ),
                                                   focusedBorder:
                                                       UnderlineInputBorder(
                                                     borderSide: BorderSide(
-                                                      color:
-                                                          Color(0x00000000),
+                                                      color: Color(0x00000000),
                                                       width: 1,
                                                     ),
                                                     borderRadius:
                                                         BorderRadius.only(
                                                       topLeft:
-                                                          Radius.circular(
-                                                              4.0),
+                                                          Radius.circular(4.0),
                                                       topRight:
-                                                          Radius.circular(
-                                                              4.0),
+                                                          Radius.circular(4.0),
                                                     ),
                                                   ),
                                                 ),
