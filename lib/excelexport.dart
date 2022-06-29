@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:io';
 
 import 'package:intl/intl.dart';
@@ -120,9 +119,11 @@ void exportAsExcel(SectionList sectionList, File file, UnitType unitType) {
   }
   excel.delete("Sheet1");
 
-  excel.encode().then((onValue) {
+  var onValue = excel.encode();
+  if (onValue != null) {
     file
       ..createSync(recursive: true)
       ..writeAsBytesSync(onValue);
-  });
+  }
+
 }

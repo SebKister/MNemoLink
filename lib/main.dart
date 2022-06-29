@@ -1,4 +1,3 @@
-import 'dart:ffi';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -14,6 +13,7 @@ import './shot.dart';
 import './sectionlist.dart';
 
 void main() {
+
   runApp(const MyApp());
 }
 
@@ -48,10 +48,21 @@ class _MyHomePageState extends State<MyHomePage> {
   bool connected = false;
   List<String> CLIHistory = [""];
   var transferBuffer = List<int>.empty(growable: true);
-  SectionList sections = new SectionList();
-  var cliScrollController = new ScrollController();
+  SectionList sections =  SectionList();
+  var cliScrollController =  ScrollController();
   bool commandSent = false;
   UnitType unitType = UnitType.METRIC;
+  int stabilizationFactor = 0;
+  int clickThreshold = 30;
+  List<String> wifiList = [];
+
+  int xCompass = 0;
+  int yCompass = 0;
+  int zCompass = 0;
+
+  bool factorySettingsLock = true;
+
+  var factorySettingsLockSlider = true;
 
   @override
   void initState() {
@@ -65,15 +76,6 @@ class _MyHomePageState extends State<MyHomePage> {
         commandSent = false;
       }
     });
-
-    @override
-    void didUpdateWidget(MyHomePage oldWidget) {
-      super.didUpdateWidget(oldWidget);
-      if (cliScrollController.hasClients) {
-        final position = cliScrollController.position.maxScrollExtent;
-        cliScrollController.jumpTo(position);
-      }
-    }
   }
 
   String getMnemoAddress() {
@@ -89,7 +91,6 @@ class _MyHomePageState extends State<MyHomePage> {
         connected = false;
       } else {
         mnemoPort = SerialPort(mnemoPortAddress);
-
         connected = true;
       }
     });
@@ -115,7 +116,7 @@ class _MyHomePageState extends State<MyHomePage> {
     int cursor = 0;
 
     while (cursor < currentMemory - 2) {
-      Section section = new Section();
+      Section section =  Section();
 
       int fileVersion = 0;
 
@@ -151,7 +152,7 @@ class _MyHomePageState extends State<MyHomePage> {
       //  LocalDateTime dateSection = LocalDateTime.now();
       section.setDateSurey(dateSection);
       // Read section type and name
-      StringBuffer stbuilder = new StringBuffer();
+      StringBuffer stbuilder =  StringBuffer();
       stbuilder.write(utf8.decode([readByteFromEEProm(cursor++)]));
       stbuilder.write(utf8.decode([readByteFromEEProm(cursor++)]));
       stbuilder.write(utf8.decode([readByteFromEEProm(cursor++)]));
@@ -174,7 +175,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
       Shot shot;
       do {
-        shot = new Shot.zero();
+        shot =  Shot.zero();
         int typeShot = 0;
 
         typeShot = readByteFromEEProm(cursor++);
@@ -224,7 +225,7 @@ class _MyHomePageState extends State<MyHomePage> {
         title: Text(widget.title),
         actions: [
           Container(
-            padding: EdgeInsets.all(10),
+            padding: const EdgeInsets.all(10),
             child: Row(
               children: connected
                   ? [
@@ -232,12 +233,12 @@ class _MyHomePageState extends State<MyHomePage> {
                         children: [
                           Text("MNemo Connected on $mnemoPortAddress"),
                           Text(
-                              style: TextStyle(fontSize: 12),
+                              style: const TextStyle(fontSize: 12),
                               ' SN ${mnemoPort?.serialNumber}')
                         ],
                       )
                     ]
-                  : [Text("Mnemo Not detected")],
+                  : [const Text("Mnemo Not detected")],
             ),
           )
         ],
@@ -302,7 +303,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                     decoration: const BoxDecoration(
                                         color: Colors.black26),
                                     child: ListView(
-                                      padding: EdgeInsets.all(20),
+                                      padding: const EdgeInsets.all(20),
                                       shrinkWrap: true,
                                       scrollDirection: Axis.vertical,
                                       children: sections
@@ -324,28 +325,189 @@ class _MyHomePageState extends State<MyHomePage> {
                                   ),
                                 ),
                               ]),
+                              //Settings----------------------------------------
                               Column(
                                 children: [
-                                  SettingCard(
-                                    name: "Date & Time",
-                                    subtitle:
-                                        "Synchronize date and time with the computer",
-                                    icon: Icons.timer,
-                                    actionWidget: SettingActionButton(
-                                        "SYNC NOW",
-                                        () => executeCLI("syncdatetime")),
+                                  Expanded(
+                                    child: Container(
+                                      decoration: const BoxDecoration(
+                                          color: Colors.black26),
+                                      child: ListView(
+                                        padding: const EdgeInsets.all(20),
+                                        shrinkWrap: true,
+                                        scrollDirection: Axis.vertical,
+                                        children: [
+                                          SettingCard(
+                                            name: "Date & Time",
+                                            subtitle:
+                                                "Synchronize date and time with the computer",
+                                            icon: Icons.timer,
+                                            actionWidget: SettingActionButton(
+                                                "SYNC NOW",
+                                                () =>
+                                                    executeCLI("syncdatetime")),
+                                          ),
+                                          SettingCard(
+                                            name: "Stabilization",
+                                            subtitle:
+                                                "How much stability is required to get a compass reading",
+                                            icon: Icons.vibration,
+                                            actionWidget: Row(
+                                              children: [
+                                                SettingActionButton(
+                                                    "GET CURRENT",
+                                                    () =>
+                                                        getCurrentStabilizationFactor()),
+                                                SettingActionRadioList(
+                                                    "SYNC NOW", {
+                                                  "LOW": 50,
+                                                  "MID": 100,
+                                                  "HIGH": 220
+                                                }, (e) {
+                                                  executeCLI(
+                                                      "setstabilizationfactor $e");
+                                                  getCurrentStabilizationFactor();
+                                                }, stabilizationFactor),
+                                              ],
+                                            ),
+                                          ),
+                                          SettingCard(
+                                            name: "WIFI",
+                                            subtitle:
+                                                "Manage known WIFI networks",
+                                            icon: Icons.wifi,
+                                            actionWidget: Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.spaceEvenly,
+                                              children: [
+                                                SettingActionButton(
+                                                    "GET CURRENT",
+                                                    () => getCurrentWifiList()),
+                                                SettingWifiList(wifiList, (e) {
+                                                  executeCLI(
+                                                      "removewifinet $e");
+                                                  getCurrentWifiList();
+                                                }),
+                                                SettingWifiActionButton(
+                                                    "ADD NEW",
+                                                    (e, f) =>
+                                                        addToWifiList(e, f)),
+                                              ],
+                                            ),
+                                          ),
+                                          Stack(
+                                            children: [
+                                              SettingCard(
+                                                locked:
+                                                    factorySettingsLockSlider,
+                                                name: "Slider Button",
+                                                subtitle:
+                                                    "Adjust the sensitivity of the slider button",
+                                                icon: Icons.smart_button,
+                                                actionWidget: Row(
+                                                  children: [
+                                                    SettingActionButton(
+                                                        "GET CURRENT",
+                                                        () =>
+                                                            getCurrentClickThreshold()),
+                                                    SettingActionRadioList(
+                                                        "SYNC NOW", {
+                                                      "LOW": 50,
+                                                      "MID": 40,
+                                                      "HIGH": 35
+                                                    }, (e) {
+                                                      executeCLI(
+                                                          "setclickthreshold $e");
+                                                      getCurrentClickThreshold();
+                                                    }, clickThreshold),
+                                                  ],
+                                                ),
+                                              ),
+                                              IconButton(
+                                                  onPressed: () {
+                                                    setState(() {
+                                                      factorySettingsLockSlider =
+                                                          !factorySettingsLockSlider;
+                                                    });
+                                                  },
+                                                  icon:
+                                                      factorySettingsLockSlider
+                                                          ? const Icon(Icons.lock)
+                                                          : const Icon(
+                                                              Icons.lock_open)),
+                                            ],
+                                          ),
+                                          Stack(
+                                            children: [
+                                              SettingCard(
+                                                locked: factorySettingsLock,
+                                                name: "Compass HW parameter",
+                                                subtitle:
+                                                    "Set Compass Orientation (Factory Settings)",
+                                                icon: Icons.hardware,
+                                                actionWidget: Row(
+                                                  children: [
+                                                    SettingActionButton(
+                                                        "GET X",
+                                                        () =>
+                                                            getCurrentXCompass()),
+                                                    SettingActionRadioList(
+                                                        "SYNC NOW", {
+                                                      "1": 1,
+                                                      "-1": 255,
+                                                    }, (e) {
+                                                      executeCLI(
+                                                          "eepromwrite 32 $e");
+                                                      getCurrentXCompass();
+                                                    }, xCompass),
+                                                    SettingActionButton(
+                                                        "GET Y",
+                                                        () =>
+                                                            getCurrentYCompass()),
+                                                    SettingActionRadioList(
+                                                        "SYNC NOW", {
+                                                      "1": 1,
+                                                      "-1": 255,
+                                                    }, (e) {
+                                                      executeCLI(
+                                                          "eepromwrite 33 $e");
+                                                      getCurrentYCompass();
+                                                    }, yCompass),
+                                                    SettingActionButton(
+                                                        "GET Z",
+                                                        () =>
+                                                            getCurrentZCompass()),
+                                                    SettingActionRadioList(
+                                                        "SYNC NOW", {
+                                                      "1": 1,
+                                                      "-1": 255,
+                                                    }, (e) {
+                                                      executeCLI(
+                                                          "eepromwrite 34 $e");
+                                                      getCurrentZCompass();
+                                                    }, zCompass),
+                                                  ],
+                                                ),
+                                              ),
+                                              IconButton(
+                                                  onPressed: () {
+                                                    setState(() {
+                                                      factorySettingsLock =
+                                                          !factorySettingsLock;
+                                                    });
+                                                  },
+                                                  icon: factorySettingsLock
+                                                      ? const Icon(Icons.lock)
+                                                      : const Icon(Icons.lock_open)),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                   ),
-                                  SettingCard(
-                                    name: "Stabilization",
-                                    subtitle:
-                                    "How much stability is required to get a compass reading",
-                                    icon: Icons.timer,
-                                    actionWidget: SettingActionRadioList(
-                                        "SYNC NOW",{"LOW" : 50,"MID" : 100,"HIGH" :220},
-                                            (e) => executeCLI("setstabilizationfactor $e")),
-                                  )
                                 ],
                               ),
+                              //CLI ---------------------------------------------------
                               SizedBox(
                                 width: 100,
                                 height: 100,
@@ -353,83 +515,66 @@ class _MyHomePageState extends State<MyHomePage> {
                                   mainAxisSize: MainAxisSize.max,
                                   children: [
                                     AppBar(
-                                      title: Container(
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.max,
-                                          children: [
-                                            Container(
-                                              child: const Padding(
-                                                padding: EdgeInsetsDirectional
-                                                    .fromSTEB(20, 0, 0, 0),
-                                                child: Text(
-                                                  'Command',
-                                                  style: TextStyle(
-                                                      color: Colors.blueGrey),
-                                                ),
-                                              ),
-                                            ),
-                                            Expanded(
-                                              child: Padding(
-                                                padding:
-                                                    const EdgeInsetsDirectional
-                                                        .fromSTEB(20, 0, 0, 0),
-                                                child: TextFormField(
-                                                  onFieldSubmitted:
-                                                      (_command) async {
-                                                    executeCLI(_command);
-                                                  },
-                                                  autofocus: true,
-                                                  obscureText: false,
-                                                  decoration:
-                                                      const InputDecoration(
-                                                    hintText:
-                                                        '[Enter Command or type listcommands]',
-                                                    enabledBorder:
-                                                        UnderlineInputBorder(
-                                                      borderSide: BorderSide(
-                                                        color:
-                                                            Color(0x00000000),
-                                                        width: 1,
-                                                      ),
-                                                      borderRadius:
-                                                          BorderRadius.only(
-                                                        topLeft:
-                                                            Radius.circular(
-                                                                4.0),
-                                                        topRight:
-                                                            Radius.circular(
-                                                                4.0),
-                                                      ),
+                                      title: Row(
+                                        mainAxisSize: MainAxisSize.max,
+                                        children: [
+                                          Expanded(
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsetsDirectional
+                                                      .fromSTEB(20, 0, 0, 0),
+                                              child: TextFormField(
+                                                onFieldSubmitted:
+                                                    (command) async {
+                                                  executeCLI(command);
+                                                },
+                                                autofocus: true,
+                                                obscureText: false,
+                                                decoration:
+                                                    const InputDecoration(
+                                                  labelText: "Command",
+                                                  hintText:
+                                                      '[Enter Command or type listcommands]',
+                                                  enabledBorder:
+                                                      UnderlineInputBorder(
+                                                    borderSide: BorderSide(
+                                                      color:
+                                                          Color(0x00000000),
+                                                      width: 1,
                                                     ),
-                                                    focusedBorder:
-                                                        UnderlineInputBorder(
-                                                      borderSide: BorderSide(
-                                                        color:
-                                                            Color(0x00000000),
-                                                        width: 1,
-                                                      ),
-                                                      borderRadius:
-                                                          BorderRadius.only(
-                                                        topLeft:
-                                                            Radius.circular(
-                                                                4.0),
-                                                        topRight:
-                                                            Radius.circular(
-                                                                4.0),
-                                                      ),
+                                                    borderRadius:
+                                                        BorderRadius.only(
+                                                      topLeft:
+                                                          Radius.circular(
+                                                              4.0),
+                                                      topRight:
+                                                          Radius.circular(
+                                                              4.0),
+                                                    ),
+                                                  ),
+                                                  focusedBorder:
+                                                      UnderlineInputBorder(
+                                                    borderSide: BorderSide(
+                                                      color:
+                                                          Color(0x00000000),
+                                                      width: 1,
+                                                    ),
+                                                    borderRadius:
+                                                        BorderRadius.only(
+                                                      topLeft:
+                                                          Radius.circular(
+                                                              4.0),
+                                                      topRight:
+                                                          Radius.circular(
+                                                              4.0),
                                                     ),
                                                   ),
                                                 ),
                                               ),
                                             ),
-                                          ],
-                                        ),
+                                          ),
+                                        ],
                                       ),
-                                      actions: [
-                                        IconButton(
-                                            onPressed: onReadData,
-                                            icon: const Icon(Icons.refresh))
-                                      ],
                                       backgroundColor: Colors.white30,
                                     ),
                                     Expanded(
@@ -438,7 +583,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                             color: Colors.black26),
                                         child: ListView(
                                           controller: cliScrollController,
-                                          padding: EdgeInsets.all(20),
+                                          padding: const EdgeInsets.all(20),
                                           shrinkWrap: true,
                                           scrollDirection: Axis.vertical,
                                           children: CLIHistory.map(
@@ -476,7 +621,7 @@ class _MyHomePageState extends State<MyHomePage> {
     mnemoPort?.openReadWrite();
 
     var command = rawCommand.trim();
-    var commandnl = command + '\n';
+    var commandnl = '$command\n';
 
     var uint8list = Uint8List.fromList(
         utf8.decode(commandnl.runes.toList()).runes.toList());
@@ -490,6 +635,8 @@ class _MyHomePageState extends State<MyHomePage> {
         sections.getSections().clear();
         waitAnswer();
         analyzeTransferBuffer();
+        commandSent = true;
+        mnemoPort?.close();
 
         break;
 
@@ -508,22 +655,22 @@ class _MyHomePageState extends State<MyHomePage> {
         setState(() => CLIHistory.add(
             (nbwritten == 5) ? "DateTime$date\n" : "Error in DateTime\n"));
 
+        commandSent = true;
+        mnemoPort?.close();
         break;
 
       default:
         waitAnswer();
-        displayAnswer();
+        if (transferBuffer.isNotEmpty) displayAnswer();
+        commandSent = true;
+        mnemoPort?.close();
 
         break;
     }
-
-    commandSent = true;
-    mnemoPort?.close();
   }
 
   void waitAnswer() {
     int counterWait = 0;
-    int counterData = 0;
     transferBuffer.clear();
     final mnemoPort = this.mnemoPort;
 
@@ -541,7 +688,7 @@ class _MyHomePageState extends State<MyHomePage> {
       }
 
       counterWait = 0;
-      var readBuffer = List<int>.empty(growable: true);
+
       if (mnemoPort != null) {
         var readBuffer8 = mnemoPort.read(mnemoPort.bytesAvailable);
         for (int i = 0; i < readBuffer8.length; i++) {
@@ -564,11 +711,11 @@ class _MyHomePageState extends State<MyHomePage> {
       File file = File(result);
       if (!result.toLowerCase().endsWith('.dmp')) result += ".dmp";
       var sink = file.openWrite();
-      transferBuffer.forEach((element) {
+      for (var element in transferBuffer) {
         (element >= 0 && element <= 127)
             ? sink.write("$element;")
             : sink.write("${-(256 - element)};");
-      });
+      }
 
       await sink.flush();
       await sink.close();
@@ -591,9 +738,49 @@ class _MyHomePageState extends State<MyHomePage> {
   void onSyncDateTime() {
     executeCLI("syncdatetime");
   }
+
+  void getCurrentStabilizationFactor() {
+    executeCLI("getstabilizationfactor");
+    var decode = utf8.decode(transferBuffer);
+    stabilizationFactor = int.parse(decode);
+  }
+
+  void getCurrentClickThreshold() {
+    executeCLI("getclickthreshold");
+    var decode = utf8.decode(transferBuffer);
+    clickThreshold = int.parse(decode);
+  }
+
+  void getCurrentWifiList() {
+    executeCLI("listwifinet");
+    var decode = utf8.decode(transferBuffer);
+    wifiList = decode.split(("\r\n"));
+    wifiList.removeWhere((element) => element.isEmpty);
+  }
+
+  addToWifiList(String name, String passwd) {
+    executeCLI("addwifinet $name $passwd");
+    getCurrentWifiList();
+  }
+
+  getCurrentXCompass() {
+    executeCLI("eepromread 32");
+    var decode = utf8.decode(transferBuffer);
+    xCompass = int.parse(decode);
+  }
+
+  getCurrentYCompass() {
+    executeCLI("eepromread 33");
+    var decode = utf8.decode(transferBuffer);
+    yCompass = int.parse(decode);
+  }
+
+  getCurrentZCompass() {
+    executeCLI("eepromread 34");
+    var decode = utf8.decode(transferBuffer);
+    zCompass = int.parse(decode);
+  }
 }
-
-
 
 extension IntToString on int {
   String toHex() => '0x${toRadixString(16)}';
