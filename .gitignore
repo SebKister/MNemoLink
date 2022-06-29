@@ -889,3 +889,6 @@ DerivedData/
 !/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
 .flutter-plugins-dependencies
 windows/runner/Runner.aps
+windows/SetupMnemoLink/.vs/
+windows/SetupMnemoLink/SetupMnemoLink/Debug/setup.exe
+windows/SetupMnemoLink/SetupMnemoLink/Release/setup.exe
