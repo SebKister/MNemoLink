@@ -174,7 +174,7 @@
         {
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_00320FC9E7A541EC9C82C8396A90026A"
             {
-            "SourcePath" = "8:..\\..\\..\\..\\Documents\\Repos\\mnemolink\\build\\windows\\runner\\Release\\data\\flutter_assets\\AssetManifest.json"
+            "SourcePath" = "8:..\\..\\..\\build\\windows\\runner\\Release\\data\\flutter_assets\\AssetManifest.json"
             "TargetName" = "8:AssetManifest.json"
             "Tag" = "8:"
             "Folder" = "8:_E6BD2631BE744D1D9609AD0C3D3ABEBE"
@@ -194,7 +194,7 @@
             }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_129FD614481F464AA00FCEC3DA14C6AB"
             {
-            "SourcePath" = "8:..\\..\\..\\..\\Documents\\Repos\\mnemolink\\build\\windows\\runner\\Release\\data\\flutter_assets\\packages\\cupertino_icons\\assets\\CupertinoIcons.ttf"
+            "SourcePath" = "8:..\\..\\..\\build\\windows\\runner\\Release\\data\\flutter_assets\\packages\\cupertino_icons\\assets\\CupertinoIcons.ttf"
             "TargetName" = "8:CupertinoIcons.ttf"
             "Tag" = "8:"
             "Folder" = "8:_7C0F425C4A4D4596A04C1F97FD1C1B0C"
@@ -214,7 +214,7 @@
             }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_18416E4C94DD4E22B935271B10185BCD"
             {
-            "SourcePath" = "8:..\\..\\..\\..\\Documents\\Repos\\mnemolink\\build\\windows\\runner\\Release\\data\\flutter_assets\\NOTICES.Z"
+            "SourcePath" = "8:..\\..\\..\\build\\windows\\runner\\Release\\data\\flutter_assets\\NOTICES.Z"
             "TargetName" = "8:NOTICES.Z"
             "Tag" = "8:"
             "Folder" = "8:_E6BD2631BE744D1D9609AD0C3D3ABEBE"
@@ -234,7 +234,7 @@
             }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_2701D150C12146D5A3FB7FD5A0B4734A"
             {
-            "SourcePath" = "8:..\\..\\..\\..\\Documents\\Repos\\mnemolink\\build\\windows\\runner\\Release\\data\\flutter_assets\\FontManifest.json"
+            "SourcePath" = "8:..\\..\\..\\build\\windows\\runner\\Release\\data\\flutter_assets\\FontManifest.json"
             "TargetName" = "8:FontManifest.json"
             "Tag" = "8:"
             "Folder" = "8:_E6BD2631BE744D1D9609AD0C3D3ABEBE"
@@ -254,7 +254,7 @@
             }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_3C2905C375004509835A79C294B15CAE"
             {
-            "SourcePath" = "8:..\\..\\..\\..\\Documents\\Repos\\mnemolink\\build\\windows\\runner\\Release\\data\\app.so"
+            "SourcePath" = "8:..\\..\\..\\build\\windows\\runner\\Release\\data\\app.so"
             "TargetName" = "8:app.so"
             "Tag" = "8:"
             "Folder" = "8:_0A435337F53249EA9FDB07034F323E81"
@@ -274,7 +274,7 @@
             }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_5757AAE994C24C0190C40CE100D9A0BB"
             {
-            "SourcePath" = "8:..\\..\\..\\..\\Documents\\Repos\\mnemolink\\build\\windows\\runner\\Release\\flutter_libserialport_plugin.dll"
+            "SourcePath" = "8:..\\..\\..\\build\\windows\\runner\\Release\\flutter_libserialport_plugin.dll"
             "TargetName" = "8:flutter_libserialport_plugin.dll"
             "Tag" = "8:"
             "Folder" = "8:_A063F5B5F8B9440EBD53B2C5C9432AE8"
@@ -294,7 +294,7 @@
             }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_5FAC111A0B9B4529A2A7C56EE4DAD496"
             {
-            "SourcePath" = "8:..\\..\\..\\..\\Documents\\Repos\\mnemolink\\build\\windows\\runner\\Release\\mnemolink.exe"
+            "SourcePath" = "8:..\\..\\..\\build\\windows\\runner\\Release\\mnemolink.exe"
             "TargetName" = "8:mnemolink.exe"
             "Tag" = "8:"
             "Folder" = "8:_A063F5B5F8B9440EBD53B2C5C9432AE8"
@@ -314,7 +314,7 @@
             }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_5FE97051A79D40189BEACE08E4A7E073"
             {
-            "SourcePath" = "8:..\\..\\..\\..\\Documents\\Repos\\mnemolink\\windows\\runner\\resources\\mnemo.ico"
+            "SourcePath" = "8:..\\..\\..\\windows\\runner\\resources\\mnemo.ico"
             "TargetName" = "8:mnemo.ico"
             "Tag" = "8:"
             "Folder" = "8:_A063F5B5F8B9440EBD53B2C5C9432AE8"
@@ -334,7 +334,7 @@
             }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_7DD91C7F9E484A5A8F2CAC45A63B8B4F"
             {
-            "SourcePath" = "8:..\\..\\..\\..\\Documents\\Repos\\mnemolink\\build\\windows\\runner\\Release\\data\\icudtl.dat"
+            "SourcePath" = "8:..\\..\\..\\build\\windows\\runner\\Release\\data\\icudtl.dat"
             "TargetName" = "8:icudtl.dat"
             "Tag" = "8:"
             "Folder" = "8:_0A435337F53249EA9FDB07034F323E81"
@@ -354,7 +354,7 @@
             }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_99642200004048CD8976EEC29B231510"
             {
-            "SourcePath" = "8:..\\..\\..\\..\\Documents\\Repos\\mnemolink\\build\\windows\\runner\\Release\\data\\flutter_assets\\fonts\\MaterialIcons-Regular.otf"
+            "SourcePath" = "8:..\\..\\..\\build\\windows\\runner\\Release\\data\\flutter_assets\\fonts\\MaterialIcons-Regular.otf"
             "TargetName" = "8:MaterialIcons-Regular.otf"
             "Tag" = "8:"
             "Folder" = "8:_1326F3D80069496C8D83C232E9B315EA"
@@ -374,7 +374,7 @@
             }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_BBD74A5FF4194B469F69D56286DE466A"
             {
-            "SourcePath" = "8:..\\..\\..\\..\\Documents\\Repos\\mnemolink\\build\\windows\\runner\\Release\\flutter_windows.dll"
+            "SourcePath" = "8:..\\..\\..\\build\\windows\\runner\\Release\\flutter_windows.dll"
             "TargetName" = "8:flutter_windows.dll"
             "Tag" = "8:"
             "Folder" = "8:_A063F5B5F8B9440EBD53B2C5C9432AE8"
@@ -394,7 +394,7 @@
             }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_C451EC41F3084B7BB7CCCAB8ABDF5650"
             {
-            "SourcePath" = "8:..\\..\\..\\..\\Documents\\Repos\\mnemolink\\build\\windows\\runner\\Release\\serialport.dll"
+            "SourcePath" = "8:..\\..\\..\\build\\windows\\runner\\Release\\serialport.dll"
             "TargetName" = "8:serialport.dll"
             "Tag" = "8:"
             "Folder" = "8:_A063F5B5F8B9440EBD53B2C5C9432AE8"
