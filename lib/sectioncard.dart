@@ -10,19 +10,26 @@ import 'mapsurvey.dart';
 class SectionCard extends StatelessWidget {
   final Section section;
   SvgPicture? picture;
-  String rawSvg =
-      r'<svg width="400" height="110"><rect width="300" height="100" style="fill:rgb(0,0,255);stroke-width:3;stroke:rgb(0,0,0)" /></svg>';
-  MapSurvey map=MapSurvey();
+  String rawSvg = "";
+  MapSurvey map = MapSurvey();
+  static const double displayWidth = 256;
+  static const double displayHeight = 256;
+  static const double margin = 4;
 
   SectionCard(this.section) {
-    map=MapSurvey.build(section);
-    rawSvg = buildSVG(map.buildDisplayMap());
-    picture = SvgPicture.string(rawSvg);
+    map = MapSurvey.build(section);
+    rawSvg = buildSVG(map.buildDisplayMap(displayWidth, displayHeight));
+    picture = SvgPicture.string(
+      rawSvg,
+      width: 200,
+      height: 200,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Card(
+      elevation: 2,
       child: ListTile(
         title: Text(section.name),
         subtitle: Text("#${section.shots.length}"),
@@ -36,9 +43,9 @@ class SectionCard extends StatelessWidget {
     StringBuffer result = StringBuffer("");
     StringBuffer bufr = StringBuffer("");
     result.writeln(
-        "<svg version=\"1.1\" height=\"800\" viewBox=\"-4 -4 136 136\" xmlns=\"http://www.w3.org/2000/svg\">");
+        "<svg version=\"1.1\" height=\"800\" viewBox=\"-$margin -$margin ${displayWidth + margin} ${displayHeight + margin}\" xmlns=\"http://www.w3.org/2000/svg\">");
     result.writeln(
-        "<rect x=\"-2\" y=\"-2\" width=\"132\" height=\"132\" style=\"fill:black;stroke:blue;stroke-width:0.5;fill-opacity:0.1;stroke-opacity:1\" />");
+        "<rect x=\"-${margin / 2}\" y=\"-${margin / 2}\" width=\"${displayWidth + margin / 2}\" height=\"${displayHeight + margin / 2}\" style=\"fill:black;stroke:blue;stroke-width:0.5;fill-opacity:0.1;stroke-opacity:1\" />");
 
     result.write("<polyline points=\"");
 

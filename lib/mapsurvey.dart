@@ -56,7 +56,7 @@ class MapSurvey {
     return Point<double>(pointx, pointy);
   }
 
-  MapSurvey buildDisplayMap() {
+  MapSurvey buildDisplayMap(double displayWidth, double displayHeight) {
     Point<double> minPoint = getMinPoint();
     Point<double> maxPoint = getMaxPoint();
 
@@ -71,7 +71,9 @@ class MapSurvey {
       maxSize = ySize;
 
     MapSurvey dMap = MapSurvey();
-    double MAPDISPLAYSIZE = 128, MAPDISPLAYSIZEX = 3, MAPDISPLAYSIZEY = 3;
+    double MAPDISPLAYSIZE = displayWidth as double,
+        MAPDISPLAYSIZEX = 3,
+        MAPDISPLAYSIZEY = 3;
 
     for (int i = 0; i < this.points.length; i++) {
       dMap.points.add(Point(
