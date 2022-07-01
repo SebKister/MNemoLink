@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mnemolink/section.dart';
@@ -41,7 +39,6 @@ class SectionCard extends StatelessWidget {
 
   String buildSVG(MapSurvey map) {
     StringBuffer result = StringBuffer("");
-    StringBuffer bufr = StringBuffer("");
     result.writeln(
         "<svg version=\"1.1\" height=\"800\" viewBox=\"-$margin -$margin ${displayWidth + margin} ${displayHeight + margin}\" xmlns=\"http://www.w3.org/2000/svg\">");
     result.writeln(

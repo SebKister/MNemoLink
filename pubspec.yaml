@@ -39,6 +39,7 @@ dependencies:
   file_picker: ^4.6.1
   excel: ^2.0.0-null-safety-3
   flutter_svg: ^1.0.3
+  loading_animation_widget: ^1.2.0+2
 
 dev_dependencies:
   flutter_test:

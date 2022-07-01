@@ -12,7 +12,7 @@ class MapSurvey {
 // Get the empty section case out of the way
     if (section.shots.isEmpty) return;
 
-    Point<double> start = Point<double>(0, 0);
+    Point<double> start = const Point<double>(0, 0);
     points.add(start);
 
     for (int i = 0; i < section.shots.length; i++) {
@@ -65,17 +65,18 @@ class MapSurvey {
     xSize = maxPoint.x - minPoint.x;
     ySize = maxPoint.y - minPoint.y;
 
-    if (xSize > ySize)
+    if (xSize > ySize) {
       maxSize = xSize;
-    else
+    } else {
       maxSize = ySize;
+    }
 
     MapSurvey dMap = MapSurvey();
-    double MAPDISPLAYSIZE = displayWidth as double,
+    double MAPDISPLAYSIZE = displayWidth,
         MAPDISPLAYSIZEX = 3,
         MAPDISPLAYSIZEY = 3;
 
-    for (int i = 0; i < this.points.length; i++) {
+    for (int i = 0; i < points.length; i++) {
       dMap.points.add(Point(
           (points[i].x - minPoint.x - (maxPoint.x - minPoint.x) / 2.0) *
                   MAPDISPLAYSIZE /

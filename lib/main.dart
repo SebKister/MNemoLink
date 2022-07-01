@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_libserialport/flutter_libserialport.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:mnemolink/excelexport.dart';
 import 'package:mnemolink/sectioncard.dart';
 import 'package:mnemolink/settingcard.dart';
@@ -62,6 +63,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
   var factorySettingsLockSlider = true;
 
+  bool serialBusy = false;
+
   @override
   void initState() {
     super.initState();
@@ -95,7 +98,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void onReadData() {
-    executeCLI("getdata");
+    executeCLIAsync("getdata");
   }
 
   int readByteFromEEProm(int adresse) {
@@ -227,6 +230,13 @@ class _MyHomePageState extends State<MyHomePage> {
             child: Row(
               children: connected
                   ? [
+                      (serialBusy)
+                          ? Container(
+                              padding: const EdgeInsets.only(right: 30),
+                              child: LoadingAnimationWidget.inkDrop(
+                                  color: Colors.white60, size: 20),
+                            )
+                          : const SizedBox.shrink(),
                       Column(
                         children: [
                           Text("MNemo Connected on $mnemoPortAddress"),
@@ -279,17 +289,20 @@ class _MyHomePageState extends State<MyHomePage> {
                                 AppBar(
                                   actions: [
                                     IconButton(
-                                      onPressed: onReadData,
+                                      onPressed:
+                                          (serialBusy) ? null : onReadData,
                                       icon: const Icon(Icons.refresh),
                                       tooltip: "Read Data from Device",
                                     ),
                                     IconButton(
-                                      onPressed: onSaveDMP,
+                                      onPressed:
+                                          (serialBusy) ? null : onSaveDMP,
                                       icon: const Icon(Icons.save),
                                       tooltip: "Save as DMP",
                                     ),
                                     IconButton(
-                                      onPressed: onExportXLS,
+                                      onPressed:
+                                          (serialBusy) ? null : onExportXLS,
                                       icon: const Icon(Icons.save_alt),
                                       tooltip: "Export as XLS",
                                     ),
@@ -333,8 +346,9 @@ class _MyHomePageState extends State<MyHomePage> {
                                             icon: Icons.timer,
                                             actionWidget: SettingActionButton(
                                                 "SYNC NOW",
-                                                () =>
-                                                    executeCLI("syncdatetime")),
+                                                (serialBusy)
+                                                    ? null
+                                                    : () => onSyncDateTime()),
                                           ),
                                           SettingCard(
                                             name: "Stabilization",
@@ -345,18 +359,21 @@ class _MyHomePageState extends State<MyHomePage> {
                                               children: [
                                                 SettingActionButton(
                                                     "GET CURRENT",
-                                                    () =>
-                                                        getCurrentStabilizationFactor()),
+                                                    (serialBusy)
+                                                        ? null
+                                                        : () =>
+                                                            getCurrentStabilizationFactor()),
                                                 SettingActionRadioList(
-                                                    "SYNC NOW", {
-                                                  "LOW": 50,
-                                                  "MID": 100,
-                                                  "HIGH": 220
-                                                }, (e) {
-                                                  executeCLI(
-                                                      "setstabilizationfactor $e");
-                                                  getCurrentStabilizationFactor();
-                                                }, stabilizationFactor),
+                                                    "SYNC NOW",
+                                                    {
+                                                      "LOW": 50,
+                                                      "MID": 100,
+                                                      "HIGH": 220
+                                                    },
+                                                    (serialBusy)
+                                                        ? null
+                                                        : setStabilizationFactor,
+                                                    stabilizationFactor),
                                               ],
                                             ),
                                           ),
@@ -371,16 +388,22 @@ class _MyHomePageState extends State<MyHomePage> {
                                               children: [
                                                 SettingActionButton(
                                                     "GET CURRENT",
-                                                    () => getCurrentWifiList()),
-                                                SettingWifiList(wifiList, (e) {
-                                                  executeCLI(
-                                                      "removewifinet $e");
-                                                  getCurrentWifiList();
-                                                }),
+                                                    (serialBusy)
+                                                        ? null
+                                                        : () =>
+                                                            getCurrentWifiList()),
+                                                SettingWifiList(
+                                                    wifiList,
+                                                    (serialBusy)
+                                                        ? null
+                                                        : removeFromWifiList),
                                                 SettingWifiActionButton(
                                                     "ADD NEW",
-                                                    (e, f) =>
-                                                        addToWifiList(e, f)),
+                                                    (serialBusy)
+                                                        ? null
+                                                        : (e, f) =>
+                                                            addToWifiList(
+                                                                e, f)),
                                               ],
                                             ),
                                           ),
@@ -397,18 +420,21 @@ class _MyHomePageState extends State<MyHomePage> {
                                                   children: [
                                                     SettingActionButton(
                                                         "GET CURRENT",
-                                                        () =>
-                                                            getCurrentClickThreshold()),
+                                                        (serialBusy)
+                                                            ? null
+                                                            : () =>
+                                                                getCurrentClickThreshold()),
                                                     SettingActionRadioList(
-                                                        "SYNC NOW", {
-                                                      "LOW": 50,
-                                                      "MID": 40,
-                                                      "HIGH": 35
-                                                    }, (e) {
-                                                      executeCLI(
-                                                          "setclickthreshold $e");
-                                                      getCurrentClickThreshold();
-                                                    }, clickThreshold),
+                                                        "SYNC NOW",
+                                                        {
+                                                          "LOW": 50,
+                                                          "MID": 40,
+                                                          "HIGH": 35
+                                                        },
+                                                        (serialBusy)
+                                                            ? null
+                                                            : setClickThreshold,
+                                                        clickThreshold),
                                                   ],
                                                 ),
                                               ),
@@ -439,43 +465,52 @@ class _MyHomePageState extends State<MyHomePage> {
                                                   children: [
                                                     SettingActionButton(
                                                         "GET X",
-                                                        () =>
-                                                            getCurrentXCompass()),
+                                                        (serialBusy)
+                                                            ? null
+                                                            : () =>
+                                                                getCurrentXCompass()),
                                                     SettingActionRadioList(
-                                                        "SYNC NOW", {
-                                                      "1": 1,
-                                                      "-1": 255,
-                                                    }, (e) {
-                                                      executeCLI(
-                                                          "eepromwrite 32 $e");
-                                                      getCurrentXCompass();
-                                                    }, xCompass),
+                                                        "SYNC NOW",
+                                                        {
+                                                          "1": 1,
+                                                          "-1": 255,
+                                                        },
+                                                        (serialBusy)
+                                                            ? null
+                                                            : setXCompass,
+                                                        xCompass),
                                                     SettingActionButton(
                                                         "GET Y",
-                                                        () =>
-                                                            getCurrentYCompass()),
+                                                        (serialBusy)
+                                                            ? null
+                                                            : () =>
+                                                                getCurrentYCompass()),
                                                     SettingActionRadioList(
-                                                        "SYNC NOW", {
-                                                      "1": 1,
-                                                      "-1": 255,
-                                                    }, (e) {
-                                                      executeCLI(
-                                                          "eepromwrite 33 $e");
-                                                      getCurrentYCompass();
-                                                    }, yCompass),
+                                                        "SYNC NOW",
+                                                        {
+                                                          "1": 1,
+                                                          "-1": 255,
+                                                        },
+                                                        (serialBusy)
+                                                            ? null
+                                                            : setYCompass,
+                                                        yCompass),
                                                     SettingActionButton(
                                                         "GET Z",
-                                                        () =>
-                                                            getCurrentZCompass()),
+                                                        (serialBusy)
+                                                            ? null
+                                                            : () =>
+                                                                getCurrentZCompass()),
                                                     SettingActionRadioList(
-                                                        "SYNC NOW", {
-                                                      "1": 1,
-                                                      "-1": 255,
-                                                    }, (e) {
-                                                      executeCLI(
-                                                          "eepromwrite 34 $e");
-                                                      getCurrentZCompass();
-                                                    }, zCompass),
+                                                        "SYNC NOW",
+                                                        {
+                                                          "1": 1,
+                                                          "-1": 255,
+                                                        },
+                                                        (serialBusy)
+                                                            ? null
+                                                            : setZCompass,
+                                                        zCompass),
                                                   ],
                                                 ),
                                               ),
@@ -515,10 +550,9 @@ class _MyHomePageState extends State<MyHomePage> {
                                                   const EdgeInsetsDirectional
                                                       .fromSTEB(20, 0, 0, 0),
                                               child: TextFormField(
-                                                onFieldSubmitted:
-                                                    (command) async {
-                                                  executeCLI(command);
-                                                },
+                                                onFieldSubmitted:  (serialBusy)
+                                                    ? null:
+                                                    onExecuteCLICommand,
                                                 autofocus: true,
                                                 obscureText: false,
                                                 decoration:
@@ -602,6 +636,40 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
+  void onExecuteCLICommand(command) async {
+    executeCLIAsync(command);
+  }
+
+  Future<void> setZCompass(e) async {
+    await executeCLIAsync("eepromwrite 34 $e");
+    getCurrentZCompass();
+  }
+
+  Future<void> setYCompass(e) async {
+    await executeCLIAsync("eepromwrite 33 $e");
+    getCurrentYCompass();
+  }
+
+  Future<void> setXCompass(e) async {
+    await executeCLIAsync("eepromwrite 32 $e");
+    getCurrentXCompass();
+  }
+
+  Future<void> setClickThreshold(e) async {
+    await executeCLIAsync("setclickthreshold $e");
+    getCurrentClickThreshold();
+  }
+
+  Future<void> setStabilizationFactor(e) async {
+    await executeCLIAsync("setstabilizationfactor $e");
+    await getCurrentStabilizationFactor();
+  }
+
+  Future<void> removeFromWifiList(e) async {
+    await executeCLIAsync("removewifinet $e");
+    await getCurrentWifiList();
+  }
+
   void executeCLI(String rawCommand) {
     mnemoPort?.openReadWrite();
 
@@ -651,6 +719,89 @@ class _MyHomePageState extends State<MyHomePage> {
         mnemoPort?.close();
 
         break;
+    }
+  }
+
+  Future<void> executeCLIAsync(String rawCommand) async {
+    setState(() => serialBusy = true);
+    mnemoPort?.openReadWrite();
+
+    var command = rawCommand.trim();
+    var commandnl = '$command\n';
+
+    var uint8list = Uint8List.fromList(
+        utf8.decode(commandnl.runes.toList()).runes.toList());
+    int? nbwritten = mnemoPort?.write(uint8list);
+
+    setState(() => CLIHistory.add(
+        (nbwritten == commandnl.length) ? command : "Error $command"));
+
+    switch (command) {
+      case "getdata":
+        sections.getSections().clear();
+        await waitAnswerAsync();
+        analyzeTransferBuffer();
+        commandSent = true;
+        mnemoPort?.close();
+
+        break;
+
+      case "syncdatetime":
+        var startCodeInt = List<int>.empty(growable: true);
+
+        var date = DateTime.now();
+
+        startCodeInt.add(date.year % 1000);
+        startCodeInt.add(date.month);
+        startCodeInt.add(date.day);
+        startCodeInt.add(date.hour);
+        startCodeInt.add(date.minute);
+        var uint8list2 = Uint8List.fromList(startCodeInt);
+        int? nbwritten = mnemoPort?.write(uint8list2);
+        setState(() => CLIHistory.add(
+            (nbwritten == 5) ? "DateTime$date\n" : "Error in DateTime\n"));
+
+        commandSent = true;
+        mnemoPort?.close();
+        break;
+
+      default:
+        await waitAnswerAsync();
+        if (transferBuffer.isNotEmpty) displayAnswer();
+        commandSent = true;
+        mnemoPort?.close();
+
+        break;
+    }
+    setState(() => serialBusy = false);
+  }
+
+  Future<void> waitAnswerAsync() async {
+    int counterWait = 0;
+    transferBuffer.clear();
+    final mnemoPort = this.mnemoPort;
+
+    while (counterWait == 0) {
+      while (mnemoPort != null && mnemoPort.bytesAvailable <= 0) {
+        await Future.delayed(Duration(milliseconds: 20));
+
+        counterWait++;
+        if (counterWait == 100) {
+          break;
+        }
+      }
+      if (counterWait == 100) {
+        break;
+      }
+
+      counterWait = 0;
+
+      if (mnemoPort != null) {
+        var readBuffer8 = mnemoPort.read(mnemoPort.bytesAvailable);
+        for (int i = 0; i < readBuffer8.length; i++) {
+          transferBuffer.add(readBuffer8[i]);
+        }
+      }
     }
   }
 
@@ -720,48 +871,48 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  void onSyncDateTime() {
-    executeCLI("syncdatetime");
+  Future<void> onSyncDateTime() async {
+    await executeCLIAsync("syncdatetime");
   }
 
-  void getCurrentStabilizationFactor() {
-    executeCLI("getstabilizationfactor");
+  Future<void> getCurrentStabilizationFactor() async {
+    await executeCLIAsync("getstabilizationfactor");
     var decode = utf8.decode(transferBuffer);
     stabilizationFactor = int.parse(decode);
   }
 
-  void getCurrentClickThreshold() {
-    executeCLI("getclickthreshold");
+  Future<void> getCurrentClickThreshold() async {
+    await executeCLIAsync("getclickthreshold");
     var decode = utf8.decode(transferBuffer);
     clickThreshold = int.parse(decode);
   }
 
-  void getCurrentWifiList() {
-    executeCLI("listwifinet");
+  Future<void> getCurrentWifiList() async {
+    await executeCLIAsync("listwifinet");
     var decode = utf8.decode(transferBuffer);
     wifiList = decode.split(("\r\n"));
     wifiList.removeWhere((element) => element.isEmpty);
   }
 
-  addToWifiList(String name, String passwd) {
-    executeCLI("addwifinet $name $passwd");
-    getCurrentWifiList();
+  Future<void> addToWifiList(String name, String passwd) async {
+    await executeCLIAsync("addwifinet $name $passwd");
+    await getCurrentWifiList();
   }
 
-  getCurrentXCompass() {
-    executeCLI("eepromread 32");
+  Future<void> getCurrentXCompass() async {
+    await executeCLIAsync("eepromread 32");
     var decode = utf8.decode(transferBuffer);
     xCompass = int.parse(decode);
   }
 
-  getCurrentYCompass() {
-    executeCLI("eepromread 33");
+  Future<void> getCurrentYCompass() async {
+    await executeCLIAsync("eepromread 33");
     var decode = utf8.decode(transferBuffer);
     yCompass = int.parse(decode);
   }
 
-  getCurrentZCompass() {
-    executeCLI("eepromread 34");
+  Future<void> getCurrentZCompass() async {
+    await executeCLIAsync("eepromread 34");
     var decode = utf8.decode(transferBuffer);
     zCompass = int.parse(decode);
   }

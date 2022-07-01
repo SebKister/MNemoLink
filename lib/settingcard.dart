@@ -42,7 +42,7 @@ class SettingCard extends StatelessWidget {
 
 class SettingActionButton extends StatelessWidget {
   final String actionText;
-  final void Function() callback;
+  final void Function()? callback;
 
   const SettingActionButton(this.actionText, this.callback);
 
@@ -57,7 +57,7 @@ class SettingActionButton extends StatelessWidget {
 
 class SettingWifiActionButton extends StatelessWidget {
   final String actionText;
-  final void Function(String e, String f) callback;
+  final void Function(String e, String f)? callback;
 
   const SettingWifiActionButton(this.actionText, this.callback);
 
@@ -73,7 +73,7 @@ class SettingWifiActionButton extends StatelessWidget {
         children: [
           TextButton(
             child: Text(actionText),
-            onPressed: () => callback(
+            onPressed: callback==null? null:() => callback!(
                 controllerName.value.text, controllerPasswd.value.text),
           ),
           Container(
@@ -148,7 +148,7 @@ class SettingWifiList extends StatelessWidget {
           .map((String k) => Row(
                 children: [
                   IconButton(
-                    onPressed: () {
+                    onPressed:callback==null ? null: () {
                       callback!(k);
                     },
                     icon: const Icon(Icons.delete),
