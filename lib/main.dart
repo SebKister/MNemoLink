@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_libserialport/flutter_libserialport.dart';
+import 'package:flutter_window_close/flutter_window_close.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:mnemolink/excelexport.dart';
 import 'package:mnemolink/sectioncard.dart';
@@ -80,6 +81,16 @@ class _MyHomePageState extends State<MyHomePage> {
         cliScrollController.jumpTo(position);
         commandSent = false;
       }
+    });
+
+    FlutterWindowClose.setWindowShouldCloseHandler(() async {
+      if (mnemoPort != null &&
+          mnemoPort?.isOpen != null &&
+          mnemoPort!.isOpen == true) {
+        mnemoPort?.flush();
+        mnemoPort?.close();
+      }
+      return true;
     });
   }
 
@@ -784,12 +795,12 @@ class _MyHomePageState extends State<MyHomePage> {
 
         counterWait++;
         if (counterWait == 100) {
-          initMnemoPort();
+        //  initMnemoPort();
           break;
         }
       }
       if (counterWait == 100) {
-        initMnemoPort();
+       // initMnemoPort();
         break;
       }
 
