@@ -795,12 +795,12 @@ class _MyHomePageState extends State<MyHomePage> {
 
         counterWait++;
         if (counterWait == 100) {
-        //  initMnemoPort();
+          //  initMnemoPort();
           break;
         }
       }
       if (counterWait == 100) {
-       // initMnemoPort();
+        // initMnemoPort();
         break;
       }
 
@@ -811,6 +811,14 @@ class _MyHomePageState extends State<MyHomePage> {
         for (int i = 0; i < readBuffer8.length; i++) {
           transferBuffer.add(readBuffer8[i]);
         }
+      }
+      //Check if ending with transmissionovermessage
+      if (utf8
+          .decode(transferBuffer, allowMalformed: true)
+          .contains("MN2Over")) {
+        var lengthBuff = transferBuffer.length;
+        transferBuffer.removeRange(lengthBuff - 7, lengthBuff);
+        return;
       }
     }
   }
