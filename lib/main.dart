@@ -65,6 +65,10 @@ class _MyHomePageState extends State<MyHomePage> {
 
   bool serialBusy = false;
 
+  int dateFormat = -1;
+
+  int timeFormat = -1;
+
   @override
   void initState() {
     super.initState();
@@ -92,6 +96,7 @@ class _MyHomePageState extends State<MyHomePage> {
         connected = false;
       } else {
         mnemoPort = SerialPort(mnemoPortAddress);
+        mnemoPort?.flush();
         connected = true;
       }
     });
@@ -344,11 +349,45 @@ class _MyHomePageState extends State<MyHomePage> {
                                             subtitle:
                                                 "Synchronize date and time with the computer",
                                             icon: Icons.timer,
-                                            actionWidget: SettingActionButton(
-                                                "SYNC NOW",
-                                                (serialBusy)
-                                                    ? null
-                                                    : () => onSyncDateTime()),
+                                            actionWidget: Row(children: [
+                                              SettingActionButton(
+                                                  "SYNC NOW",
+                                                  (serialBusy)
+                                                      ? null
+                                                      : () => onSyncDateTime()),
+                                              SettingActionButton(
+                                                  "GET TIME FORMAT",
+                                                  (serialBusy)
+                                                      ? null
+                                                      : () =>
+                                                          getCurrentTimeFormat()),
+                                              SettingActionRadioList(
+                                                  "",
+                                                  {
+                                                    "24H": 0,
+                                                    "12AM/12PM": 1,
+                                                  },
+                                                  (serialBusy)
+                                                      ? null
+                                                      : setTimeFormat,
+                                                  timeFormat),
+                                              SettingActionButton(
+                                                  "GET DATE FORMAT",
+                                                  (serialBusy)
+                                                      ? null
+                                                      : () =>
+                                                          getCurrentDateFormat()),
+                                              SettingActionRadioList(
+                                                  "",
+                                                  {
+                                                    "DD/MM": 0,
+                                                    "MM/DD": 1,
+                                                  },
+                                                  (serialBusy)
+                                                      ? null
+                                                      : setDateFormat,
+                                                  dateFormat),
+                                            ]),
                                           ),
                                           SettingCard(
                                             name: "Stabilization",
@@ -550,9 +589,9 @@ class _MyHomePageState extends State<MyHomePage> {
                                                   const EdgeInsetsDirectional
                                                       .fromSTEB(20, 0, 0, 0),
                                               child: TextFormField(
-                                                onFieldSubmitted:  (serialBusy)
-                                                    ? null:
-                                                    onExecuteCLICommand,
+                                                onFieldSubmitted: (serialBusy)
+                                                    ? null
+                                                    : onExecuteCLICommand,
                                                 autofocus: true,
                                                 obscureText: false,
                                                 decoration:
@@ -670,56 +709,14 @@ class _MyHomePageState extends State<MyHomePage> {
     await getCurrentWifiList();
   }
 
-  void executeCLI(String rawCommand) {
-    mnemoPort?.openReadWrite();
+  Future<void> setTimeFormat(e) async {
+    await executeCLIAsync("eepromwrite 35 $e");
+    getCurrentTimeFormat();
+  }
 
-    var command = rawCommand.trim();
-    var commandnl = '$command\n';
-
-    var uint8list = Uint8List.fromList(
-        utf8.decode(commandnl.runes.toList()).runes.toList());
-    int? nbwritten = mnemoPort?.write(uint8list);
-
-    setState(() => CLIHistory.add(
-        (nbwritten == commandnl.length) ? command : "Error $command"));
-
-    switch (command) {
-      case "getdata":
-        sections.getSections().clear();
-        waitAnswer();
-        analyzeTransferBuffer();
-        commandSent = true;
-        mnemoPort?.close();
-
-        break;
-
-      case "syncdatetime":
-        var startCodeInt = List<int>.empty(growable: true);
-
-        var date = DateTime.now();
-
-        startCodeInt.add(date.year % 1000);
-        startCodeInt.add(date.month);
-        startCodeInt.add(date.day);
-        startCodeInt.add(date.hour);
-        startCodeInt.add(date.minute);
-        var uint8list2 = Uint8List.fromList(startCodeInt);
-        int? nbwritten = mnemoPort?.write(uint8list2);
-        setState(() => CLIHistory.add(
-            (nbwritten == 5) ? "DateTime$date\n" : "Error in DateTime\n"));
-
-        commandSent = true;
-        mnemoPort?.close();
-        break;
-
-      default:
-        waitAnswer();
-        if (transferBuffer.isNotEmpty) displayAnswer();
-        commandSent = true;
-        mnemoPort?.close();
-
-        break;
-    }
+  Future<void> setDateFormat(e) async {
+    await executeCLIAsync("eepromwrite 36 $e");
+    getCurrentDateFormat();
   }
 
   Future<void> executeCLIAsync(String rawCommand) async {
@@ -787,39 +784,12 @@ class _MyHomePageState extends State<MyHomePage> {
 
         counterWait++;
         if (counterWait == 100) {
+          initMnemoPort();
           break;
         }
       }
       if (counterWait == 100) {
-        break;
-      }
-
-      counterWait = 0;
-
-      if (mnemoPort != null) {
-        var readBuffer8 = mnemoPort.read(mnemoPort.bytesAvailable);
-        for (int i = 0; i < readBuffer8.length; i++) {
-          transferBuffer.add(readBuffer8[i]);
-        }
-      }
-    }
-  }
-
-  void waitAnswer() {
-    int counterWait = 0;
-    transferBuffer.clear();
-    final mnemoPort = this.mnemoPort;
-
-    while (counterWait == 0) {
-      while (mnemoPort != null && mnemoPort.bytesAvailable <= 0) {
-        sleep(const Duration(milliseconds: 20));
-
-        counterWait++;
-        if (counterWait == 100) {
-          break;
-        }
-      }
-      if (counterWait == 100) {
+        initMnemoPort();
         break;
       }
 
@@ -915,6 +885,18 @@ class _MyHomePageState extends State<MyHomePage> {
     await executeCLIAsync("eepromread 34");
     var decode = utf8.decode(transferBuffer);
     zCompass = int.parse(decode);
+  }
+
+  Future<void> getCurrentTimeFormat() async {
+    await executeCLIAsync("eepromread 35");
+    var decode = utf8.decode(transferBuffer);
+    timeFormat = int.parse(decode);
+  }
+
+  Future<void> getCurrentDateFormat() async {
+    await executeCLIAsync("eepromread 36");
+    var decode = utf8.decode(transferBuffer);
+    dateFormat = int.parse(decode);
   }
 }
 

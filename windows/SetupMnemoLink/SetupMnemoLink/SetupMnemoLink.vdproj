@@ -314,7 +314,7 @@
             }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_5FE97051A79D40189BEACE08E4A7E073"
             {
-            "SourcePath" = "8:..\\..\\..\\windows\\runner\\resources\\mnemo.ico"
+            "SourcePath" = "8:..\\..\\runner\\resources\\mnemo.ico"
             "TargetName" = "8:mnemo.ico"
             "Tag" = "8:"
             "Folder" = "8:_A063F5B5F8B9440EBD53B2C5C9432AE8"
@@ -545,15 +545,15 @@
         {
         "Name" = "8:Microsoft Visual Studio"
         "ProductName" = "8:MnemoLink"
-        "ProductCode" = "8:{9BC5FD79-9470-4A90-9426-1781AB03A852}"
-        "PackageCode" = "8:{56D4099E-FDF0-4D96-8A0C-6332A44C9F89}"
+        "ProductCode" = "8:{5DA76B79-67CA-49EB-AAFD-6F611C16E730}"
+        "PackageCode" = "8:{0BC5C313-20FF-4C08-B1E8-CC82A63D1AEA}"
         "UpgradeCode" = "8:{7DADBCA4-ECC4-4A07-915D-055391C70988}"
         "AspNetVersion" = "8:4.0.30319.0"
         "RestartWWWService" = "11:FALSE"
         "RemovePreviousVersions" = "11:TRUE"
         "DetectNewerInstalledVersion" = "11:TRUE"
         "InstallAllUsers" = "11:FALSE"
-        "ProductVersion" = "8:1.0.0"
+        "ProductVersion" = "8:1.0.1"
         "Manufacturer" = "8:Ariane's Line"
         "ARPHELPTELEPHONE" = "8:"
         "ARPHELPLINK" = "8:"
