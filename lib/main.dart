@@ -744,7 +744,13 @@ class _MyHomePageState extends State<MyHomePage> {
     setState(() => CLIHistory.add(
         (nbwritten == commandnl.length) ? command : "Error $command"));
 
-    switch (command) {
+    String commandnoPara = "";
+    if (command.contains(" "))
+      commandnoPara = command.split(" ").first.trim();
+    else
+      commandnoPara = command;
+
+    switch (commandnoPara) {
       case "getdata":
         sections.getSections().clear();
         await waitAnswerAsync();
@@ -772,7 +778,11 @@ class _MyHomePageState extends State<MyHomePage> {
         commandSent = true;
         mnemoPort?.close();
         break;
+      case "readfile":
+        await waitAnswerAsync();
+        await saveFile();
 
+        break;
       default:
         await waitAnswerAsync();
         if (transferBuffer.isNotEmpty) displayAnswer();
@@ -916,6 +926,22 @@ class _MyHomePageState extends State<MyHomePage> {
     await executeCLIAsync("eepromread 36");
     var decode = utf8.decode(transferBuffer);
     dateFormat = int.parse(decode);
+  }
+
+  Future<void> saveFile() async {
+    // Lets the user pick one file; files with any file extension can be selected
+    var result = await FilePicker.platform.saveFile(dialogTitle: "Save File");
+
+// The result will be null, if the user aborted the dialog
+    if (result != null) {
+      File file = File(result);
+      var sink = file.openWrite();
+
+      sink.add(transferBuffer);
+
+      await sink.flush();
+      await sink.close();
+    }
   }
 }
 
