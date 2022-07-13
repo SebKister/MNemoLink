@@ -44,7 +44,7 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   String mnemoPortAddress = "";
-  SerialPort? mnemoPort;
+  late SerialPort mnemoPort;
   bool connected = false;
   List<String> CLIHistory = [""];
   var transferBuffer = List<int>.empty(growable: true);
@@ -85,10 +85,10 @@ class _MyHomePageState extends State<MyHomePage> {
 
     FlutterWindowClose.setWindowShouldCloseHandler(() async {
       if (mnemoPort != null &&
-          mnemoPort?.isOpen != null &&
-          mnemoPort!.isOpen == true) {
-        mnemoPort?.flush();
-        mnemoPort?.close();
+          mnemoPort.isOpen != null &&
+          mnemoPort.isOpen == true) {
+        mnemoPort.flush();
+        mnemoPort.close();
       }
       return true;
     });
@@ -107,7 +107,10 @@ class _MyHomePageState extends State<MyHomePage> {
         connected = false;
       } else {
         mnemoPort = SerialPort(mnemoPortAddress);
-        mnemoPort?.flush();
+        SerialPortConfig config = SerialPortConfig();
+      //  config = mnemoPort.config;
+        config.baudRate = 9600;
+        mnemoPort.config = config;
         connected = true;
       }
     });
@@ -258,7 +261,7 @@ class _MyHomePageState extends State<MyHomePage> {
                           Text("MNemo Connected on $mnemoPortAddress"),
                           Text(
                               style: const TextStyle(fontSize: 12),
-                              ' SN ${mnemoPort?.serialNumber}')
+                              ' SN ${mnemoPort.serialNumber}')
                         ],
                       )
                     ]
@@ -416,9 +419,9 @@ class _MyHomePageState extends State<MyHomePage> {
                                                 SettingActionRadioList(
                                                     "SYNC NOW",
                                                     {
-                                                      "LOW": 50,
-                                                      "MID": 100,
-                                                      "HIGH": 220
+                                                      "LOW": 5,
+                                                      "MID": 10,
+                                                      "HIGH": 20
                                                     },
                                                     (serialBusy)
                                                         ? null
@@ -732,14 +735,22 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> executeCLIAsync(String rawCommand) async {
     setState(() => serialBusy = true);
-    mnemoPort?.openReadWrite();
+    var res = mnemoPort.openReadWrite();
+    mnemoPort.flush();
 
+    if (res == false) {
+      setState(() {
+        CLIHistory.add("Error Opening Port");
+        serialBusy = false;
+      });
+      return;
+    }
     var command = rawCommand.trim();
     var commandnl = '$command\n';
 
     var uint8list = Uint8List.fromList(
         utf8.decode(commandnl.runes.toList()).runes.toList());
-    int? nbwritten = mnemoPort?.write(uint8list);
+    int? nbwritten = mnemoPort.write(uint8list, timeout: 1000);
 
     setState(() => CLIHistory.add(
         (nbwritten == commandnl.length) ? command : "Error $command"));
@@ -756,7 +767,7 @@ class _MyHomePageState extends State<MyHomePage> {
         await waitAnswerAsync();
         analyzeTransferBuffer();
         commandSent = true;
-        mnemoPort?.close();
+        mnemoPort.close();
 
         break;
 
@@ -771,12 +782,12 @@ class _MyHomePageState extends State<MyHomePage> {
         startCodeInt.add(date.hour);
         startCodeInt.add(date.minute);
         var uint8list2 = Uint8List.fromList(startCodeInt);
-        int? nbwritten = mnemoPort?.write(uint8list2);
+        int? nbwritten = mnemoPort.write(uint8list2);
         setState(() => CLIHistory.add(
             (nbwritten == 5) ? "DateTime$date\n" : "Error in DateTime\n"));
 
         commandSent = true;
-        mnemoPort?.close();
+        mnemoPort.close();
         break;
       case "readfile":
         await waitAnswerAsync();
@@ -787,7 +798,7 @@ class _MyHomePageState extends State<MyHomePage> {
         await waitAnswerAsync();
         if (transferBuffer.isNotEmpty) displayAnswer();
         commandSent = true;
-        mnemoPort?.close();
+        mnemoPort.close();
 
         break;
     }
