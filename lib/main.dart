@@ -3,7 +3,8 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_libserialport/flutter_libserialport.dart';
-import 'package:flutter_window_close/flutter_window_close.dart';
+
+//import 'package:flutter_window_close/flutter_window_close.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:mnemolink/excelexport.dart';
 import 'package:mnemolink/sectioncard.dart';
@@ -73,7 +74,6 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
-    initMnemoPort();
 
     cliScrollController.addListener(() {
       if (cliScrollController.hasClients && commandSent) {
@@ -82,16 +82,18 @@ class _MyHomePageState extends State<MyHomePage> {
         commandSent = false;
       }
     });
-
+/*
     FlutterWindowClose.setWindowShouldCloseHandler(() async {
-      if (mnemoPort != null &&
+    return await (){  if (mnemoPort != null &&
           mnemoPort.isOpen != null &&
           mnemoPort.isOpen == true) {
         mnemoPort.flush();
         mnemoPort.close();
       }
-      return true;
+      return true;}();
     });
+*/
+    initMnemoPort();
   }
 
   String getMnemoAddress() {
@@ -108,7 +110,7 @@ class _MyHomePageState extends State<MyHomePage> {
       } else {
         mnemoPort = SerialPort(mnemoPortAddress);
         SerialPortConfig config = SerialPortConfig();
-      //  config = mnemoPort.config;
+        //  config = mnemoPort.config;
         config.baudRate = 9600;
         mnemoPort.config = config;
         connected = true;
@@ -276,7 +278,7 @@ class _MyHomePageState extends State<MyHomePage> {
         children: (!connected)
             ? <Widget>[
                 const Center(
-                  child: Text("Click on connect"),
+                  child: Text("Connect the Mnemo to your computer and restart the application"),
                 ),
               ]
             : <Widget>[
@@ -681,11 +683,7 @@ class _MyHomePageState extends State<MyHomePage> {
               ],
       ),
 
-      floatingActionButton: FloatingActionButton(
-        onPressed: (connected) ? null : initMnemoPort,
-        tooltip: 'Connect to the Mnemo',
-        child: const Icon(Icons.connect_without_contact),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+      // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 
