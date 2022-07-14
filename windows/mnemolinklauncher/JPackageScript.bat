@@ -1,0 +1,13 @@
+ "C:\Program Files\Amazon Corretto\jdk17.0.3_6\bin\jpackage.exe" ^
+ -i ".\build\install\mnemolinklauncher\lib" ^
+ -n "MnemoLink" ^
+ --main-class "com.arianesline.mnemolink.MnemoLinkLauncher" ^
+ --main-jar "mnemolinklauncher-1.0.0.jar" ^
+--app-version 1.0.0 ^
+--copyright "Sebastien Kister" ^
+--description "Cave mapping solution" ^
+--vendor "Ariane's Line" ^
+--verbose ^
+--win-menu ^
+--win-shortcut ^
+--icon ".\packaging\windows\mnemo.ico"

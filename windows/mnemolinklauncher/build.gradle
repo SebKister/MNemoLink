@@ -1,0 +1,26 @@
+buildscript {
+    repositories {
+
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+}
+plugins {
+    id 'application'
+}
+
+group 'com.arianesline'
+version '1.0.0'
+
+repositories {
+    mavenCentral()
+}
+mainClassName = 'com.arianesline.mnemolink.MnemoLinkLauncher'
+dependencies {
+    implementation 'com.fazecast:jSerialComm:[2.0.0,3.0.0)'
+}
+
+test {
+    useJUnitPlatform()
+}
