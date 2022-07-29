@@ -60,6 +60,7 @@ class _MyHomePageState extends State<MyHomePage> {
   int xCompass = 0;
   int yCompass = 0;
   int zCompass = 0;
+  int calMode = -1;
 
   bool factorySettingsLock = true;
 
@@ -278,7 +279,8 @@ class _MyHomePageState extends State<MyHomePage> {
         children: (!connected)
             ? <Widget>[
                 const Center(
-                  child: Text("Connect the Mnemo to your computer and restart the application"),
+                  child: Text(
+                      "Connect the Mnemo to your computer and restart the application"),
                 ),
               ]
             : <Widget>[
@@ -566,6 +568,22 @@ class _MyHomePageState extends State<MyHomePage> {
                                                             ? null
                                                             : setZCompass,
                                                         zCompass),
+                                                    SettingActionButton(
+                                                        "GET CAL. MODE",
+                                                        (serialBusy)
+                                                            ? null
+                                                            : () =>
+                                                                getCurrentCalMode()),
+                                                    SettingActionRadioList(
+                                                        "SYNC NOW",
+                                                        {
+                                                          "SLOW": 0,
+                                                          "FAST": 1,
+                                                        },
+                                                        (serialBusy)
+                                                            ? null
+                                                            : setCalMode,
+                                                        calMode),
                                                   ],
                                                 ),
                                               ),
@@ -694,6 +712,11 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<void> setZCompass(e) async {
     await executeCLIAsync("eepromwrite 34 $e");
     getCurrentZCompass();
+  }
+
+  Future<void> setCalMode(e) async {
+    await executeCLIAsync("eepromwrite 37 $e");
+    getCurrentCalMode();
   }
 
   Future<void> setYCompass(e) async {
@@ -921,6 +944,12 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> getCurrentZCompass() async {
     await executeCLIAsync("eepromread 34");
+    var decode = utf8.decode(transferBuffer);
+    zCompass = int.parse(decode);
+  }
+
+  Future<void> getCurrentCalMode() async {
+    await executeCLIAsync("eepromread 37");
     var decode = utf8.decode(transferBuffer);
     zCompass = int.parse(decode);
   }
