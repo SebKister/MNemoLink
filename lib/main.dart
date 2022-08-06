@@ -110,10 +110,10 @@ class _MyHomePageState extends State<MyHomePage> {
         connected = false;
       } else {
         mnemoPort = SerialPort(mnemoPortAddress);
-        SerialPortConfig config = SerialPortConfig();
+       // SerialPortConfig config = SerialPortConfig();
         //  config = mnemoPort.config;
-        config.baudRate = 9600;
-        mnemoPort.config = config;
+       // config.baudRate = 9600;
+       // mnemoPort.config = config;
         connected = true;
       }
     });

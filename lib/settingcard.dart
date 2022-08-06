@@ -93,6 +93,7 @@ class SettingWifiActionButton extends StatelessWidget {
             height: 80,
             child: TextFormField(
               controller: controllerPasswd,
+              obscureText: true,
               decoration: const InputDecoration(
                 labelText: "Password",
               ),
