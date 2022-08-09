@@ -21,7 +21,7 @@ class MapSurvey {
       points.add(Point(
           points[i].x +
               factecr * sin(-section.shots[i].headingOut / 3600.0 * 2.0 * pi),
-          points[i].y -
+          points[i].y +
               factecr * cos(section.shots[i].headingOut / 3600.0 * 2.0 * pi)));
     }
   }
