@@ -951,7 +951,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<void> getCurrentCalMode() async {
     await executeCLIAsync("eepromread 37");
     var decode = utf8.decode(transferBuffer);
-    zCompass = int.parse(decode);
+    calMode = int.parse(decode);
   }
 
   Future<void> getCurrentTimeFormat() async {
