@@ -54,6 +54,7 @@ class _MyHomePageState extends State<MyHomePage> {
   bool commandSent = false;
   UnitType unitType = UnitType.METRIC;
   int stabilizationFactor = 0;
+  String nameDevice = "";
   int clickThreshold = 30;
   List<String> wifiList = [];
 
@@ -103,18 +104,19 @@ class _MyHomePageState extends State<MyHomePage> {
         orElse: () => "");
   }
 
-  void initMnemoPort() {
+  Future<void> initMnemoPort() async {
     setState(() {
       mnemoPortAddress = getMnemoAddress();
       if (mnemoPortAddress == "") {
         connected = false;
       } else {
         mnemoPort = SerialPort(mnemoPortAddress);
-       // SerialPortConfig config = SerialPortConfig();
+        // SerialPortConfig config = SerialPortConfig();
         //  config = mnemoPort.config;
-       // config.baudRate = 9600;
-       // mnemoPort.config = config;
+        // config.baudRate = 9600;
+        // mnemoPort.config = config;
         connected = true;
+        getCurrentName();
       }
     });
   }
@@ -261,7 +263,7 @@ class _MyHomePageState extends State<MyHomePage> {
                           : const SizedBox.shrink(),
                       Column(
                         children: [
-                          Text("MNemo Connected on $mnemoPortAddress"),
+                          Text("[$nameDevice] Connected on $mnemoPortAddress"),
                           Text(
                               style: const TextStyle(fontSize: 12),
                               ' SN ${mnemoPort.serialNumber}')
@@ -763,6 +765,7 @@ class _MyHomePageState extends State<MyHomePage> {
       setState(() {
         CLIHistory.add("Error Opening Port");
         serialBusy = false;
+        connected=false;
       });
       return;
     }
@@ -900,6 +903,11 @@ class _MyHomePageState extends State<MyHomePage> {
       File file = File(result);
       exportAsExcel(sections, file, unitType);
     }
+  }
+
+  Future<void> getCurrentName() async {
+    await executeCLIAsync("getname");
+    nameDevice = utf8.decode(transferBuffer).trim();
   }
 
   Future<void> onSyncDateTime() async {
