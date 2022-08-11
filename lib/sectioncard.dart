@@ -30,7 +30,7 @@ class SectionCard extends StatelessWidget {
       elevation: 2,
       child: ListTile(
         title: Text(section.name),
-        subtitle: Text("#${section.shots.length}"),
+        subtitle: Text("#${section.shots.length-1}"),
         trailing: Text(DateFormat('yyyy-MM-dd').format(section.dateSurey)),
         leading: picture,
       ),
