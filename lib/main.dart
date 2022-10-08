@@ -25,7 +25,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'MNemo Link',
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
@@ -800,7 +800,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
         var date = DateTime.now();
 
-        startCodeInt.add(date.year % 1000);
+        startCodeInt.add(date.year % 100);
         startCodeInt.add(date.month);
         startCodeInt.add(date.day);
         startCodeInt.add(date.hour);
