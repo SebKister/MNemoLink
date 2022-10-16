@@ -5,7 +5,7 @@ class Section {
     shots = [];
   }
 
-  SurveyDirection direction = SurveyDirection.SURVEY_IN;
+  SurveyDirection direction = SurveyDirection.surveyIn;
 
   /// Get the value of direction
   ///

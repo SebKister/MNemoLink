@@ -3,10 +3,10 @@ import 'dart:math';
 import 'package:mnemolink/section.dart';
 
 class MapSurvey {
-  int ID = 0;
+  int id = 0;
   List<Point<double>> points = [];
 
-  MapSurvey() {}
+  MapSurvey();
 
   void buildMap(Section section) {
 // Get the empty section case out of the way
@@ -72,22 +72,22 @@ class MapSurvey {
     }
 
     MapSurvey dMap = MapSurvey();
-    double MAPDISPLAYSIZE = displayWidth,
-        MAPDISPLAYSIZEX = 3,
-        MAPDISPLAYSIZEY = 3;
+    double mapDisplaySize = displayWidth,
+        mapDisplaySizeX = 3,
+        mapDisplaySizeY = 3;
 
     for (int i = 0; i < points.length; i++) {
       dMap.points.add(Point(
           (points[i].x - minPoint.x - (maxPoint.x - minPoint.x) / 2.0) *
-                  MAPDISPLAYSIZE /
+                  mapDisplaySize /
                   maxSize +
-              MAPDISPLAYSIZEX +
-              MAPDISPLAYSIZE / 2,
+              mapDisplaySizeX +
+              mapDisplaySize / 2,
           (points[i].y - minPoint.y - (maxPoint.y - minPoint.y) / 2.0) *
-                  MAPDISPLAYSIZE /
+                  mapDisplaySize /
                   maxSize +
-              MAPDISPLAYSIZEY +
-              MAPDISPLAYSIZE / 2));
+              mapDisplaySizeY +
+              mapDisplaySize / 2));
     }
 
     return dMap;

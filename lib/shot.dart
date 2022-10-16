@@ -1,6 +1,6 @@
  class Shot {
 
-   TypeShot typeShot=TypeShot.STD;
+   TypeShot typeShot=TypeShot.std;
 
   /// Get the value of typeShot
   ///
@@ -139,19 +139,19 @@
     headingOut = 0;
     depthIn = 0;
     depthOut = 0;
-    typeShot=TypeShot.STD;
+    typeShot=TypeShot.std;
   }
 }
 
 
  enum SurveyDirection {
-  SURVEY_IN,SURVEY_OUT
+  surveyIn,surveyOut
 }
 
  enum TypeShot {
-  CSA, CSB, STD, EOC
+  csa, csb, std, eoc
 }
 
 enum UnitType{
-  METRIC,IMPERIAL
+  metric,imperial
 }
