@@ -47,12 +47,12 @@ class _MyHomePageState extends State<MyHomePage> {
   String mnemoPortAddress = "";
   late SerialPort mnemoPort;
   bool connected = false;
-  List<String> cliHistory = [""];
+  List<String> CLIHistory = [""];
   var transferBuffer = List<int>.empty(growable: true);
   SectionList sections = SectionList();
   var cliScrollController = ScrollController();
   bool commandSent = false;
-  UnitType unitType = UnitType.metric;
+  UnitType unitType = UnitType.METRIC;
   int stabilizationFactor = 0;
   String nameDevice = "";
   int clickThreshold = 30;
@@ -192,7 +192,7 @@ class _MyHomePageState extends State<MyHomePage> {
       }
 
       double conversionFactor = 0.0;
-      if (unitType == UnitType.metric) {
+      if (unitType == UnitType.METRIC) {
         conversionFactor = 1.0;
       } else {
         conversionFactor = 3.28084;
@@ -235,7 +235,7 @@ class _MyHomePageState extends State<MyHomePage> {
         shot.setMarkerIndex(readByteFromEEProm(cursor++));
 
         section.getShots().add(shot);
-      } while (shot.getTypeShot() != TypeShot.eoc);
+      } while (shot.getTypeShot() != TypeShot.EOC);
 
       setState(() {
         sections.getSections().add(section);
@@ -383,7 +383,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                           getCurrentTimeFormat()),
                                               SettingActionRadioList(
                                                   "",
-                                                  const {
+                                                  {
                                                     "24H": 0,
                                                     "12AM/12PM": 1,
                                                   },
@@ -399,7 +399,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                           getCurrentDateFormat()),
                                               SettingActionRadioList(
                                                   "",
-                                                  const {
+                                                  {
                                                     "DD/MM": 0,
                                                     "MM/DD": 1,
                                                   },
@@ -424,7 +424,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                             getCurrentStabilizationFactor()),
                                                 SettingActionRadioList(
                                                     "SYNC NOW",
-                                                    const {
+                                                    {
                                                       "LOW": 5,
                                                       "MID": 10,
                                                       "HIGH": 20
@@ -485,10 +485,10 @@ class _MyHomePageState extends State<MyHomePage> {
                                                                 getCurrentClickThreshold()),
                                                     SettingActionRadioList(
                                                         "SYNC NOW",
-                                                        const {
+                                                        {
                                                           "LOW": 50,
                                                           "MID": 40,
-                                                          "HIGH": 30
+                                                          "HIGH": 35
                                                         },
                                                         (serialBusy)
                                                             ? null
@@ -530,7 +530,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                                 getCurrentXCompass()),
                                                     SettingActionRadioList(
                                                         "SYNC NOW",
-                                                        const {
+                                                        {
                                                           "1": 1,
                                                           "-1": 255,
                                                         },
@@ -546,7 +546,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                                 getCurrentYCompass()),
                                                     SettingActionRadioList(
                                                         "SYNC NOW",
-                                                        const {
+                                                        {
                                                           "1": 1,
                                                           "-1": 255,
                                                         },
@@ -562,7 +562,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                                 getCurrentZCompass()),
                                                     SettingActionRadioList(
                                                         "SYNC NOW",
-                                                        const {
+                                                        {
                                                           "1": 1,
                                                           "-1": 255,
                                                         },
@@ -578,7 +578,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                                 getCurrentCalMode()),
                                                     SettingActionRadioList(
                                                         "SYNC NOW",
-                                                        const {
+                                                        {
                                                           "SLOW": 0,
                                                           "FAST": 1,
                                                         },
@@ -680,7 +680,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                           padding: const EdgeInsets.all(20),
                                           shrinkWrap: true,
                                           scrollDirection: Axis.vertical,
-                                          children: cliHistory.map(
+                                          children: CLIHistory.map(
                                             (e) => Card(
                                               child: ListTile(
                                                 title: Text(e),
@@ -763,7 +763,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
     if (res == false) {
       setState(() {
-        cliHistory.add("Error Opening Port");
+        CLIHistory.add("Error Opening Port");
         serialBusy = false;
         connected=false;
       });
@@ -776,15 +776,14 @@ class _MyHomePageState extends State<MyHomePage> {
         utf8.decode(commandnl.runes.toList()).runes.toList());
     int? nbwritten = mnemoPort.write(uint8list, timeout: 1000);
 
-    setState(() => cliHistory.add(
+    setState(() => CLIHistory.add(
         (nbwritten == commandnl.length) ? command : "Error $command"));
 
     String commandnoPara = "";
-    if (command.contains(" ")) {
+    if (command.contains(" "))
       commandnoPara = command.split(" ").first.trim();
-    } else {
+    else
       commandnoPara = command;
-    }
 
     switch (commandnoPara) {
       case "getdata":
@@ -808,7 +807,7 @@ class _MyHomePageState extends State<MyHomePage> {
         startCodeInt.add(date.minute);
         var uint8list2 = Uint8List.fromList(startCodeInt);
         int? nbwritten = mnemoPort.write(uint8list2);
-        setState(() => cliHistory.add(
+        setState(() => CLIHistory.add(
             (nbwritten == 5) ? "DateTime$date\n" : "Error in DateTime\n"));
 
         commandSent = true;
@@ -836,8 +835,8 @@ class _MyHomePageState extends State<MyHomePage> {
     final mnemoPort = this.mnemoPort;
 
     while (counterWait == 0) {
-      while (mnemoPort.bytesAvailable <= 0) {
-        await Future.delayed(const Duration(milliseconds: 20));
+      while (mnemoPort != null && mnemoPort.bytesAvailable <= 0) {
+        await Future.delayed(Duration(milliseconds: 20));
 
         counterWait++;
         if (counterWait == 100) {
@@ -852,9 +851,11 @@ class _MyHomePageState extends State<MyHomePage> {
 
       counterWait = 0;
 
-      var readBuffer8 = mnemoPort.read(mnemoPort.bytesAvailable);
-      for (int i = 0; i < readBuffer8.length; i++) {
-        transferBuffer.add(readBuffer8[i]);
+      if (mnemoPort != null) {
+        var readBuffer8 = mnemoPort.read(mnemoPort.bytesAvailable);
+        for (int i = 0; i < readBuffer8.length; i++) {
+          transferBuffer.add(readBuffer8[i]);
+        }
       }
       //Check if ending with transmissionovermessage
       if (utf8
@@ -868,7 +869,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void displayAnswer() {
-    setState(() => cliHistory.add(utf8.decode(transferBuffer)));
+    setState(() => CLIHistory.add(utf8.decode(transferBuffer)));
   }
 
   Future<void> onSaveDMP() async {

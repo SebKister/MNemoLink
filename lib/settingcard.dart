@@ -8,7 +8,7 @@ class SettingCard extends StatelessWidget {
   final bool locked;
 
   const SettingCard(
-      {super.key, this.name = "",
+      {this.name = "",
       this.subtitle = "",
       this.icon = Icons.add,
       this.actionWidget = const Text("Action"),
@@ -44,7 +44,7 @@ class SettingActionButton extends StatelessWidget {
   final String actionText;
   final void Function()? callback;
 
-  const SettingActionButton(this.actionText, this.callback, {super.key});
+  const SettingActionButton(this.actionText, this.callback);
 
   @override
   Widget build(BuildContext context) {
@@ -59,7 +59,7 @@ class SettingWifiActionButton extends StatelessWidget {
   final String actionText;
   final void Function(String e, String f)? callback;
 
-  const SettingWifiActionButton(this.actionText, this.callback, {super.key});
+  const SettingWifiActionButton(this.actionText, this.callback);
 
   @override
   Widget build(BuildContext context) {
@@ -72,9 +72,9 @@ class SettingWifiActionButton extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           TextButton(
+            child: Text(actionText),
             onPressed: callback==null? null:() => callback!(
                 controllerName.value.text, controllerPasswd.value.text),
-            child: Text(actionText),
           ),
           Container(
             padding: const EdgeInsets.only(left: 20),
@@ -112,7 +112,7 @@ class SettingActionRadioList extends StatelessWidget {
   final int selectedValue;
 
   const SettingActionRadioList(
-      this.actionText, this.actionMap, this.callback, this.selectedValue, {super.key});
+      this.actionText, this.actionMap, this.callback, this.selectedValue);
 
   @override
   Widget build(BuildContext context) {
@@ -139,7 +139,7 @@ class SettingWifiList extends StatelessWidget {
   final List<String> wifiNets;
   final void Function(String? i)? callback;
 
-  const SettingWifiList(this.wifiNets, this.callback, {super.key});
+  const SettingWifiList(this.wifiNets, this.callback);
 
   @override
   Widget build(BuildContext context) {
