@@ -18,7 +18,7 @@ class SettingCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
         child: Container(
-          color: (locked) ?Colors.black12:Colors.transparent,
+      color: (locked) ? Colors.black12 : Colors.transparent,
       padding: const EdgeInsets.fromLTRB(20, 10, 0, 10),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -43,15 +43,49 @@ class SettingCard extends StatelessWidget {
 class SettingActionButton extends StatelessWidget {
   final String actionText;
   final void Function()? callback;
+  double widthButton = 0.0;
+  double heightButton = 0.0;
 
-  const SettingActionButton(this.actionText, this.callback);
+  SettingActionButton(this.actionText, this.callback);
+
+  SettingActionButton.sized(
+      this.actionText, this.callback, this.widthButton, this.heightButton);
 
   @override
   Widget build(BuildContext context) {
-    return TextButton(
-      onPressed: callback,
-      child: Text(actionText),
-    );
+    if (widthButton != 0.0 && heightButton != 0.0)
+      return SizedBox(
+        height: heightButton,
+        width: widthButton,
+        child: TextButton(
+          style: ButtonStyle(alignment: AlignmentDirectional.centerStart),
+          onPressed: callback,
+          child: Text(actionText),
+        ),
+      );
+    else if (widthButton != 0.0)
+      return SizedBox(
+        width: widthButton,
+        child: TextButton(
+          style: ButtonStyle(alignment: AlignmentDirectional.centerStart),
+          onPressed: callback,
+          child: Text(actionText),
+        ),
+      );
+    else if (heightButton != 0.0)
+      return SizedBox(
+        height: heightButton,
+        child: TextButton(
+          style: ButtonStyle(alignment: AlignmentDirectional.centerStart),
+          onPressed: callback,
+          child: Text(actionText),
+        ),
+      );
+    else
+      return TextButton(
+        onPressed: callback,
+        child: Text(actionText),
+      );
   }
 }
 
@@ -73,8 +107,10 @@ class SettingWifiActionButton extends StatelessWidget {
         children: [
           TextButton(
             child: Text(actionText),
-            onPressed: callback==null? null:() => callback!(
-                controllerName.value.text, controllerPasswd.value.text),
+            onPressed: callback == null
+                ? null
+                : () => callback!(
+                    controllerName.value.text, controllerPasswd.value.text),
           ),
           Container(
             padding: const EdgeInsets.only(left: 20),
@@ -149,9 +185,11 @@ class SettingWifiList extends StatelessWidget {
           .map((String k) => Row(
                 children: [
                   IconButton(
-                    onPressed:callback==null ? null: () {
-                      callback!(k);
-                    },
+                    onPressed: callback == null
+                        ? null
+                        : () {
+                            callback!(k);
+                          },
                     icon: const Icon(Icons.delete),
                   ),
                   Text(k),

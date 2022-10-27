@@ -3,8 +3,7 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_libserialport/flutter_libserialport.dart';
-
-//import 'package:flutter_window_close/flutter_window_close.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:mnemolink/excelexport.dart';
 import 'package:mnemolink/sectioncard.dart';
@@ -57,6 +56,19 @@ class _MyHomePageState extends State<MyHomePage> {
   String nameDevice = "";
   int clickThreshold = 30;
   List<String> wifiList = [];
+
+// create some values
+  Color pickerColor = Color(0xff443a49);
+  Color readingAColor = Color(0x00000000);
+  Color readingBColor = Color(0x00000000);
+  Color standbyColor = Color(0x00000000);
+  Color stabilizeColor = Color(0x00000000);
+  Color readyColor = Color(0x00000000);
+
+// ValueChanged<Color> callback
+  void changeColor(Color color) {
+    setState(() => pickerColor = color);
+  }
 
   int xCompass = 0;
   int yCompass = 0;
@@ -245,6 +257,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    const double widthColorButton = 150.0;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
@@ -466,6 +480,124 @@ class _MyHomePageState extends State<MyHomePage> {
                                               ],
                                             ),
                                           ),
+                                          SettingCard(
+                                            name: "Color Scheme",
+                                            subtitle:
+                                                "Colors defining survey steps",
+                                            icon: Icons.color_lens_outlined,
+                                            actionWidget: Row(
+                                              children: [
+                                                SettingActionButton.sized(
+                                                    "GET CURRENT",
+                                                    (serialBusy)
+                                                        ? null
+                                                        : () =>
+                                                            getCurrentColorScheme(),
+                                                    widthColorButton,
+                                                    0.0),
+                                                Column(
+                                                  children: [
+                                                    Row(children: [
+                                                      SettingActionButton.sized(
+                                                          "SET READINGA",
+                                                          (serialBusy)
+                                                              ? null
+                                                              : () =>
+                                                                  setCurrentColorSchemeReadingA(),
+                                                          widthColorButton,
+                                                          0.0),
+                                                      Placeholder(
+                                                        fallbackWidth: 100,
+                                                        fallbackHeight: 10,
+                                                        strokeWidth: 10,
+                                                        color: readingAColor,
+                                                      ),
+                                                    ]),
+                                                    Row(children: [
+                                                      SettingActionButton.sized(
+                                                          "SET READINGB",
+                                                          (serialBusy)
+                                                              ? null
+                                                              : () =>
+                                                                  setCurrentColorSchemeReadingB(),
+                                                          widthColorButton,
+                                                          0.0),
+                                                      Placeholder(
+                                                        fallbackWidth: 100,
+                                                        fallbackHeight: 10,
+                                                        strokeWidth: 10,
+                                                        color: readingBColor,
+                                                      ),
+                                                    ]),
+                                                    Row(children: [
+                                                      SettingActionButton.sized(
+                                                          "SET STANDBY",
+                                                          (serialBusy)
+                                                              ? null
+                                                              : () =>
+                                                                  setCurrentColorSchemeStandBy(),
+                                                          widthColorButton,
+                                                          0.0),
+                                                      Placeholder(
+                                                        fallbackWidth: 100,
+                                                        fallbackHeight: 10,
+                                                        strokeWidth: 10,
+                                                        color: standbyColor,
+                                                      ),
+                                                    ]),
+                                                    Row(children: [
+                                                      SettingActionButton.sized(
+                                                          "SET READY",
+                                                          (serialBusy)
+                                                              ? null
+                                                              : () =>
+                                                                  setCurrentColorSchemeReady(),
+                                                          widthColorButton,
+                                                          0.0),
+                                                      Placeholder(
+                                                        fallbackWidth: 100,
+                                                        fallbackHeight: 10,
+                                                        strokeWidth: 10,
+                                                        color: readyColor,
+                                                      ),
+                                                    ]),
+                                                    Row(children: [
+                                                      SettingActionButton.sized(
+                                                          "SET STABILIZE",
+                                                          (serialBusy)
+                                                              ? null
+                                                              : () =>
+                                                                  setCurrentColorSchemeStabilize(),
+                                                          widthColorButton,
+                                                          0.0),
+                                                      Placeholder(
+                                                        fallbackWidth: 100,
+                                                        fallbackHeight: 10,
+                                                        strokeWidth: 10,
+                                                        color: stabilizeColor,
+                                                      ),
+                                                    ]),
+                                                  ],
+                                                ),
+                                                SizedBox(width: 50),
+                                                SizedBox(
+                                                  height: 200,
+                                                  child: MaterialPicker(
+                                                    pickerColor: pickerColor,
+                                                    onColorChanged: changeColor,
+                                                    enableLabel: true,
+                                                  ),
+                                                ),
+                                                SizedBox(width: 50),
+                                                SettingActionButton(
+                                                    "RESET TO DEFAULT COLORS",
+                                                    (serialBusy)
+                                                        ? null
+                                                        : () =>
+                                                            resetColorScheme()),
+                                              ],
+                                            ),
+                                          ),
                                           Stack(
                                             children: [
                                               SettingCard(
@@ -488,7 +620,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                         {
                                                           "LOW": 50,
                                                           "MID": 40,
-                                                          "HIGH": 35
+                                                          "HIGH": 30
                                                         },
                                                         (serialBusy)
                                                             ? null
@@ -765,7 +897,7 @@ class _MyHomePageState extends State<MyHomePage> {
       setState(() {
         CLIHistory.add("Error Opening Port");
         serialBusy = false;
-        connected=false;
+        connected = false;
       });
       return;
     }
@@ -988,6 +1120,58 @@ class _MyHomePageState extends State<MyHomePage> {
       await sink.flush();
       await sink.close();
     }
+  }
+
+  Future<void> getCurrentColorScheme() async {
+    await executeCLIAsync("getcolor readinga");
+    var decode = utf8.decode(transferBuffer);
+    setState(() => readingAColor = Color(0xFF000000 + int.parse(decode)));
+
+    await executeCLIAsync("getcolor readingb");
+    decode = utf8.decode(transferBuffer);
+    setState(() => readingBColor = Color(0xFF000000 + int.parse(decode)));
+
+    await executeCLIAsync("getcolor standby");
+    decode = utf8.decode(transferBuffer);
+    setState(() => standbyColor = Color(0xFF000000 + int.parse(decode)));
+
+    await executeCLIAsync("getcolor ready");
+    decode = utf8.decode(transferBuffer);
+    setState(() => readyColor = Color(0xFF000000 + int.parse(decode)));
+
+    await executeCLIAsync("getcolor stabilize");
+    decode = utf8.decode(transferBuffer);
+    setState(() => stabilizeColor = Color(0xFF000000 + int.parse(decode)));
+  }
+
+  Future<void> setCurrentColorSchemeReadingA() async {
+    setState(() => readingAColor = pickerColor);
+    await executeCLIAsync("setcolor readinga " + pickerColor.value.toString());
+  }
+
+  Future<void> setCurrentColorSchemeReadingB() async {
+    setState(() => readingBColor = pickerColor);
+    await executeCLIAsync("setcolor readingb " + pickerColor.value.toString());
+  }
+
+  Future<void> setCurrentColorSchemeReady() async {
+    setState(() => readyColor = pickerColor);
+    await executeCLIAsync("setcolor ready " + pickerColor.value.toString());
+  }
+
+  Future<void> setCurrentColorSchemeStabilize() async {
+    setState(() => stabilizeColor = pickerColor);
+    await executeCLIAsync("setcolor stabilize " + pickerColor.value.toString());
+  }
+
+  Future<void> setCurrentColorSchemeStandBy() async {
+    setState(() => standbyColor = pickerColor);
+    await executeCLIAsync("setcolor standby " + pickerColor.value.toString());
+  }
+
+  Future<void> resetColorScheme() async {
+    await executeCLIAsync("defaultcolorscheme");
+    await getCurrentColorScheme();
   }
 }
 
