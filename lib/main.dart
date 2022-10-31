@@ -497,6 +497,14 @@ class _MyHomePageState extends State<MyHomePage> {
                                                     0.0),
                                                 Column(
                                                   children: [
+                                                    SettingActionButton.sized(
+                                                        "RESET TO DEFAULT",
+                                                        (serialBusy)
+                                                            ? null
+                                                            : () =>
+                                                                resetColorScheme(),
+                                                        widthColorButton,
+                                                        0.0),
                                                     Row(children: [
                                                       SettingActionButton.sized(
                                                           "SET READINGA",
@@ -589,12 +597,6 @@ class _MyHomePageState extends State<MyHomePage> {
                                                   ),
                                                 ),
                                                 SizedBox(width: 50),
-                                                SettingActionButton(
-                                                    "RESET TO DEFAULT COLORS",
-                                                    (serialBusy)
-                                                        ? null
-                                                        : () =>
-                                                            resetColorScheme()),
                                               ],
                                             ),
                                           ),
@@ -620,7 +622,8 @@ class _MyHomePageState extends State<MyHomePage> {
                                                         {
                                                           "LOW": 50,
                                                           "MID": 40,
-                                                          "HIGH": 30
+                                                          "HIGH": 30,
+                                                          "ULTRA HIGH": 25
                                                         },
                                                         (serialBusy)
                                                             ? null
