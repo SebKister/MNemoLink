@@ -55,6 +55,7 @@ class _MyHomePageState extends State<MyHomePage> {
   int stabilizationFactor = 0;
   String nameDevice = "";
   int clickThreshold = 30;
+  int clickBMDurationFactor = 100;
   List<String> wifiList = [];
 
 // create some values
@@ -78,6 +79,10 @@ class _MyHomePageState extends State<MyHomePage> {
   bool factorySettingsLock = true;
 
   var factorySettingsLockSlider = true;
+
+  bool factorySettingsLockBMDuration = true;
+
+  bool factorySettingsLockStabilizationFactor = true;
 
   bool serialBusy = false;
 
@@ -424,33 +429,6 @@ class _MyHomePageState extends State<MyHomePage> {
                                             ]),
                                           ),
                                           SettingCard(
-                                            name: "Stabilization",
-                                            subtitle:
-                                                "How much stability is required to get a compass reading",
-                                            icon: Icons.vibration,
-                                            actionWidget: Row(
-                                              children: [
-                                                SettingActionButton(
-                                                    "GET CURRENT",
-                                                    (serialBusy)
-                                                        ? null
-                                                        : () =>
-                                                            getCurrentStabilizationFactor()),
-                                                SettingActionRadioList(
-                                                    "SYNC NOW",
-                                                    {
-                                                      "LOW": 5,
-                                                      "MID": 10,
-                                                      "HIGH": 20
-                                                    },
-                                                    (serialBusy)
-                                                        ? null
-                                                        : setStabilizationFactor,
-                                                    stabilizationFactor),
-                                              ],
-                                            ),
-                                          ),
-                                          SettingCard(
                                             name: "WIFI",
                                             subtitle:
                                                 "Manage known WIFI networks",
@@ -604,6 +582,52 @@ class _MyHomePageState extends State<MyHomePage> {
                                             children: [
                                               SettingCard(
                                                 locked:
+                                                    factorySettingsLockStabilizationFactor,
+                                                name: "Stabilization",
+                                                subtitle:
+                                                    "How much stability is required to get a compass reading",
+                                                icon: Icons.vibration,
+                                                actionWidget: Row(
+                                                  children: [
+                                                    SettingActionButton(
+                                                        "GET CURRENT",
+                                                        (serialBusy)
+                                                            ? null
+                                                            : () =>
+                                                                getCurrentStabilizationFactor()),
+                                                    SettingActionRadioList(
+                                                        "SYNC NOW",
+                                                        {
+                                                          "LOW": 5,
+                                                          "MID": 10,
+                                                          "HIGH": 20
+                                                        },
+                                                        (serialBusy)
+                                                            ? null
+                                                            : setStabilizationFactor,
+                                                        stabilizationFactor),
+                                                  ],
+                                                ),
+                                              ),
+                                              IconButton(
+                                                  onPressed: () {
+                                                    setState(() {
+                                                      factorySettingsLockStabilizationFactor =
+                                                          !factorySettingsLockStabilizationFactor;
+                                                    });
+                                                  },
+                                                  icon:
+                                                      factorySettingsLockStabilizationFactor
+                                                          ? const Icon(
+                                                              Icons.lock)
+                                                          : const Icon(
+                                                              Icons.lock_open)),
+                                            ],
+                                          ),
+                                          Stack(
+                                            children: [
+                                              SettingCard(
+                                                locked:
                                                     factorySettingsLockSlider,
                                                 name: "Slider Button",
                                                 subtitle:
@@ -641,6 +665,53 @@ class _MyHomePageState extends State<MyHomePage> {
                                                   },
                                                   icon:
                                                       factorySettingsLockSlider
+                                                          ? const Icon(
+                                                              Icons.lock)
+                                                          : const Icon(
+                                                              Icons.lock_open)),
+                                            ],
+                                          ),
+                                          Stack(
+                                            children: [
+                                              SettingCard(
+                                                locked:
+                                                    factorySettingsLockBMDuration,
+                                                name: "Basic Mode",
+                                                subtitle:
+                                                    "Adjust the duration required to validate a command with the slider button",
+                                                icon: Icons.smart_button,
+                                                actionWidget: Row(
+                                                  children: [
+                                                    SettingActionButton(
+                                                        "GET CURRENT",
+                                                        (serialBusy)
+                                                            ? null
+                                                            : () =>
+                                                                getCurrentBMClickDurationFactor()),
+                                                    SettingActionRadioList(
+                                                        "SYNC NOW",
+                                                        {
+                                                          "EXTRA FAST": 25,
+                                                          "FAST": 50,
+                                                          "NORMAL": 100,
+                                                          "SLOW": 150
+                                                        },
+                                                        (serialBusy)
+                                                            ? null
+                                                            : setBMDurationFactor,
+                                                        clickBMDurationFactor),
+                                                  ],
+                                                ),
+                                              ),
+                                              IconButton(
+                                                  onPressed: () {
+                                                    setState(() {
+                                                      factorySettingsLockBMDuration =
+                                                          !factorySettingsLockBMDuration;
+                                                    });
+                                                  },
+                                                  icon:
+                                                      factorySettingsLockBMDuration
                                                           ? const Icon(
                                                               Icons.lock)
                                                           : const Icon(
@@ -871,6 +942,11 @@ class _MyHomePageState extends State<MyHomePage> {
     getCurrentClickThreshold();
   }
 
+  Future<void> setBMDurationFactor(e) async {
+    await executeCLIAsync("setBMclickfactor $e");
+    getCurrentBMClickDurationFactor();
+  }
+
   Future<void> setStabilizationFactor(e) async {
     await executeCLIAsync("setstabilizationfactor $e");
     await getCurrentStabilizationFactor();
@@ -1059,6 +1135,12 @@ class _MyHomePageState extends State<MyHomePage> {
     await executeCLIAsync("getclickthreshold");
     var decode = utf8.decode(transferBuffer);
     clickThreshold = int.parse(decode);
+  }
+
+  Future<void> getCurrentBMClickDurationFactor() async {
+    await executeCLIAsync("getBMclickfactor");
+    var decode = utf8.decode(transferBuffer);
+    clickBMDurationFactor = int.parse(decode);
   }
 
   Future<void> getCurrentWifiList() async {
