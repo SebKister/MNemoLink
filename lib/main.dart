@@ -56,6 +56,8 @@ class _MyHomePageState extends State<MyHomePage> {
   String nameDevice = "";
   int clickThreshold = 30;
   int clickBMDurationFactor = 100;
+  int safetySwitchON = -1;
+  int doubleTap=-1;
   List<String> wifiList = [];
 
 // create some values
@@ -76,6 +78,8 @@ class _MyHomePageState extends State<MyHomePage> {
   int zCompass = 0;
   int calMode = -1;
 
+  bool factorySettingsLockSafetyON = true;
+
   bool factorySettingsLock = true;
 
   var factorySettingsLockSlider = true;
@@ -83,6 +87,8 @@ class _MyHomePageState extends State<MyHomePage> {
   bool factorySettingsLockBMDuration = true;
 
   bool factorySettingsLockStabilizationFactor = true;
+
+  bool factorySettingsDoubleTapON=true;
 
   bool serialBusy = false;
 
@@ -721,6 +727,95 @@ class _MyHomePageState extends State<MyHomePage> {
                                           Stack(
                                             children: [
                                               SettingCard(
+                                                locked:
+                                                    factorySettingsLockSafetyON,
+                                                name: "Switch ON Safety",
+                                                subtitle:
+                                                    "Require to click right before switching on the device",
+                                                icon: Icons.smart_button,
+                                                actionWidget: Row(
+                                                  children: [
+                                                    SettingActionButton(
+                                                        "GET CURRENT",
+                                                        (serialBusy)
+                                                            ? null
+                                                            : () =>
+                                                                getCurrentsafetySwitchON()),
+                                                    SettingActionRadioList(
+                                                        "SYNC NOW",
+                                                        {
+                                                          "DISABLED": 0,
+                                                          "ENABLED": 1
+                                                        },
+                                                        (serialBusy)
+                                                            ? null
+                                                            : setCurrentsafetySwitchON,
+                                                        safetySwitchON),
+                                                  ],
+                                                ),
+                                              ),
+                                              IconButton(
+                                                  onPressed: () {
+                                                    setState(() {
+                                                      factorySettingsLockSafetyON =
+                                                          !factorySettingsLockSafetyON;
+                                                    });
+                                                  },
+                                                  icon:
+                                                      factorySettingsLockSafetyON
+                                                          ? const Icon(
+                                                              Icons.lock)
+                                                          : const Icon(
+                                                              Icons.lock_open)),
+                                            ],
+                                          ),  Stack(
+                                            children: [
+                                              SettingCard(
+                                                locked:
+                                                factorySettingsDoubleTapON,
+                                                name: "Double Tap",
+                                                subtitle:
+                                                "Double tap the Mnemo to display the current survey",
+                                                icon: Icons.smart_button,
+                                                actionWidget: Row(
+                                                  children: [
+                                                    SettingActionButton(
+                                                        "GET CURRENT",
+                                                        (serialBusy)
+                                                            ? null
+                                                            : () =>
+                                                            getCurrentDoubleTap()),
+                                                    SettingActionRadioList(
+                                                        "SYNC NOW",
+                                                        {
+                                                          "DISABLED": 0,
+                                                          "ENABLED": 1
+                                                        },
+                                                        (serialBusy)
+                                                            ? null
+                                                            : setCurrentDoubleTap,
+                                                        doubleTap),
+                                                  ],
+                                                ),
+                                              ),
+                                              IconButton(
+                                                  onPressed: () {
+                                                    setState(() {
+                                                      factorySettingsDoubleTapON =
+                                                      !factorySettingsDoubleTapON;
+                                                    });
+                                                  },
+                                                  icon:
+                                                  factorySettingsDoubleTapON
+                                                      ? const Icon(
+                                                      Icons.lock)
+                                                      : const Icon(
+                                                      Icons.lock_open)),
+                                            ],
+                                          ),
+                                          Stack(
+                                            children: [
+                                              SettingCard(
                                                 locked: factorySettingsLock,
                                                 name: "Compass HW parameter",
                                                 subtitle:
@@ -957,6 +1052,16 @@ class _MyHomePageState extends State<MyHomePage> {
     await getCurrentWifiList();
   }
 
+  Future<void> setCurrentsafetySwitchON(e) async {
+    await executeCLIAsync("eepromwrite 57 $e");
+    getCurrentsafetySwitchON();
+  }
+
+  Future<void> setCurrentDoubleTap(e) async {
+    await executeCLIAsync("eepromwrite 56 $e");
+    getCurrentDoubleTap();
+  }
+
   Future<void> setTimeFormat(e) async {
     await executeCLIAsync("eepromwrite 35 $e");
     getCurrentTimeFormat();
@@ -1141,6 +1246,18 @@ class _MyHomePageState extends State<MyHomePage> {
     await executeCLIAsync("getBMclickfactor");
     var decode = utf8.decode(transferBuffer);
     clickBMDurationFactor = int.parse(decode);
+  }
+
+  Future<void> getCurrentsafetySwitchON() async {
+    await executeCLIAsync("eepromread 57");
+    var decode = utf8.decode(transferBuffer);
+    safetySwitchON = int.parse(decode);
+  }
+
+  Future<void> getCurrentDoubleTap() async {
+    await executeCLIAsync("eepromread 56");
+    var decode = utf8.decode(transferBuffer);
+    doubleTap = int.parse(decode);
   }
 
   Future<void> getCurrentWifiList() async {
