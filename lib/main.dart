@@ -57,7 +57,7 @@ class _MyHomePageState extends State<MyHomePage> {
   int clickThreshold = 30;
   int clickBMDurationFactor = 100;
   int safetySwitchON = -1;
-  int doubleTap=-1;
+  int doubleTap = -1;
   List<String> wifiList = [];
 
 // create some values
@@ -88,7 +88,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   bool factorySettingsLockStabilizationFactor = true;
 
-  bool factorySettingsDoubleTapON=true;
+  bool factorySettingsDoubleTapON = true;
 
   bool serialBusy = false;
 
@@ -768,14 +768,15 @@ class _MyHomePageState extends State<MyHomePage> {
                                                           : const Icon(
                                                               Icons.lock_open)),
                                             ],
-                                          ),  Stack(
+                                          ),
+                                          Stack(
                                             children: [
                                               SettingCard(
                                                 locked:
-                                                factorySettingsDoubleTapON,
+                                                    factorySettingsDoubleTapON,
                                                 name: "Double Tap",
                                                 subtitle:
-                                                "Double tap the Mnemo to display the current survey",
+                                                    "Double tap the Mnemo to display the current survey",
                                                 icon: Icons.smart_button,
                                                 actionWidget: Row(
                                                   children: [
@@ -784,7 +785,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                         (serialBusy)
                                                             ? null
                                                             : () =>
-                                                            getCurrentDoubleTap()),
+                                                                getCurrentDoubleTap()),
                                                     SettingActionRadioList(
                                                         "SYNC NOW",
                                                         {
@@ -802,15 +803,15 @@ class _MyHomePageState extends State<MyHomePage> {
                                                   onPressed: () {
                                                     setState(() {
                                                       factorySettingsDoubleTapON =
-                                                      !factorySettingsDoubleTapON;
+                                                          !factorySettingsDoubleTapON;
                                                     });
                                                   },
                                                   icon:
-                                                  factorySettingsDoubleTapON
-                                                      ? const Icon(
-                                                      Icons.lock)
-                                                      : const Icon(
-                                                      Icons.lock_open)),
+                                                      factorySettingsDoubleTapON
+                                                          ? const Icon(
+                                                              Icons.lock)
+                                                          : const Icon(
+                                                              Icons.lock_open)),
                                             ],
                                           ),
                                           Stack(
