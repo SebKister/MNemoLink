@@ -8,7 +8,7 @@ import './sectionlist.dart';
 import './shot.dart';
 
 void writeHeaderOnSheet(Sheet sheet, int rowNumber) {
-  var ls = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"];
+  var ls = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"];
   int index = 0;
 
   var cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
@@ -36,11 +36,17 @@ void writeHeaderOnSheet(Sheet sheet, int rowNumber) {
   cell.value = "Pitch OUT";
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
+  cell.value = "Temperature";
+
+  cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
+  cell.value = "Time";
+
+  cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
   cell.value = "Marker";
 }
 
-void writeRowOnSheet(Shot data, Sheet sheet, int rowNumber) {
-  var ls = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"];
+void writeRowOnSheet(Section section, Shot data, Sheet sheet, int rowNumber) {
+  var ls = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"];
   int index = 0;
 
   var cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
@@ -68,6 +74,13 @@ void writeRowOnSheet(Shot data, Sheet sheet, int rowNumber) {
   cell.value = data.pitchOut / 10.0;
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
+  cell.value = data.temperature / 10.0;
+
+  cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
+  cell.value = DateTime(section.dateSurvey.year, section.dateSurvey.month,
+      section.dateSurvey.day, data.hr, data.min, data.sec).toIso8601String();
+
+  cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
   cell.value = data.markerIndex;
 }
 
@@ -82,7 +95,7 @@ void writeTitleOnSheet(Sheet sheet, Section s, UnitType unitType) {
   cell.value = "Unit: ${unitType.name}";
 
   cell = sheet.cell(CellIndex.indexByString("A3"));
-  cell.value = "Date: ${DateFormat('yyyy-MM-dd').format(s.dateSurey)}";
+  cell.value = "Date: ${DateFormat('yyyy-MM-dd').format(s.dateSurvey)}";
 }
 
 void exportAsExcel(SectionList sectionList, File file, UnitType unitType) {
@@ -114,7 +127,7 @@ void exportAsExcel(SectionList sectionList, File file, UnitType unitType) {
 
     writeHeaderOnSheet(sheet, rownum++);
     element.getShots().forEach((data) {
-      writeRowOnSheet(data, sheet, rownum++);
+      writeRowOnSheet(element, data, sheet, rownum++);
     });
   }
   excel.delete("Sheet1");
@@ -125,5 +138,4 @@ void exportAsExcel(SectionList sectionList, File file, UnitType unitType) {
       ..createSync(recursive: true)
       ..writeAsBytesSync(onValue);
   }
-
 }

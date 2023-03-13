@@ -53,19 +53,19 @@ class Section {
     this.name = name;
   }
 
-  DateTime dateSurey = DateTime.now();
+  DateTime dateSurvey = DateTime.now();
 
   /// Get the value of dateSurey
   ///
   /// @return the value of dateSurey
   DateTime getDateSurey() {
-    return dateSurey;
+    return dateSurvey;
   }
 
   /// Set the value of dateSurey
   ///
   /// @param dateSurey new value of dateSurey
   void setDateSurey(DateTime dateSurey) {
-    this.dateSurey = dateSurey;
+    this.dateSurvey = dateSurey;
   }
 }
