@@ -5,9 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_libserialport/flutter_libserialport.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:mnemolink/excelexport.dart';
 import 'package:mnemolink/sectioncard.dart';
 import 'package:mnemolink/settingcard.dart';
+
 import 'dart:convert' show utf8;
 import './section.dart';
 import './shot.dart';
@@ -59,6 +61,14 @@ class _MyHomePageState extends State<MyHomePage> {
   int safetySwitchON = -1;
   int doubleTap = -1;
   List<String> wifiList = [];
+  PackageInfo _packageInfo = PackageInfo(
+    appName: 'Unknown',
+    packageName: 'Unknown',
+    version: 'Unknown',
+    buildNumber: 'Unknown',
+    buildSignature: 'Unknown',
+    installerStore: 'Unknown',
+  );
 
 // create some values
   Color pickerColor = Color(0xff443a49);
@@ -96,6 +106,13 @@ class _MyHomePageState extends State<MyHomePage> {
 
   int timeFormat = -1;
 
+  Future<void> _initPackageInfo() async {
+    final info = await PackageInfo.fromPlatform();
+    setState(() {
+      _packageInfo = info;
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -118,6 +135,7 @@ class _MyHomePageState extends State<MyHomePage> {
       return true;}();
     });
 */
+    _initPackageInfo();
     initMnemoPort();
   }
 
@@ -284,7 +302,12 @@ class _MyHomePageState extends State<MyHomePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.title),
+        title: Column(crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(widget.title),
+            Text(style: const TextStyle(fontSize: 12), _packageInfo.version)
+          ],
+        ),
         actions: [
           Container(
             padding: const EdgeInsets.all(10),
