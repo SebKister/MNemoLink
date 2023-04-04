@@ -1204,7 +1204,7 @@ class _MyHomePageState extends State<MyHomePage> {
       counterWait = 0;
 
       if (mnemoPort != null) {
-        var readBuffer8 = mnemoPort.read(mnemoPort.bytesAvailable);
+        var readBuffer8 = mnemoPort.read(mnemoPort.bytesAvailable,timeout: 5000);
         for (int i = 0; i < readBuffer8.length; i++) {
           transferBuffer.add(readBuffer8[i]);
         }
