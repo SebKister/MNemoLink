@@ -248,28 +248,28 @@ class _MyHomePageState extends State<MyHomePage> {
         shot.setTypeShot(TypeShot.values[typeShot]);
         // cursor++;
         shot.setHeadingIn(readIntFromEEProm(cursor));
-        cursor = cursor + 2;
+        cursor += 2;
 
         shot.setHeadingOut(readIntFromEEProm(cursor));
-        cursor = cursor + 2;
+        cursor += 2;
 
         shot.setLength(readIntFromEEProm(cursor) * conversionFactor / 100.0);
-        cursor = cursor + 2;
+        cursor += 2;
 
         shot.setDepthIn(readIntFromEEProm(cursor) * conversionFactor / 100.0);
-        cursor = cursor + 2;
+        cursor += 2;
 
         shot.setDepthOut(readIntFromEEProm(cursor) * conversionFactor / 100.0);
-        cursor = cursor + 2;
+        cursor += 2;
 
         shot.setPitchIn(readIntFromEEProm(cursor));
-        cursor = cursor + 2;
+        cursor += 2;
 
         shot.setPitchOut(readIntFromEEProm(cursor));
-        cursor = cursor + 2;
+        cursor += 2;
         if (fileVersion >= 3) {
           shot.setTemperature(readIntFromEEProm(cursor));
-          cursor = cursor + 2;
+          cursor += 2;
           shot.setHr(readByteFromEEProm(cursor++));
           shot.setMin(readByteFromEEProm(cursor++));
           shot.setSec(readByteFromEEProm(cursor++));
