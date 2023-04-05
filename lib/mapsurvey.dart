@@ -9,8 +9,7 @@ class MapSurvey {
   MapSurvey() {}
 
   void buildMap(Section section) {
-// Get the empty section case out of the way
-    if (section.shots.length < 2) return;
+
 
     Point<double> start = const Point<double>(0, 0);
     points.add(start);

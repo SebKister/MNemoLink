@@ -290,6 +290,8 @@ class _MyHomePageState extends State<MyHomePage> {
       } while (shot.getTypeShot() != TypeShot.EOC);
 
       setState(() {
+        // Adding section only if it contains data. Note : EOC shot should always be present at end of section.
+        if (section.shots.length > 1) ;
         sections.getSections().add(section);
       });
     }
