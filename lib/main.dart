@@ -152,11 +152,10 @@ class _MyHomePageState extends State<MyHomePage> {
         connected = false;
       } else {
         mnemoPort = SerialPort(mnemoPortAddress);
-        // SerialPortConfig config = SerialPortConfig();
-        //  config = mnemoPort.config;
-        // config.baudRate = 9600;
-        // mnemoPort.config = config;
-        connected = true;
+        connected = mnemoPort.openReadWrite();
+        mnemoPort.flush();
+        mnemoPort.config.setFlowControl(0);
+        mnemoPort.close();
         getCurrentName();
       }
     });
@@ -302,7 +301,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Column(crossAxisAlignment: CrossAxisAlignment.start,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(widget.title),
             Text(style: const TextStyle(fontSize: 12), _packageInfo.version)
@@ -1204,7 +1204,8 @@ class _MyHomePageState extends State<MyHomePage> {
       counterWait = 0;
 
       if (mnemoPort != null) {
-        var readBuffer8 = mnemoPort.read(mnemoPort.bytesAvailable,timeout: 5000);
+        var readBuffer8 =
+            mnemoPort.read(mnemoPort.bytesAvailable, timeout: 5000);
         for (int i = 0; i < readBuffer8.length; i++) {
           transferBuffer.add(readBuffer8[i]);
         }
