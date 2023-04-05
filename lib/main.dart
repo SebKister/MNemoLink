@@ -154,7 +154,10 @@ class _MyHomePageState extends State<MyHomePage> {
         mnemoPort = SerialPort(mnemoPortAddress);
         connected = mnemoPort.openReadWrite();
         mnemoPort.flush();
-        mnemoPort.config.setFlowControl(0);
+        SerialPortConfig config = mnemoPort.config;
+        config.setFlowControl(SerialPortFlowControl.none);
+        mnemoPort.config = config;
+        config.dispose();
         mnemoPort.close();
         getCurrentName();
       }
@@ -191,14 +194,7 @@ class _MyHomePageState extends State<MyHomePage> {
       }
       int year = 0;
 
-      while (year != 16 &&
-          year != 17 &&
-          year != 18 &&
-          year != 19 &&
-          year != 20 &&
-          year != 21 &&
-          year != 22 &&
-          year != 23) {
+      while ((year < 16) || (year > (DateTime.now().year - 2000))) {
         year = readByteFromEEProm(cursor);
         cursor++;
       }
@@ -291,8 +287,9 @@ class _MyHomePageState extends State<MyHomePage> {
 
       setState(() {
         // Adding section only if it contains data. Note : EOC shot should always be present at end of section.
-        if (section.shots.length > 1) ;
-        sections.getSections().add(section);
+        if (section.shots.length > 1) {
+          sections.getSections().add(section);
+        }
       });
     }
   }
