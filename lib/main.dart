@@ -188,7 +188,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
       int fileVersion = 0;
 
-      while (fileVersion != 2 && fileVersion != 3) {
+      while (fileVersion != 2 && fileVersion != 3 && fileVersion != 4) {
         fileVersion = readByteFromEEProm(cursor);
         cursor++;
       }
@@ -267,6 +267,17 @@ class _MyHomePageState extends State<MyHomePage> {
 
         shot.setPitchOut(readIntFromEEProm(cursor));
         cursor += 2;
+
+        if (fileVersion >= 4) {
+          shot.setLeft(readIntFromEEProm(cursor) * conversionFactor / 100.0);
+          cursor += 2;
+          shot.setRight(readIntFromEEProm(cursor) * conversionFactor / 100.0);
+          cursor += 2;
+          shot.setUp(readIntFromEEProm(cursor) * conversionFactor / 100.0);
+          cursor += 2;
+          shot.setDown(readIntFromEEProm(cursor) * conversionFactor / 100.0);
+          cursor += 2;
+        }
         if (fileVersion >= 3) {
           shot.setTemperature(readIntFromEEProm(cursor));
           cursor += 2;

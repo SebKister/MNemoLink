@@ -8,7 +8,24 @@ import './sectionlist.dart';
 import './shot.dart';
 
 void writeHeaderOnSheet(Sheet sheet, int rowNumber) {
-  var ls = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"];
+  var ls = [
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "H",
+    "I",
+    "J",
+    "K",
+    "L",
+    "M",
+    "N",
+    "O",
+    "P"
+  ];
   int index = 0;
 
   var cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
@@ -36,6 +53,18 @@ void writeHeaderOnSheet(Sheet sheet, int rowNumber) {
   cell.value = "Pitch OUT";
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
+  cell.value = "Left";
+
+  cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
+  cell.value = "Right";
+
+  cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
+  cell.value = "Up";
+
+  cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
+  cell.value = "Down";
+
+  cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
   cell.value = "Temperature";
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
@@ -46,7 +75,24 @@ void writeHeaderOnSheet(Sheet sheet, int rowNumber) {
 }
 
 void writeRowOnSheet(Section section, Shot data, Sheet sheet, int rowNumber) {
-  var ls = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"];
+  var ls = [
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "H",
+    "I",
+    "J",
+    "K",
+    "L",
+    "M",
+    "N",
+    "O",
+    "P"
+  ];
   int index = 0;
 
   var cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
@@ -74,11 +120,24 @@ void writeRowOnSheet(Section section, Shot data, Sheet sheet, int rowNumber) {
   cell.value = data.pitchOut / 10.0;
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
+  cell.value = data.left;
+
+  cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
+  cell.value = data.right;
+
+  cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
+  cell.value = data.up;
+
+  cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
+  cell.value = data.down;
+
+  cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
   cell.value = data.temperature / 10.0;
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
   cell.value = DateTime(section.dateSurvey.year, section.dateSurvey.month,
-      section.dateSurvey.day, data.hr, data.min, data.sec).toIso8601String();
+          section.dateSurvey.day, data.hr, data.min, data.sec)
+      .toIso8601String();
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
   cell.value = data.markerIndex;

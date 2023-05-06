@@ -40,6 +40,10 @@ class Shot {
   int min = 0;
   int sec = 0;
   int markerIndex = 0;
+  double left = 0.0;
+  double right = 0.0;
+  double up = 0.0;
+  double down = 0.0;
 
   int getHr() {
     return hr;
@@ -170,6 +174,10 @@ class Shot {
       this.headingOut,
       this.depthIn,
       this.depthOut,
+      this.left,
+      this.right,
+      this.up,
+      this.down,
       this.temperature,
       this.hr,
       this.min,
@@ -181,11 +189,31 @@ class Shot {
     headingOut = 0;
     depthIn = 0;
     depthOut = 0;
+    left = 0.0;
+    right = 0.0;
+    up = 0.0;
+    down = 0.0;
     temperature = 0;
     hr = 0;
     min = 0;
     sec = 0;
     typeShot = TypeShot.STD;
+  }
+
+  void setLeft(double left) {
+    this.left = left;
+  }
+
+  void setRight(double right) {
+    this.right = right;
+  }
+
+  void setUp(double up) {
+    this.up = up;
+  }
+
+  void setDown(double down) {
+    this.down = down;
   }
 }
 
