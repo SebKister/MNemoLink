@@ -78,6 +78,10 @@ class _MyHomePageState extends State<MyHomePage> {
   Color stabilizeColor = Color(0x00000000);
   Color readyColor = Color(0x00000000);
 
+  int timeON = 0;
+
+  int timeSurvey = 0;
+
 // ValueChanged<Color> callback
   void changeColor(Color color) {
     setState(() => pickerColor = color);
@@ -159,7 +163,8 @@ class _MyHomePageState extends State<MyHomePage> {
         mnemoPort.config = config;
         config.dispose();
         mnemoPort.close();
-        getCurrentName();
+        getCurrentName()
+            .then((value) => getTimeON().then((value) => getTimeSurvey()));
       }
     });
   }
@@ -335,8 +340,11 @@ class _MyHomePageState extends State<MyHomePage> {
                         children: [
                           Text("[$nameDevice] Connected on $mnemoPortAddress"),
                           Text(
-                              style: const TextStyle(fontSize: 12),
-                              ' SN ${mnemoPort.serialNumber}')
+                              style: const TextStyle(fontSize: 10),
+                              ' SN ${mnemoPort.serialNumber}'),
+                          Text(
+                              style: const TextStyle(fontSize: 9),
+                              ' ON: $timeON min - Survey: $timeSurvey min')
                         ],
                       )
                     ]
@@ -1421,6 +1429,16 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<void> resetColorScheme() async {
     await executeCLIAsync("defaultcolorscheme");
     await getCurrentColorScheme();
+  }
+
+  Future<void> getTimeON() async {
+    await executeCLIAsync("gettimeon");
+    timeON = int.parse(utf8.decode(transferBuffer).trim());
+  }
+
+  Future<void> getTimeSurvey() async {
+    await executeCLIAsync("gettimesurvey");
+    timeSurvey = int.parse(utf8.decode(transferBuffer).trim());
   }
 }
 
