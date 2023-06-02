@@ -171,7 +171,6 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void onReadData() {
     executeCLIAsync("getdata").then((value) => analyzeTransferBuffer());
-
   }
 
   int readByteFromEEProm(int adresse) {
@@ -189,15 +188,42 @@ class _MyHomePageState extends State<MyHomePage> {
     int currentMemory = transferBuffer.length;
     int cursor = 0;
 
+    var FILEVERSION_VALA = 68;
+    var FILEVERSION_VALB = 89;
+    var FILEVERSION_VALC = 101;
+
+    var SHOTSTART_VALA = 57;
+    var SHOTSTART_VALB = 67;
+    var SHOTSTART_VALC = 77;
+
+    var SHOTEND_VALA = 95;
+    var SHOTEND_VALB = 25;
+    var SHOTEND_VALC = 35;
+
     while (cursor < currentMemory - 2) {
       Section section = Section();
 
       int fileVersion = 0;
-
-      while (fileVersion != 2 && fileVersion != 3 && fileVersion != 4) {
+      int checkbyteA = 0;
+      int checkbyteB = 0;
+      int checkbyteC = 0;
+      while (fileVersion != 2 &&
+          fileVersion != 3 &&
+          fileVersion != 4 &&
+          fileVersion != 5) {
         fileVersion = readByteFromEEProm(cursor);
         cursor++;
       }
+
+      if (fileVersion >= 5) {
+        checkbyteA = readByteFromEEProm(cursor++);
+        checkbyteB = readByteFromEEProm(cursor++);
+        checkbyteC = readByteFromEEProm(cursor++);
+        if (checkbyteA != FILEVERSION_VALA ||
+            checkbyteB != FILEVERSION_VALB ||
+            checkbyteC != FILEVERSION_VALC) return;
+      }
+
       int year = 0;
 
       while ((year < 16) || (year > (DateTime.now().year - 2000))) {
@@ -244,7 +270,14 @@ class _MyHomePageState extends State<MyHomePage> {
       do {
         shot = Shot.zero();
         int typeShot = 0;
-
+        if (fileVersion >= 5) {
+          checkbyteA = readByteFromEEProm(cursor++);
+          checkbyteB = readByteFromEEProm(cursor++);
+          checkbyteC = readByteFromEEProm(cursor++);
+          if (checkbyteA != SHOTSTART_VALA ||
+              checkbyteB != SHOTSTART_VALB ||
+              checkbyteC != SHOTSTART_VALC) return;
+        }
         typeShot = readByteFromEEProm(cursor++);
 
         if (typeShot > 3 || typeShot < 0) {
@@ -298,7 +331,14 @@ class _MyHomePageState extends State<MyHomePage> {
         }
 
         shot.setMarkerIndex(readByteFromEEProm(cursor++));
-
+        if (fileVersion >= 5) {
+          checkbyteA = readByteFromEEProm(cursor++);
+          checkbyteB = readByteFromEEProm(cursor++);
+          checkbyteC = readByteFromEEProm(cursor++);
+          if (checkbyteA != SHOTEND_VALA ||
+              checkbyteB != SHOTEND_VALB ||
+              checkbyteC != SHOTEND_VALC) return;
+        }
         section.getShots().add(shot);
       } while (shot.getTypeShot() != TypeShot.EOC);
 
@@ -1250,8 +1290,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
 // The result will be null, if the user aborted the dialog
     if (result != null) {
-      File file = File(result);
       if (!result.toLowerCase().endsWith('.dmp')) result += ".dmp";
+      File file = File(result);
       var sink = file.openWrite();
       for (var element in transferBuffer) {
         (element >= 0 && element <= 127)
@@ -1270,6 +1310,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
 // The result will be null, if the user aborted the dialog
     if (result != null) {
+
       if (!result.toLowerCase().endsWith('.xlsx')) result += ".xlsx";
 
       File file = File(result);

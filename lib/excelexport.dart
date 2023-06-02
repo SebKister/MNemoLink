@@ -23,8 +23,7 @@ void writeHeaderOnSheet(Sheet sheet, int rowNumber) {
     "L",
     "M",
     "N",
-    "O",
-    "P"
+    "O"
   ];
   int index = 0;
 
@@ -90,8 +89,7 @@ void writeRowOnSheet(Section section, Shot data, Sheet sheet, int rowNumber) {
     "L",
     "M",
     "N",
-    "O",
-    "P"
+    "O"
   ];
   int index = 0;
 
