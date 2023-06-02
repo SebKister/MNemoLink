@@ -170,7 +170,8 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void onReadData() {
-    executeCLIAsync("getdata");
+    executeCLIAsync("getdata").then((value) => analyzeTransferBuffer());
+
   }
 
   int readByteFromEEProm(int adresse) {
@@ -1159,7 +1160,6 @@ class _MyHomePageState extends State<MyHomePage> {
       case "getdata":
         sections.getSections().clear();
         await waitAnswerAsync();
-        analyzeTransferBuffer();
         commandSent = true;
         mnemoPort.close();
 
@@ -1244,6 +1244,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<void> onSaveDMP() async {
+    await executeCLIAsync("getdata");
 // Lets the user pick one file; files with any file extension can be selected
     var result = await FilePicker.platform.saveFile(dialogTitle: "Save as DMP");
 
