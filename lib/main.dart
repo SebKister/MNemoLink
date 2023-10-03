@@ -870,7 +870,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                     factorySettingsDoubleTapON,
                                                 name: "Double Tap",
                                                 subtitle:
-                                                    "Double tap the Mnemo to display the current survey",
+                                                    "Double tap sensitivity to display the current survey",
                                                 icon: Icons.smart_button,
                                                 actionWidget: Row(
                                                   children: [
@@ -882,9 +882,11 @@ class _MyHomePageState extends State<MyHomePage> {
                                                                 getCurrentDoubleTap()),
                                                     SettingActionRadioList(
                                                         "SYNC NOW",
-                                                        {
+                                                         {
                                                           "DISABLED": 0,
-                                                          "ENABLED": 1
+                                                          "LIGHT": 15,
+                                                          "NORMAL": 20,
+                                                          "HARD":28
                                                         },
                                                         (serialBusy)
                                                             ? null
