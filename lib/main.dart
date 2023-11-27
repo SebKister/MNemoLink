@@ -882,11 +882,11 @@ class _MyHomePageState extends State<MyHomePage> {
                                                                 getCurrentDoubleTap()),
                                                     SettingActionRadioList(
                                                         "SYNC NOW",
-                                                         {
+                                                        {
                                                           "DISABLED": 0,
                                                           "LIGHT": 15,
                                                           "NORMAL": 20,
-                                                          "HARD":28
+                                                          "HARD": 28
                                                         },
                                                         (serialBusy)
                                                             ? null
@@ -1225,11 +1225,14 @@ class _MyHomePageState extends State<MyHomePage> {
         commandSent = true;
         mnemoPort.close();
         break;
+
       case "readfile":
         await waitAnswerAsync();
         await saveFile();
-
+        commandSent = true;
+        mnemoPort.close();
         break;
+
       default:
         await waitAnswerAsync();
         if (transferBuffer.isNotEmpty) displayAnswer();
@@ -1312,7 +1315,6 @@ class _MyHomePageState extends State<MyHomePage> {
 
 // The result will be null, if the user aborted the dialog
     if (result != null) {
-
       if (!result.toLowerCase().endsWith('.xlsx')) result += ".xlsx";
 
       File file = File(result);
