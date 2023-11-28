@@ -28,49 +28,49 @@ void writeHeaderOnSheet(Sheet sheet, int rowNumber) {
   int index = 0;
 
   var cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = "TypeShot";
+  cell.value = const TextCellValue("TypeShot");
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = "Length";
+  cell.value = const TextCellValue("Length");
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = "Depth IN";
+  cell.value = const TextCellValue("Depth IN");
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = "Depth OUT";
+  cell.value = const TextCellValue("Depth OUT");
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = "Heading IN";
+  cell.value = const TextCellValue("Heading IN");
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = "Heading OUT";
+  cell.value = const TextCellValue("Heading OUT");
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = "Pitch IN";
+  cell.value = const TextCellValue("Pitch IN");
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = "Pitch OUT";
+  cell.value = const TextCellValue("Pitch OUT");
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = "Left";
+  cell.value = const TextCellValue("Left");
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = "Right";
+  cell.value = const TextCellValue("Right");
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = "Up";
+  cell.value = const TextCellValue("Up");
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = "Down";
+  cell.value = const TextCellValue("Down");
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = "Temperature";
+  cell.value = const TextCellValue("Temperature");
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = "Time";
+  cell.value = const TextCellValue("Time");
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = "Marker";
+  cell.value = const TextCellValue("Marker");
 }
 
 void writeRowOnSheet(Section section, Shot data, Sheet sheet, int rowNumber) {
@@ -94,65 +94,70 @@ void writeRowOnSheet(Section section, Shot data, Sheet sheet, int rowNumber) {
   int index = 0;
 
   var cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = data.typeShot.name;
+  cell.value = TextCellValue(data.typeShot.name);
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = data.length;
+  cell.value = DoubleCellValue(data.length);
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = data.depthIn;
+  cell.value = DoubleCellValue(data.depthIn);
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = data.depthOut;
+  cell.value = DoubleCellValue(data.depthOut);
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = data.headingIn / 10.0;
+  cell.value = DoubleCellValue(data.headingIn / 10.0);
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = data.headingOut / 10.0;
+  cell.value = DoubleCellValue(data.headingOut / 10.0);
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = data.pitchIn / 10.0;
+  cell.value = DoubleCellValue(data.pitchIn / 10.0);
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = data.pitchOut / 10.0;
+  cell.value = DoubleCellValue(data.pitchOut / 10.0);
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = data.left;
+  cell.value = DoubleCellValue(data.left);
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = data.right;
+  cell.value = DoubleCellValue(data.right);
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = data.up;
+  cell.value = DoubleCellValue(data.up);
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = data.down;
+  cell.value = DoubleCellValue(data.down);
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = data.temperature / 10.0;
+  cell.value = DoubleCellValue(data.temperature / 10.0);
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = DateTime(section.dateSurvey.year, section.dateSurvey.month,
-          section.dateSurvey.day, data.hr, data.min, data.sec)
-      .toIso8601String();
+  cell.value = DateCellValue.fromDateTime(DateTime(
+      section.dateSurvey.year,
+      section.dateSurvey.month,
+      section.dateSurvey.day,
+      data.hr,
+      data.min,
+      data.sec));
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = data.markerIndex;
+  cell.value = IntCellValue(data.markerIndex);
 }
 
 void writeTitleOnSheet(Sheet sheet, Section s, UnitType unitType) {
   var cell = sheet.cell(CellIndex.indexByString("A1"));
-  cell.value = s.getName();
+  cell.value = TextCellValue(s.getName());
 
   cell = sheet.cell(CellIndex.indexByString("A2"));
-  cell.value = "Direction: ${s.direction.name}";
+  cell.value = TextCellValue("Direction: ${s.direction.name}");
 
   cell = sheet.cell(CellIndex.indexByString("B2"));
-  cell.value = "Unit: ${unitType.name}";
+  cell.value = TextCellValue("Unit: ${unitType.name}");
 
   cell = sheet.cell(CellIndex.indexByString("A3"));
-  cell.value = "Date: ${DateFormat('yyyy-MM-dd').format(s.dateSurvey)}";
+  cell.value =
+      TextCellValue("Date: ${DateFormat('yyyy-MM-dd').format(s.dateSurvey)}");
 }
 
 void exportAsExcel(SectionList sectionList, File file, UnitType unitType) {
