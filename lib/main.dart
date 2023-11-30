@@ -1311,7 +1311,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> onExportXLS() async {
     // Lets the user pick one file; files with any file extension can be selected
-    var result = await FilePicker.platform.saveFile(dialogTitle: "Save as DMP");
+    var result =
+        await FilePicker.platform.saveFile(dialogTitle: "Save as XLSX");
 
 // The result will be null, if the user aborted the dialog
     if (result != null) {
