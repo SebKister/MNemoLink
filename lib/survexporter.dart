@@ -14,31 +14,41 @@ class SurvexExporter {
   final double maxDeltaDepth = 0.2;
   final double maxDeltaAzimuth = 5;
 
-  double getAzimuthMean(double angle1, double angle2) {
-    final double yPart = (cos(deg2rad(angle1)) + cos(deg2rad(angle2))) / 2;
-    final double xPart = (sin(deg2rad(angle1)) + sin(deg2rad(angle2))) / 2;
+  double getAzimuthMean(double az1, double az2) {
+    // Convert degrees to radians
+    final double az1Rad = deg2rad(az1);
+    final double az2Rad = deg2rad(az2);
 
-    double mean = rad2deg(atan2(yPart, xPart));
+    // Calculate mean azimuth in radians
+    final double meanSin = (sin(az1Rad) + sin(az2Rad)) / 2.0;
+    final double meanCos = (cos(az1Rad) + cos(az2Rad)) / 2.0;
+    final double meanAzimuthRad = atan2(meanSin, meanCos);
 
-    // Transforming negative azimuths to positive ones
-    if (mean < 0) {
-      mean += 360;
+    // Convert the result back to degrees
+    double meanAzimuthDeg = rad2deg(meanAzimuthRad);
+
+    // Normalize the result to be within [0, 360) degrees
+    if (meanAzimuthDeg < 0) {
+      meanAzimuthDeg += 360.0;
     }
 
-    return mean;
+    return meanAzimuthDeg;
   }
 
   double deg2rad(double degrees) {
-    return degrees * pi / 180;
+    return degrees * pi / 180.0;
   }
 
   double rad2deg(double radians) {
-    return radians * 180 / pi;
+    return radians * 180.0 / pi;
   }
 
   Future<void> asSurvex(
       SectionList sectionList, String baseFilename, UnitType unitType) async {
     int fileCounter = 0;
+
+    // Removing extension
+    baseFilename = baseFilename.substring(0, baseFilename.length - 4);
 
     for (var section in sectionList.sections) {
       fileCounter++;
@@ -50,13 +60,10 @@ class SurvexExporter {
           await getSvxContents(section, shots, filenameSuffix, unitType);
       final Uint8List contentsAsBytes = utf8.encode(contents);
 
-      // Removing extension
-      baseFilename = baseFilename.substring(0, baseFilename.length - 4);
-
       final String filename = "$baseFilename-$filenameSuffix.svx";
       final File file = File(filename);
 
-      await file.create(recursive: true);
+      // await file.create(recursive: true);
       await file.writeAsBytes(contentsAsBytes);
     }
   }
@@ -65,64 +72,72 @@ class SurvexExporter {
     final List<Shot> shots = section.getShots();
     int id = 1;
     bool firstMeasurement = true;
-    String? intermediateStation;
+    String connectingStation;
     double depthFrom = 0.0;
     double depthTo = 0.0;
-    double azimuthNormalMeanPrevious = 0;
+    double depthToLast = 0.0;
+    double azimuthNormalMeanPrevious = 0.0;
     List<ShotRegular> regularShots = [];
-    List<ShotIntermediate> intermediateShots = [];
+    List<ShotConnecting> connectingShots = [];
 
     for (final shot in shots) {
+      if (shot.typeShot != TypeShot.STD) {
+        continue;
+      }
+
       final double length = shot.getLength();
-      final double azimuthIn = (shot.getHeadingIn() as double) / 10.0;
-      final double azimuthOut = (shot.getHeadingOut() as double) / 10.0;
+      final double azimuthIn = (shot.getHeadingIn().toDouble()) / 10.0;
+      final double azimuthOut = (shot.getHeadingOut().toDouble()) / 10.0;
       final double azimuthMean = getAzimuthMean(azimuthIn, azimuthOut);
       final double azimuthDelta = getAzimuthDelta(azimuthIn, azimuthOut);
       final List<String> azimuthComments =
           getAzimuthComment(azimuthMean, azimuthDelta, azimuthIn, azimuthOut);
-      final double pitchIn = (shot.getPitchIn() as double) / 10.0;
-      final double pitchOut = (shot.getPitchOut() as double) / 10.0;
+      final double pitchIn = (shot.getPitchIn().toDouble()) / 10.0;
+      final double pitchOut = (shot.getPitchOut().toDouble()) / 10.0;
       final double depthIn = shot.getDepthIn();
       final double depthOut = shot.getDepthOut();
 
-      double depthDelta;
+      double depthDelta = 0.0;
       List<String> depthComments = [];
 
       if (firstMeasurement) {
         firstMeasurement = false;
-        depthDelta = 0;
+        depthDelta = 0.0;
         depthFrom = depthIn;
       } else {
-        depthDelta = getDepthDelta(depthIn, depthOut);
-        depthComments = getDepthComment(depthDelta, depthIn, depthOut);
+        depthDelta = getDepthDelta(depthIn, depthToLast);
+        depthComments = getDepthComment(depthDelta, depthIn, depthToLast);
 
         if (depthDelta > maxDeltaDepth) {
           depthFrom = depthIn;
         } else {
-          depthFrom = depthDelta / 2;
-          depthTo = depthFrom;
+          depthFrom = (depthIn + depthToLast) / 2;
+          regularShots[id - 2].depthTo = depthFrom;
         }
 
         azimuthNormalMeanPrevious =
             getAzimuthNormal(regularShots[id - 2].azimuthMean, azimuthMean);
       }
+      depthTo = depthOut;
 
       if (depthDelta > maxDeltaDepth) {
-        intermediateStation = '${id - 1}B';
-        final ShotIntermediate intermediateShot = ShotIntermediate(
-            from: (id - 1).toString(),
-            to: id.toString(),
+        final String connectingStationFrom = (id - 1).toString();
+        final String connectingStationTo = '${connectingStationFrom}B';
+        final ShotConnecting connectingShot = ShotConnecting(
+            from: connectingStationFrom,
+            to: connectingStationTo,
             length: depthDelta,
             depthFrom: regularShots[id - 2].depthTo,
             depthTo: depthFrom);
-        intermediateShots.add(intermediateShot);
+        connectingShots.add(connectingShot);
+        connectingStation = connectingStationTo;
       } else {
-        intermediateStation = null;
+        connectingStation = '';
       }
 
       final ShotRegular regularShot = ShotRegular(
-          from: intermediateStation ?? (id - 1).toString(),
-          to: id.toString(),
+          from: connectingStation.isEmpty ? id.toString() : connectingStation,
+          to: (id + 1).toString(),
           length: length,
           azimuthIn: azimuthIn,
           azimuthOut: azimuthOut,
@@ -140,11 +155,12 @@ class SurvexExporter {
 
       regularShots.add(regularShot);
 
+      depthToLast = depthOut;
       id++;
     }
 
     final Shots processedShots =
-        Shots(intermediateShots: intermediateShots, regularShots: regularShots);
+        Shots(connectingShots: connectingShots, regularShots: regularShots);
 
     return processedShots;
   }
@@ -488,7 +504,8 @@ class SurvexExporter {
         newLine('; First and last stations automatically exported', prefix));
 
     // Exporting first and last stations
-    final export = "1, ${shots.regularShots.length.toString()}";
+    final int lastStation = shots.regularShots.length + 1;
+    final String export = "1, ${lastStation.toString()}";
     contents.write(newLine('*export $export', prefix));
     contents.write('\n');
 
@@ -549,17 +566,17 @@ class SurvexExporter {
         if (!firstLine) {
           contents.write('\n');
         }
-      }
 
-      if (shot.azimuthComments.isNotEmpty) {
-        for (var comment in shot.azimuthComments) {
-          contents.write(newLine('; $comment', prefix));
+        if (shot.azimuthComments.isNotEmpty) {
+          for (var comment in shot.azimuthComments) {
+            contents.write(newLine('; $comment', prefix));
+          }
         }
-      }
 
-      if (shot.depthComments.isNotEmpty) {
-        for (String comment in shot.depthComments) {
-          contents.write(newLine('; $comment', prefix));
+        if (shot.depthComments.isNotEmpty) {
+          for (String comment in shot.depthComments) {
+            contents.write(newLine('; $comment', prefix));
+          }
         }
       }
 
@@ -571,11 +588,11 @@ class SurvexExporter {
     }
     contents.write('\n');
 
-    // Intermediate vertical legs
-    if (shots.intermediateShots.isNotEmpty) {
+    // Connecting vertical legs
+    if (shots.connectingShots.isNotEmpty) {
       contents.write(newLine(
           '; --------------------------------------------------', prefix));
-      contents.write(newLine('; Intermediate vertical legs', prefix));
+      contents.write(newLine('; Connecting vertical legs', prefix));
       contents.write(newLine(
           '; --------------------------------------------------', prefix));
       contents.write(
@@ -584,7 +601,7 @@ class SurvexExporter {
           '; From\tTo\tLength\tAzimuth\tUp/Down\tFromDep\tToDep', prefix));
       contents.write('\n');
 
-      for (ShotIntermediate shot in shots.intermediateShots) {
+      for (ShotConnecting shot in shots.connectingShots) {
         String direction = (shot.depthFrom < shot.depthTo) ? 'DOWN' : 'UP';
         contents.write(newLine(
             '${shot.from.toString().trim()}\t${shot.to.toString().trim()}\t${shot.length.toStringAsFixed(2)}\t-\t$direction\t${shot.depthFrom.toStringAsFixed(2)}\t${shot.depthTo.toStringAsFixed(2)}',
@@ -614,14 +631,14 @@ class SurvexExporter {
   }
 }
 
-class ShotIntermediate {
+class ShotConnecting {
   String from;
   String to;
   double length;
   double depthFrom;
   double depthTo;
 
-  ShotIntermediate(
+  ShotConnecting(
       {required this.from,
       required this.to,
       required this.length,
@@ -668,7 +685,7 @@ class ShotRegular {
 
 class Shots {
   List<ShotRegular> regularShots;
-  List<ShotIntermediate> intermediateShots;
+  List<ShotConnecting> connectingShots;
 
-  Shots({required this.regularShots, required this.intermediateShots});
+  Shots({required this.regularShots, required this.connectingShots});
 }
