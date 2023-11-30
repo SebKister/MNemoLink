@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
+import 'dart:typed_data';
 import 'package:characters/characters.dart';
 import 'package:mnemolink/section.dart';
 import 'package:mnemolink/sectionlist.dart';
@@ -14,10 +15,10 @@ class SurvexExporter {
   final double maxDeltaAzimuth = 5;
 
   double getAzimuthMean(double angle1, double angle2) {
-    final yPart = (cos(deg2rad(angle1)) + cos(deg2rad(angle2))) / 2;
-    final xPart = (sin(deg2rad(angle1)) + sin(deg2rad(angle2))) / 2;
+    final double yPart = (cos(deg2rad(angle1)) + cos(deg2rad(angle2))) / 2;
+    final double xPart = (sin(deg2rad(angle1)) + sin(deg2rad(angle2))) / 2;
 
-    var mean = rad2deg(atan2(yPart, xPart));
+    double mean = rad2deg(atan2(yPart, xPart));
 
     // Transforming negative azimuths to positive ones
     if (mean < 0) {
@@ -37,22 +38,22 @@ class SurvexExporter {
 
   Future<void> asSurvex(
       SectionList sectionList, String baseFilename, UnitType unitType) async {
-    var fileCounter = 0;
+    int fileCounter = 0;
 
     for (var section in sectionList.sections) {
       fileCounter++;
-      var filenameSuffix =
+      String filenameSuffix =
           "${slugify(section.name)}-${fileCounter.toString().padLeft(minSectionCountWidth, '0')}";
 
-      final shots = getShots(section);
-      final contents =
+      final Shots shots = getShots(section);
+      final String contents =
           await getSvxContents(section, shots, filenameSuffix, unitType);
-      final contentsAsBytes = utf8.encode(contents);
+      final Uint8List contentsAsBytes = utf8.encode(contents);
 
       // Removing extension
       baseFilename = baseFilename.substring(0, baseFilename.length - 4);
 
-      final filename = "$baseFilename-$filenameSuffix.svx";
+      final String filename = "$baseFilename-$filenameSuffix.svx";
       final File file = File(filename);
 
       await file.create(recursive: true);
@@ -61,7 +62,7 @@ class SurvexExporter {
   }
 
   Shots getShots(Section section) {
-    final shots = section.getShots();
+    final List<Shot> shots = section.getShots();
     int id = 1;
     bool firstMeasurement = true;
     String? intermediateStation;
@@ -72,17 +73,17 @@ class SurvexExporter {
     List<ShotIntermediate> intermediateShots = [];
 
     for (final shot in shots) {
-      final length = shot.getLength();
-      final azimuthIn = shot.getHeadingIn() as double;
-      final azimuthOut = shot.getHeadingOut() as double;
-      final azimuthMean = getAzimuthMean(azimuthIn, azimuthOut);
-      final azimuthDelta = getAzimuthDelta(azimuthIn, azimuthOut);
-      final azimuthComments =
+      final double length = shot.getLength();
+      final double azimuthIn = (shot.getHeadingIn() as double) / 10.0;
+      final double azimuthOut = (shot.getHeadingOut() as double) / 10.0;
+      final double azimuthMean = getAzimuthMean(azimuthIn, azimuthOut);
+      final double azimuthDelta = getAzimuthDelta(azimuthIn, azimuthOut);
+      final List<String> azimuthComments =
           getAzimuthComment(azimuthMean, azimuthDelta, azimuthIn, azimuthOut);
-      final pitchIn = shot.getPitchIn() as double;
-      final pitchOut = shot.getPitchOut() as double;
-      final depthIn = shot.getDepthIn();
-      final depthOut = shot.getDepthOut();
+      final double pitchIn = (shot.getPitchIn() as double) / 10.0;
+      final double pitchOut = (shot.getPitchOut() as double) / 10.0;
+      final double depthIn = shot.getDepthIn();
+      final double depthOut = shot.getDepthOut();
 
       double depthDelta;
       List<String> depthComments = [];
@@ -108,7 +109,7 @@ class SurvexExporter {
 
       if (depthDelta > maxDeltaDepth) {
         intermediateStation = '${id - 1}B';
-        final intermediateShot = ShotIntermediate(
+        final ShotIntermediate intermediateShot = ShotIntermediate(
             from: (id - 1).toString(),
             to: id.toString(),
             length: depthDelta,
@@ -119,7 +120,7 @@ class SurvexExporter {
         intermediateStation = null;
       }
 
-      final regularShot = ShotRegular(
+      final ShotRegular regularShot = ShotRegular(
           from: intermediateStation ?? (id - 1).toString(),
           to: id.toString(),
           length: length,
@@ -142,7 +143,7 @@ class SurvexExporter {
       id++;
     }
 
-    final processedShots =
+    final Shots processedShots =
         Shots(intermediateShots: intermediateShots, regularShots: regularShots);
 
     return processedShots;
@@ -159,7 +160,7 @@ class SurvexExporter {
   }
 
   double getDepthDelta(double depthIn, double depthOut) {
-    final delta = (depthIn - depthOut).abs();
+    final double delta = (depthIn - depthOut).abs();
 
     return delta;
   }
@@ -430,7 +431,7 @@ class SurvexExporter {
 
     final StringBuffer asciiBuffer = StringBuffer();
 
-    for (var char in utf16String.characters) {
+    for (final String char in utf16String.characters) {
       if (char.length == 1 &&
           char.runes.first >= 32 &&
           char.runes.first <= 127) {
@@ -469,7 +470,7 @@ class SurvexExporter {
   }
 
   String dateInSvxFormat(DateTime date) {
-    final svxDate =
+    final String svxDate =
         "${date.year.toString().padLeft(4, '0')}.${date.month.toString().padLeft(2, '0')}.${date.day.toString().padLeft(2, '0')}";
 
     return svxDate;
@@ -477,7 +478,7 @@ class SurvexExporter {
 
   Future<String> getSvxContents(Section section, Shots shots, String surveyName,
       UnitType unitType) async {
-    var contents = StringBuffer(await headerComments());
+    StringBuffer contents = StringBuffer(await headerComments());
 
     String prefix = '';
     contents.write(newLine('*begin $surveyName', prefix));
@@ -543,7 +544,7 @@ class SurvexExporter {
     contents.write('\n');
 
     bool firstLine = true;
-    for (var shot in shots.regularShots) {
+    for (ShotRegular shot in shots.regularShots) {
       if (shot.azimuthComments.isNotEmpty || shot.depthComments.isNotEmpty) {
         if (!firstLine) {
           contents.write('\n');
@@ -557,7 +558,7 @@ class SurvexExporter {
       }
 
       if (shot.depthComments.isNotEmpty) {
-        for (var comment in shot.depthComments) {
+        for (String comment in shot.depthComments) {
           contents.write(newLine('; $comment', prefix));
         }
       }
@@ -583,7 +584,7 @@ class SurvexExporter {
           '; From\tTo\tLength\tAzimuth\tUp/Down\tFromDep\tToDep', prefix));
       contents.write('\n');
 
-      for (var shot in shots.intermediateShots) {
+      for (ShotIntermediate shot in shots.intermediateShots) {
         String direction = (shot.depthFrom < shot.depthTo) ? 'DOWN' : 'UP';
         contents.write(newLine(
             '${shot.from.toString().trim()}\t${shot.to.toString().trim()}\t${shot.length.toStringAsFixed(2)}\t-\t$direction\t${shot.depthFrom.toStringAsFixed(2)}\t${shot.depthTo.toStringAsFixed(2)}',
@@ -606,7 +607,7 @@ class SurvexExporter {
   String getOutputFilename(String surveyName, String input) {
     String slugName =
         slugify(surveyName); // Implement `slugify` function in Dart
-    var parts = Uri.parse(input).pathSegments.last;
+    String parts = Uri.parse(input).pathSegments.last;
     String output = '${parts}_$slugName.svx';
 
     return output;
