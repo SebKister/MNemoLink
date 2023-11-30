@@ -121,7 +121,7 @@ class SurvexExporter {
       depthTo = depthOut;
 
       if (depthDelta > maxDeltaDepth) {
-        final String connectingStationFrom = (id - 1).toString();
+        final String connectingStationFrom = id.toString();
         final String connectingStationTo = '${connectingStationFrom}B';
         final ShotConnecting connectingShot = ShotConnecting(
             from: connectingStationFrom,

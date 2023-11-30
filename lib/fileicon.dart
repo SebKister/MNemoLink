@@ -18,34 +18,42 @@ class FileIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: size * 1.6,
-      height: size * 1.6,
-      child: Stack(
-        alignment: Alignment.center,
-        children: <Widget>[
-          IconButton(
-            icon: Icon(
-              Icons.insert_drive_file,
-              color: color,
-              size: size,
+    return Material(
+      // Use Material to provide the necessary context for InkWell
+      color: Colors.transparent, // Ensure Material is transparent
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(
+            size), // Circular border radius for the ripple effect
+        child: ClipOval(
+          // Clip the content as a circle
+          child: SizedBox(
+            width: size * 1.6,
+            height: size * 1.6,
+            child: Stack(
+              alignment: Alignment.center,
+              children: <Widget>[
+                Icon(
+                  Icons.insert_drive_file,
+                  color: color,
+                  size: size,
+                ),
+                Positioned(
+                  bottom: 4,
+                  right: 4,
+                  child: Text(
+                    extension.toUpperCase(),
+                    style: TextStyle(
+                      fontSize: size * 0.6,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.blue[900],
+                    ),
+                  ),
+                ),
+              ],
             ),
-            tooltip: tooltip,
-            onPressed: onPressed,
           ),
-          Positioned(
-            bottom: 4,
-            right: 4,
-            child: Text(
-              extension.toUpperCase(),
-              style: TextStyle(
-                fontSize: size * 0.6,
-                fontWeight: FontWeight.w800,
-                color: Colors.blue[900],
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
