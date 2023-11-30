@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_libserialport/flutter_libserialport.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
+import 'package:mnemolink/fileicon.dart';
+import 'package:mnemolink/survexporter.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:mnemolink/excelexport.dart';
 import 'package:mnemolink/sectioncard.dart';
@@ -20,7 +22,7 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   // This widget is the root of your application.
   @override
@@ -36,7 +38,7 @@ class MyApp extends StatelessWidget {
 }
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({Key? key, required this.title}) : super(key: key);
+  const MyHomePage({super.key, required this.title});
 
   final String title;
 
@@ -48,7 +50,7 @@ class _MyHomePageState extends State<MyHomePage> {
   String mnemoPortAddress = "";
   late SerialPort mnemoPort;
   bool connected = false;
-  List<String> CLIHistory = [""];
+  List<String> cliHistory = [""];
   var transferBuffer = List<int>.empty(growable: true);
   SectionList sections = SectionList();
   var cliScrollController = ScrollController();
@@ -71,12 +73,12 @@ class _MyHomePageState extends State<MyHomePage> {
   );
 
 // create some values
-  Color pickerColor = Color(0xff443a49);
-  Color readingAColor = Color(0x00000000);
-  Color readingBColor = Color(0x00000000);
-  Color standbyColor = Color(0x00000000);
-  Color stabilizeColor = Color(0x00000000);
-  Color readyColor = Color(0x00000000);
+  Color pickerColor = const Color(0xff443a49);
+  Color readingAColor = const Color(0x00000000);
+  Color readingBColor = const Color(0x00000000);
+  Color standbyColor = const Color(0x00000000);
+  Color stabilizeColor = const Color(0x00000000);
+  Color readyColor = const Color(0x00000000);
 
   int timeON = 0;
 
@@ -438,17 +440,26 @@ class _MyHomePageState extends State<MyHomePage> {
                                       icon: const Icon(Icons.refresh),
                                       tooltip: "Read Data from Device",
                                     ),
-                                    IconButton(
+                                    FileIcon(
                                       onPressed:
                                           (serialBusy) ? null : onSaveDMP,
-                                      icon: const Icon(Icons.save),
+                                      extension: 'DMP',
                                       tooltip: "Save as DMP",
+                                      size: 24,
                                     ),
-                                    IconButton(
+                                    FileIcon(
                                       onPressed:
                                           (serialBusy) ? null : onExportXLS,
-                                      icon: const Icon(Icons.save_alt),
-                                      tooltip: "Export as XLS",
+                                      extension: 'XLS',
+                                      tooltip: "Export as Excel",
+                                      size: 24,
+                                    ),
+                                    FileIcon(
+                                      onPressed:
+                                          (serialBusy) ? null : onExportSVX,
+                                      extension: 'SVX',
+                                      tooltip: "Export as Survex",
+                                      size: 24,
                                     ),
                                   ],
                                   backgroundColor: Colors.white30,
@@ -502,7 +513,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                           getCurrentTimeFormat()),
                                               SettingActionRadioList(
                                                   "",
-                                                  {
+                                                  const {
                                                     "24H": 0,
                                                     "12AM/12PM": 1,
                                                   },
@@ -518,7 +529,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                           getCurrentDateFormat()),
                                               SettingActionRadioList(
                                                   "",
-                                                  {
+                                                  const {
                                                     "DD/MM": 0,
                                                     "MM/DD": 1,
                                                   },
@@ -665,7 +676,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                     ]),
                                                   ],
                                                 ),
-                                                SizedBox(width: 50),
+                                                const SizedBox(width: 50),
                                                 SizedBox(
                                                   height: 200,
                                                   child: MaterialPicker(
@@ -674,7 +685,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                     enableLabel: true,
                                                   ),
                                                 ),
-                                                SizedBox(width: 50),
+                                                const SizedBox(width: 50),
                                               ],
                                             ),
                                           ),
@@ -697,7 +708,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                                 getCurrentStabilizationFactor()),
                                                     SettingActionRadioList(
                                                         "SYNC NOW",
-                                                        {
+                                                        const {
                                                           "LOW": 5,
                                                           "MID": 10,
                                                           "HIGH": 20
@@ -743,7 +754,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                                 getCurrentClickThreshold()),
                                                     SettingActionRadioList(
                                                         "SYNC NOW",
-                                                        {
+                                                        const {
                                                           "LOW": 50,
                                                           "MID": 40,
                                                           "HIGH": 30,
@@ -790,7 +801,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                                 getCurrentBMClickDurationFactor()),
                                                     SettingActionRadioList(
                                                         "SYNC NOW",
-                                                        {
+                                                        const {
                                                           "EXTRA FAST": 25,
                                                           "FAST": 50,
                                                           "NORMAL": 100,
@@ -837,7 +848,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                                 getCurrentsafetySwitchON()),
                                                     SettingActionRadioList(
                                                         "SYNC NOW",
-                                                        {
+                                                        const {
                                                           "DISABLED": 0,
                                                           "ENABLED": 1
                                                         },
@@ -882,7 +893,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                                 getCurrentDoubleTap()),
                                                     SettingActionRadioList(
                                                         "SYNC NOW",
-                                                        {
+                                                        const {
                                                           "DISABLED": 0,
                                                           "LIGHT": 15,
                                                           "NORMAL": 20,
@@ -928,7 +939,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                                 getCurrentXCompass()),
                                                     SettingActionRadioList(
                                                         "SYNC NOW",
-                                                        {
+                                                        const {
                                                           "1": 1,
                                                           "-1": 255,
                                                         },
@@ -944,7 +955,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                                 getCurrentYCompass()),
                                                     SettingActionRadioList(
                                                         "SYNC NOW",
-                                                        {
+                                                        const {
                                                           "1": 1,
                                                           "-1": 255,
                                                         },
@@ -960,7 +971,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                                 getCurrentZCompass()),
                                                     SettingActionRadioList(
                                                         "SYNC NOW",
-                                                        {
+                                                        const {
                                                           "1": 1,
                                                           "-1": 255,
                                                         },
@@ -976,7 +987,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                                 getCurrentCalMode()),
                                                     SettingActionRadioList(
                                                         "SYNC NOW",
-                                                        {
+                                                        const {
                                                           "SLOW": 0,
                                                           "FAST": 1,
                                                         },
@@ -1078,13 +1089,15 @@ class _MyHomePageState extends State<MyHomePage> {
                                           padding: const EdgeInsets.all(20),
                                           shrinkWrap: true,
                                           scrollDirection: Axis.vertical,
-                                          children: CLIHistory.map(
-                                            (e) => Card(
-                                              child: ListTile(
-                                                title: Text(e),
-                                              ),
-                                            ),
-                                          ).toList(),
+                                          children: cliHistory
+                                              .map(
+                                                (e) => Card(
+                                                  child: ListTile(
+                                                    title: Text(e),
+                                                  ),
+                                                ),
+                                              )
+                                              .toList(),
                                         ),
                                       ),
                                     ),
@@ -1176,7 +1189,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
     if (res == false) {
       setState(() {
-        CLIHistory.add("Error Opening Port");
+        cliHistory.add("Error Opening Port");
         serialBusy = false;
         connected = false;
       });
@@ -1189,14 +1202,15 @@ class _MyHomePageState extends State<MyHomePage> {
         utf8.decode(commandnl.runes.toList()).runes.toList());
     int? nbwritten = mnemoPort.write(uint8list, timeout: 1000);
 
-    setState(() => CLIHistory.add(
-        (nbwritten == commandnl.length) ? command : "Error $command"));
+    setState(() => cliHistory
+        .add((nbwritten == commandnl.length) ? command : "Error $command"));
 
     String commandnoPara = "";
-    if (command.contains(" "))
+    if (command.contains(" ")) {
       commandnoPara = command.split(" ").first.trim();
-    else
+    } else {
       commandnoPara = command;
+    }
 
     switch (commandnoPara) {
       case "getdata":
@@ -1219,8 +1233,8 @@ class _MyHomePageState extends State<MyHomePage> {
         startCodeInt.add(date.minute);
         var uint8list2 = Uint8List.fromList(startCodeInt);
         int? nbwritten = mnemoPort.write(uint8list2);
-        setState(() => CLIHistory.add(
-            (nbwritten == 5) ? "DateTime$date\n" : "Error in DateTime\n"));
+        setState(() => cliHistory
+            .add((nbwritten == 5) ? "DateTime$date\n" : "Error in DateTime\n"));
 
         commandSent = true;
         mnemoPort.close();
@@ -1251,7 +1265,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
     while (counterWait == 0) {
       while (mnemoPort != null && mnemoPort.bytesAvailable <= 0) {
-        await Future.delayed(Duration(milliseconds: 20));
+        await Future.delayed(const Duration(milliseconds: 20));
 
         counterWait++;
         if (counterWait == 100) {
@@ -1285,7 +1299,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void displayAnswer() {
-    setState(() => CLIHistory.add(utf8.decode(transferBuffer)));
+    setState(() => cliHistory.add(utf8.decode(transferBuffer)));
   }
 
   Future<void> onSaveDMP() async {
@@ -1309,9 +1323,24 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+  Future<void> onExportSVX() async {
+    // Lets the user pick one file; files with any file extension can be selected
+    var result =
+        await FilePicker.platform.saveFile(dialogTitle: "Save as Survex");
+
+// The result will be null, if the user aborted the dialog
+    if (result != null) {
+      if (!result.toLowerCase().endsWith('.svx')) result += ".svx";
+
+      final exporter = SurvexExporter();
+      await exporter.asSurvex(sections, result, unitType);
+    }
+  }
+
   Future<void> onExportXLS() async {
     // Lets the user pick one file; files with any file extension can be selected
-    var result = await FilePicker.platform.saveFile(dialogTitle: "Save as DMP");
+    var result =
+        await FilePicker.platform.saveFile(dialogTitle: "Save as Excel");
 
 // The result will be null, if the user aborted the dialog
     if (result != null) {
@@ -1449,27 +1478,27 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> setCurrentColorSchemeReadingA() async {
     setState(() => readingAColor = pickerColor);
-    await executeCLIAsync("setcolor readinga " + pickerColor.value.toString());
+    await executeCLIAsync("setcolor readinga ${pickerColor.value.toString()}");
   }
 
   Future<void> setCurrentColorSchemeReadingB() async {
     setState(() => readingBColor = pickerColor);
-    await executeCLIAsync("setcolor readingb " + pickerColor.value.toString());
+    await executeCLIAsync("setcolor readingb ${pickerColor.value.toString()}");
   }
 
   Future<void> setCurrentColorSchemeReady() async {
     setState(() => readyColor = pickerColor);
-    await executeCLIAsync("setcolor ready " + pickerColor.value.toString());
+    await executeCLIAsync("setcolor ready ${pickerColor.value.toString()}");
   }
 
   Future<void> setCurrentColorSchemeStabilize() async {
     setState(() => stabilizeColor = pickerColor);
-    await executeCLIAsync("setcolor stabilize " + pickerColor.value.toString());
+    await executeCLIAsync("setcolor stabilize ${pickerColor.value.toString()}");
   }
 
   Future<void> setCurrentColorSchemeStandBy() async {
     setState(() => standbyColor = pickerColor);
-    await executeCLIAsync("setcolor standby " + pickerColor.value.toString());
+    await executeCLIAsync("setcolor standby ${pickerColor.value.toString()}");
   }
 
   Future<void> resetColorScheme() async {
