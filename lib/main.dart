@@ -175,6 +175,10 @@ class _MyHomePageState extends State<MyHomePage> {
     executeCLIAsync("getdata").then((value) => analyzeTransferBuffer());
   }
 
+  void onRefreshMnemo() {
+    initMnemoPort();
+  }
+
   int readByteFromEEProm(int adresse) {
     return transferBuffer.elementAt(adresse);
   }
@@ -401,10 +405,19 @@ class _MyHomePageState extends State<MyHomePage> {
             (!connected) ? MainAxisAlignment.center : MainAxisAlignment.start,
         children: (!connected)
             ? <Widget>[
-                const Center(
-                  child: Text(
-                      "Connect the Mnemo to your computer and restart the application"),
-                ),
+                Center(
+                  child: Column(
+                    children: [
+                      const Text(
+                          "Connect the Mnemo to your computer and press the refresh button"),
+                      IconButton(
+                        onPressed: onRefreshMnemo,
+                        icon: const Icon(Icons.refresh),
+                        tooltip: "Search for Device",
+                      ),
+                    ],
+                  ),
+                )
               ]
             : <Widget>[
                 // Generated code for this TabBar Widget...
