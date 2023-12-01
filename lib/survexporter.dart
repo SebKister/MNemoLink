@@ -58,7 +58,7 @@ class SurvexExporter {
       final SVXShots shots = getShots(section);
       final String contents =
           await getSvxContents(section, shots, filenameSuffix, unitType);
-      final Uint8List contentsAsBytes = utf8.encode(contents);
+      final List<int> contentsAsBytes = utf8.encode(contents);
 
       final String filename = "$baseFilename-$filenameSuffix.svx";
       final File file = File(filename);

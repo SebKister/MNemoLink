@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 class FileIcon extends StatelessWidget {
   final String extension;
   final Color color;
+  final Color extensionColor;
   final double size;
   final String? tooltip;
   final VoidCallback? onPressed;
@@ -11,6 +12,7 @@ class FileIcon extends StatelessWidget {
     super.key,
     required this.extension,
     this.color = Colors.blue,
+    this.extensionColor=Colors.blue,
     this.size = 24.0,
     this.tooltip,
     this.onPressed,
@@ -44,9 +46,9 @@ class FileIcon extends StatelessWidget {
                   child: Text(
                     extension.toUpperCase(),
                     style: TextStyle(
-                      fontSize: size * 0.6,
+                      fontSize: size * 0.5,
                       fontWeight: FontWeight.w800,
-                      color: Colors.blue[900],
+                      color: extensionColor,
                     ),
                   ),
                 ),
