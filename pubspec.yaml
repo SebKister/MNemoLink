@@ -39,6 +39,7 @@ dependencies:
   intl: null
   loading_animation_widget: null
   package_info_plus: ^5.0.1
+  slugify: ^2.0.0
 
 dev_dependencies:
   flutter_lints: null
