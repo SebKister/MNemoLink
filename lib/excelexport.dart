@@ -93,56 +93,74 @@ void writeRowOnSheet(Section section, Shot data, Sheet sheet, int rowNumber) {
   ];
   int index = 0;
 
+  final cellStyleWithNumberFormatForNumber = CellStyle(
+    numberFormat: NumFormat.standard_0,
+  );
+
   var cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
   cell.value = TextCellValue(data.typeShot.name);
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
   cell.value = DoubleCellValue(data.length);
+  cell.cellStyle = cellStyleWithNumberFormatForNumber;
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
   cell.value = DoubleCellValue(data.depthIn);
+  cell.cellStyle = cellStyleWithNumberFormatForNumber;
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
   cell.value = DoubleCellValue(data.depthOut);
+  cell.cellStyle = cellStyleWithNumberFormatForNumber;
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
   cell.value = DoubleCellValue(data.headingIn / 10.0);
+  cell.cellStyle = cellStyleWithNumberFormatForNumber;
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
   cell.value = DoubleCellValue(data.headingOut / 10.0);
+  cell.cellStyle = cellStyleWithNumberFormatForNumber;
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
   cell.value = DoubleCellValue(data.pitchIn / 10.0);
+  cell.cellStyle = cellStyleWithNumberFormatForNumber;
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
   cell.value = DoubleCellValue(data.pitchOut / 10.0);
+  cell.cellStyle = cellStyleWithNumberFormatForNumber;
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
   cell.value = DoubleCellValue(data.left);
+  cell.cellStyle = cellStyleWithNumberFormatForNumber;
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
   cell.value = DoubleCellValue(data.right);
+  cell.cellStyle = cellStyleWithNumberFormatForNumber;
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
   cell.value = DoubleCellValue(data.up);
+  cell.cellStyle = cellStyleWithNumberFormatForNumber;
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
   cell.value = DoubleCellValue(data.down);
+  cell.cellStyle = cellStyleWithNumberFormatForNumber;
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
   cell.value = DoubleCellValue(data.temperature / 10.0);
+  cell.cellStyle = cellStyleWithNumberFormatForNumber;
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = DateCellValue.fromDateTime(DateTime(
-      section.dateSurvey.year,
-      section.dateSurvey.month,
-      section.dateSurvey.day,
-      data.hr,
-      data.min,
-      data.sec));
+  cell.value = TextCellValue(DateTime(
+          section.dateSurvey.year,
+          section.dateSurvey.month,
+          section.dateSurvey.day,
+          data.hr,
+          data.min,
+          data.sec)
+      .toIso8601String());
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
   cell.value = IntCellValue(data.markerIndex);
+  cell.cellStyle = cellStyleWithNumberFormatForNumber;
 }
 
 void writeTitleOnSheet(Sheet sheet, Section s, UnitType unitType) {
