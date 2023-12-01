@@ -174,7 +174,7 @@ class SurvexExporter {
 
     // Exporting first and last stations
     final int lastStation = svxShots.svxShots.length + 1;
-    final String export = "1, ${lastStation.toString()}";
+    final String export = "1 ${lastStation.toString()}";
     contents.write(newLine('*export $export', prefix));
     contents.write('\n');
 
