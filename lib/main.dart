@@ -441,25 +441,55 @@ class _MyHomePageState extends State<MyHomePage> {
                                       tooltip: "Read Data from Device",
                                     ),
                                     FileIcon(
-                                      onPressed:
-                                          (serialBusy) ? null : onSaveDMP,
+                                      onPressed: (serialBusy ||
+                                              sections.sections.isEmpty)
+                                          ? null
+                                          : onSaveDMP,
                                       extension: 'DMP',
                                       tooltip: "Save as DMP",
                                       size: 24,
+                                      color: (serialBusy ||
+                                              sections.sections.isEmpty)
+                                          ? Colors.black26
+                                          : Colors.black54,
+                                      extensionColor: (serialBusy ||
+                                              sections.sections.isEmpty)
+                                          ? Colors.black26
+                                          : Colors.black87,
                                     ),
                                     FileIcon(
-                                      onPressed:
-                                          (serialBusy) ? null : onExportXLS,
+                                      onPressed: (serialBusy ||
+                                              sections.sections.isEmpty)
+                                          ? null
+                                          : onExportXLS,
                                       extension: 'XLS',
                                       tooltip: "Export as Excel",
                                       size: 24,
+                                      color: (serialBusy ||
+                                          sections.sections.isEmpty)
+                                          ? Colors.black26
+                                          : Colors.black54,
+                                      extensionColor: (serialBusy ||
+                                          sections.sections.isEmpty)
+                                          ? Colors.black26
+                                          : Colors.black87,
                                     ),
                                     FileIcon(
-                                      onPressed:
-                                          (serialBusy) ? null : onExportSVX,
+                                      onPressed: (serialBusy ||
+                                              sections.sections.isEmpty)
+                                          ? null
+                                          : onExportSVX,
                                       extension: 'SVX',
                                       tooltip: "Export as Survex",
                                       size: 24,
+                                      color: (serialBusy ||
+                                          sections.sections.isEmpty)
+                                          ? Colors.black26
+                                          : Colors.black54,
+                                      extensionColor: (serialBusy ||
+                                          sections.sections.isEmpty)
+                                          ? Colors.black26
+                                          : Colors.black87,
                                     ),
                                   ],
                                   backgroundColor: Colors.white30,
@@ -513,7 +543,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                           getCurrentTimeFormat()),
                                               SettingActionRadioList(
                                                   "",
-                                                  const {
+                                                   {
                                                     "24H": 0,
                                                     "12AM/12PM": 1,
                                                   },
@@ -529,7 +559,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                           getCurrentDateFormat()),
                                               SettingActionRadioList(
                                                   "",
-                                                  const {
+                                                   {
                                                     "DD/MM": 0,
                                                     "MM/DD": 1,
                                                   },
@@ -1303,9 +1333,11 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<void> onSaveDMP() async {
-
 // Lets the enter file name, only files with the corresponding extensions are displayed
-    var result = await FilePicker.platform.saveFile(dialogTitle: "Save as DMP",type: FileType.custom,allowedExtensions: ["dmp"]);
+    var result = await FilePicker.platform.saveFile(
+        dialogTitle: "Save as DMP",
+        type: FileType.custom,
+        allowedExtensions: ["dmp"]);
 
 // The result will be null, if the user aborted the dialog
     if (result != null) {
@@ -1325,8 +1357,10 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> onExportSVX() async {
     // Lets the user pick one file; files with any file extension can be selected
-    var result =
-        await FilePicker.platform.saveFile(dialogTitle: "Save as Survex",type: FileType.custom,allowedExtensions: ["svx"]);
+    var result = await FilePicker.platform.saveFile(
+        dialogTitle: "Save as Survex",
+        type: FileType.custom,
+        allowedExtensions: ["svx"]);
 
 // The result will be null, if the user aborted the dialog
     if (result != null) {
@@ -1339,8 +1373,10 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> onExportXLS() async {
     // Lets the user pick one file; files with any file extension can be selected
-    var result =
-        await FilePicker.platform.saveFile(dialogTitle: "Save as Excel",type: FileType.custom,allowedExtensions: ["xlsx"]);
+    var result = await FilePicker.platform.saveFile(
+        dialogTitle: "Save as Excel",
+        type: FileType.custom,
+        allowedExtensions: ["xlsx"]);
 
 // The result will be null, if the user aborted the dialog
     if (result != null) {
