@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
-import 'dart:typed_data';
 import 'package:mnemolink/section.dart';
 import 'package:mnemolink/sectionlist.dart';
 import 'package:mnemolink/shot.dart';
