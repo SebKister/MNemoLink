@@ -100,9 +100,6 @@ mixin ShotExport {
           'Azimuth WARNING: difference between IN (${azimuthIn.toStringAsFixed(1)}) and OUT (${azimuthOut.toStringAsFixed(1)}) azimuths greater than limit (${_maxDeltaAzimuth.toStringAsFixed(1)}): ${azimuthDelta.toStringAsFixed(1)}');
     }
 
-    // Uncomment and modify the following line if needed
-    // comments.add('Adopted azimuth mean: $azimuthMean');
-
     return comments;
   }
 

@@ -7,6 +7,7 @@ import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:mnemolink/fileicon.dart';
 import 'package:mnemolink/survexporter.dart';
+import 'package:mnemolink/thexporter.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:mnemolink/excelexport.dart';
 import 'package:mnemolink/sectioncard.dart';
@@ -479,11 +480,11 @@ class _MyHomePageState extends State<MyHomePage> {
                                       tooltip: "Export as Excel",
                                       size: 24,
                                       color: (serialBusy ||
-                                          sections.sections.isEmpty)
+                                              sections.sections.isEmpty)
                                           ? Colors.black26
                                           : Colors.black54,
                                       extensionColor: (serialBusy ||
-                                          sections.sections.isEmpty)
+                                              sections.sections.isEmpty)
                                           ? Colors.black26
                                           : Colors.black87,
                                     ),
@@ -496,11 +497,28 @@ class _MyHomePageState extends State<MyHomePage> {
                                       tooltip: "Export as Survex",
                                       size: 24,
                                       color: (serialBusy ||
-                                          sections.sections.isEmpty)
+                                              sections.sections.isEmpty)
                                           ? Colors.black26
                                           : Colors.black54,
                                       extensionColor: (serialBusy ||
-                                          sections.sections.isEmpty)
+                                              sections.sections.isEmpty)
+                                          ? Colors.black26
+                                          : Colors.black87,
+                                    ),
+                                    FileIcon(
+                                      onPressed: (serialBusy ||
+                                              sections.sections.isEmpty)
+                                          ? null
+                                          : onExportTH,
+                                      extension: 'TH',
+                                      tooltip: "Export as Therion",
+                                      size: 24,
+                                      color: (serialBusy ||
+                                              sections.sections.isEmpty)
+                                          ? Colors.black26
+                                          : Colors.black54,
+                                      extensionColor: (serialBusy ||
+                                              sections.sections.isEmpty)
                                           ? Colors.black26
                                           : Colors.black87,
                                     ),
@@ -556,7 +574,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                           getCurrentTimeFormat()),
                                               SettingActionRadioList(
                                                   "",
-                                                   {
+                                                  {
                                                     "24H": 0,
                                                     "12AM/12PM": 1,
                                                   },
@@ -572,7 +590,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                           getCurrentDateFormat()),
                                               SettingActionRadioList(
                                                   "",
-                                                   {
+                                                  {
                                                     "DD/MM": 0,
                                                     "MM/DD": 1,
                                                   },
@@ -1369,18 +1387,30 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<void> onExportSVX() async {
-    // Lets the user pick one file; files with any file extension can be selected
     var result = await FilePicker.platform.saveFile(
         dialogTitle: "Save as Survex",
         type: FileType.custom,
         allowedExtensions: ["svx"]);
 
-// The result will be null, if the user aborted the dialog
     if (result != null) {
       if (!result.toLowerCase().endsWith('.svx')) result += ".svx";
 
       final exporter = SurvexExporter();
-      await exporter.asSurvex(sections, result, unitType);
+      await exporter.export(sections, result, unitType);
+    }
+  }
+
+  Future<void> onExportTH() async {
+    var result = await FilePicker.platform.saveFile(
+        dialogTitle: "Save as Therion (.th)",
+        type: FileType.custom,
+        allowedExtensions: ["th"]);
+
+    if (result != null) {
+      if (!result.toLowerCase().endsWith('.th')) result += ".th";
+
+      final exporter = THExporter();
+      await exporter.export(sections, result, unitType);
     }
   }
 
