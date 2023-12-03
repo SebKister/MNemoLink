@@ -51,9 +51,9 @@ class SurvexExporter with ShotExport {
     contents.write(newLine('*require 1.2.21'));
     contents.write('\n');
 
-    contents.write(newLine('*instrument compass MNemo'));
-    contents.write(newLine('*instrument depth MNemo'));
-    contents.write(newLine('*instrument tape MNemo'));
+    contents.write(newLine('*instrument compass "MNemo V2"'));
+    contents.write(newLine('*instrument depth "MNemo V2"'));
+    contents.write(newLine('*instrument tape "MNemo V2"'));
     contents.write('\n');
 
     contents.write(newLine('*sd compass 1.5 degrees'));
