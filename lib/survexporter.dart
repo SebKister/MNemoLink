@@ -24,65 +24,59 @@ class SurvexExporter with ShotExport {
       String surveyName, UnitType unitType) async {
     StringBuffer contents = StringBuffer(await headerComments());
 
-    String prefix = '';
-    contents.write(newLine('*begin $surveyName', prefix));
+    contents.write(newLine('*begin $surveyName'));
 
-    prefix = '\t';
-    contents.write(
-        newLine('; First and last stations automatically exported', prefix));
+    increasePrefix();
+    contents.write(newLine('; First and last stations automatically exported'));
 
     // Exporting first and last stations
     final int lastStation = exportShots.shots.length + 1;
     final String export = "1 ${lastStation.toString()}";
-    contents.write(newLine('*export $export', prefix));
+    contents.write(newLine('*export $export'));
     contents.write('\n');
 
-    contents.write(newLine('*title "$surveyName"', prefix));
+    contents.write(newLine('*title "$surveyName"'));
     contents.write('\n');
 
-    contents.write(
-        newLine('*date ${dateInExportFormat(section.dateSurvey)}', prefix));
+    contents.write(newLine('*date ${dateInExportFormat(section.dateSurvey)}'));
     contents.write('\n');
 
     // Additional contents based on data
     contents.write(newLine(
-        '; Uncomment and fill the lines below to set the team members names.',
-        prefix));
-    contents.write(newLine(';*team "" explorer', prefix));
-    contents.write(newLine(';*team "" surveyor', prefix));
+        '; Uncomment and fill the lines below to set the team members names.'));
+    contents.write(newLine(';*team "" explorer'));
+    contents.write(newLine(';*team "" surveyor'));
     contents.write('\n');
 
-    contents.write(newLine('*require 1.2.21', prefix));
+    contents.write(newLine('*require 1.2.21'));
     contents.write('\n');
 
-    contents.write(newLine('*instrument compass MNemo', prefix));
-    contents.write(newLine('*instrument depth MNemo', prefix));
-    contents.write(newLine('*instrument tape MNemo', prefix));
+    contents.write(newLine('*instrument compass MNemo'));
+    contents.write(newLine('*instrument depth MNemo'));
+    contents.write(newLine('*instrument tape MNemo'));
     contents.write('\n');
 
-    contents.write(newLine('*sd compass 1.5 degrees', prefix));
-    contents.write(newLine('*sd depth 0.1 metres', prefix));
-    contents.write(newLine('*sd tape 0.086 metres', prefix));
+    contents.write(newLine('*sd compass 1.5 degrees'));
+    contents.write(newLine('*sd depth 0.1 metres'));
+    contents.write(newLine('*sd tape 0.086 metres'));
     contents.write('\n');
 
-    contents.write(newLine('*calibrate depth 0 -1', prefix));
+    contents.write(newLine('*calibrate depth 0 -1'));
     contents.write('\n');
 
     // Unit handling
     if (unitType == UnitType.METRIC) {
-      contents.write(newLine('*units tape depth metres', prefix));
+      contents.write(newLine('*units tape depth metres'));
     } else {
-      contents.write(newLine('*units tape depth feet', prefix));
+      contents.write(newLine('*units tape depth feet'));
     }
     contents.write('\n');
 
     // Main topo data
     contents.write(newLine(
-        '*data diving from to tape compass fromdepth todepth ignoreall',
-        prefix));
+        '*data diving from to tape compass fromdepth todepth ignoreall'));
     contents.write(newLine(
-        '; From\tTo\tLength\tAzimuth\tDepIn\tDepOut\tAzIn\tAzOut\tAzDelta\tPitchIn\tPitchOut',
-        prefix));
+        '; From\tTo\tLength\tAzimuth\tDepIn\tDepOut\tAzIn\tAzOut\tAzDelta\tPitchIn\tPitchOut'));
     contents.write('\n');
 
     bool firstLine = true;
@@ -93,21 +87,20 @@ class SurvexExporter with ShotExport {
         }
 
         for (var comment in exportShot.azimuthComments) {
-          contents.write(newLine('; $comment', prefix));
+          contents.write(newLine('; $comment'));
         }
       }
 
       // Formatting the measurement line
       contents.write(newLine(
-          '${exportShot.from}\t${exportShot.to}\t${exportShot.length.toStringAsFixed(2)}\t${exportShot.azimuthMean.toStringAsFixed(1)}\t${exportShot.depthIn.toStringAsFixed(2)}\t${exportShot.depthOut.toStringAsFixed(2)}\t${exportShot.azimuthIn.toStringAsFixed(1)}\t${exportShot.azimuthOut.toStringAsFixed(1)}\t${exportShot.azimuthDelta.toStringAsFixed(1)}\t${exportShot.pitchIn.toStringAsFixed(1)}\t${exportShot.pitchOut.toStringAsFixed(1)}',
-          prefix));
+          '${exportShot.from}\t${exportShot.to}\t${exportShot.length.toStringAsFixed(2)}\t${exportShot.azimuthMean.toStringAsFixed(1)}\t${exportShot.depthIn.toStringAsFixed(2)}\t${exportShot.depthOut.toStringAsFixed(2)}\t${exportShot.azimuthIn.toStringAsFixed(1)}\t${exportShot.azimuthOut.toStringAsFixed(1)}\t${exportShot.azimuthDelta.toStringAsFixed(1)}\t${exportShot.pitchIn.toStringAsFixed(1)}\t${exportShot.pitchOut.toStringAsFixed(1)}'));
       firstLine = false;
     }
     contents.write('\n');
 
     // Finalizing the survey contents
-    prefix = '';
-    contents.write(newLine('*end $surveyName', prefix));
+    decreasePrefix();
+    contents.write(newLine('*end $surveyName'));
 
     return contents.toString();
   }

@@ -9,9 +9,9 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:slugify/slugify.dart';
 
 mixin ShotExport {
-  final int defaultFirstStationNumber = 1;
-  final int minSectionCountWidth = 3;
-  final double maxDeltaAzimuth = 5;
+  final int _minSectionCountWidth = 3;
+  final double _maxDeltaAzimuth = 5;
+  String _prefix = '';
 
   String get extension;
 
@@ -34,6 +34,14 @@ mixin ShotExport {
     }
 
     return meanAzimuthDeg;
+  }
+
+  void increasePrefix() {
+    _prefix += '  ';
+  }
+
+  void decreasePrefix() {
+    _prefix = _prefix.substring(2);
   }
 
   double deg2rad(double degrees) {
@@ -68,7 +76,7 @@ mixin ShotExport {
     for (var section in sectionList.sections) {
       fileCounter++;
       String filenameSuffix =
-          "${slugify(section.name)}-${fileCounter.toString().padLeft(minSectionCountWidth, '0')}";
+          "${slugify(section.name)}-${fileCounter.toString().padLeft(_minSectionCountWidth, '0')}";
 
       final ExportShots shots = getShots(section);
       final String contents =
@@ -87,9 +95,9 @@ mixin ShotExport {
       double azimuthIn, double azimuthOut) {
     List<String> comments = [];
 
-    if (azimuthDelta > maxDeltaAzimuth) {
+    if (azimuthDelta > _maxDeltaAzimuth) {
       comments.add(
-          'Azimuth WARNING: difference between IN (${azimuthIn.toStringAsFixed(1)}) and OUT (${azimuthOut.toStringAsFixed(1)}) azimuths greater than limit (${maxDeltaAzimuth.toStringAsFixed(1)}): ${azimuthDelta.toStringAsFixed(1)}');
+          'Azimuth WARNING: difference between IN (${azimuthIn.toStringAsFixed(1)}) and OUT (${azimuthOut.toStringAsFixed(1)}) azimuths greater than limit (${_maxDeltaAzimuth.toStringAsFixed(1)}): ${azimuthDelta.toStringAsFixed(1)}');
     }
 
     // Uncomment and modify the following line if needed
@@ -144,8 +152,8 @@ mixin ShotExport {
     return processedShots;
   }
 
-  String newLine(String line, String prefix) {
-    return '$prefix$line\n';
+  String newLine(String line) {
+    return '$_prefix$line\n';
   }
 
   String dateInExportFormat(DateTime date) {
