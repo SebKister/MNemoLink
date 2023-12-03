@@ -11,6 +11,9 @@ class THExporter with ShotExport {
       String surveyName, UnitType unitType) async {
     StringBuffer contents = StringBuffer(await headerComments());
 
+    contents.write(newLine('encoding UTF-8'));
+    contents.write('\n');
+
     contents.write(newLine('survey $surveyName'));
 
     increasePrefix();
