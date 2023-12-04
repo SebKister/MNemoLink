@@ -41,7 +41,6 @@ class FileIcon extends StatelessWidget {
                   ),
                   Positioned(
                     bottom: 4,
-                    right: 4,
                     child: Text(
                       extension.toUpperCase(),
                       style: TextStyle(
