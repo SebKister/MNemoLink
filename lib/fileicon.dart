@@ -7,6 +7,7 @@ class FileIcon extends StatelessWidget {
   final double size;
   final String? tooltip;
   final VoidCallback? onPressed;
+  final IconData? icon;
 
   const FileIcon({
     super.key,
@@ -16,6 +17,7 @@ class FileIcon extends StatelessWidget {
     this.size = 24.0,
     this.tooltip,
     this.onPressed,
+    this.icon,
   });
 
   @override
@@ -35,7 +37,7 @@ class FileIcon extends StatelessWidget {
                 alignment: Alignment.center,
                 children: <Widget>[
                   Icon(
-                    Icons.insert_drive_file,
+                    (icon != null) ? icon : Icons.insert_drive_file,
                     color: color,
                     size: size,
                   ),
