@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 import 'dart:typed_data';
 import 'package:csv/csv.dart';
 import 'package:file_picker/file_picker.dart';
@@ -52,6 +53,7 @@ class _MyHomePageState extends State<MyHomePage> {
   bool connected = false;
   bool dmpLoaded = false;
   List<String> cliHistory = [""];
+  List<String> cliCommandHistory = [""];
   var transferBuffer = List<int>.empty(growable: true);
   SectionList sections = SectionList();
   var cliScrollController = ScrollController();
@@ -161,10 +163,13 @@ class _MyHomePageState extends State<MyHomePage> {
         mnemoPort = SerialPort(mnemoPortAddress);
         connected = mnemoPort.openReadWrite();
         mnemoPort.flush();
-        SerialPortConfig config = mnemoPort.config;
-        config.setFlowControl(SerialPortFlowControl.none);
-        mnemoPort.config = config;
-        config.dispose();
+        mnemoPort.config = SerialPortConfig()
+          ..rts = SerialPortRts.flowControl
+          ..cts = SerialPortCts.flowControl
+          ..dsr = SerialPortDsr.flowControl
+          ..dtr = SerialPortDtr.flowControl
+          ..setFlowControl(SerialPortFlowControl.rtsCts);
+
         mnemoPort.close();
         getCurrentName()
             .then((value) => getTimeON().then((value) => getTimeSurvey()));
@@ -1185,101 +1190,114 @@ class _MyHomePageState extends State<MyHomePage> {
                                         ),
                                       ],
                                     )
-                                  : SizedBox(
-                                      width: 100,
-                                      height: 100,
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.max,
-                                        children: [
-                                          AppBar(
-                                            title: Row(
-                                              mainAxisSize: MainAxisSize.max,
-                                              children: [
-                                                Expanded(
-                                                  child: Padding(
-                                                    padding:
-                                                        const EdgeInsetsDirectional
-                                                            .fromSTEB(
-                                                            20, 0, 0, 0),
-                                                    child: TextFormField(
-                                                      onFieldSubmitted: (serialBusy)
-                                                          ? null
-                                                          : onExecuteCLICommand,
-                                                      autofocus: true,
-                                                      obscureText: false,
-                                                      decoration:
-                                                          const InputDecoration(
-                                                        labelText: "Command",
-                                                        hintText:
-                                                            '[Enter Command or type listcommands]',
-                                                        enabledBorder:
-                                                            UnderlineInputBorder(
-                                                          borderSide:
-                                                              BorderSide(
-                                                            color: Color(
-                                                                0x00000000),
-                                                            width: 1,
-                                                          ),
-                                                          borderRadius:
-                                                              BorderRadius.only(
-                                                            topLeft:
-                                                                Radius.circular(
-                                                                    4.0),
-                                                            topRight:
-                                                                Radius.circular(
-                                                                    4.0),
-                                                          ),
+                                  : Column(
+                                      mainAxisSize: MainAxisSize.max,
+                                      children: [
+                                        AppBar(
+                                          title: Row(
+                                            mainAxisSize: MainAxisSize.max,
+                                            children: [
+                                              Expanded(
+                                                child: Padding(
+                                                  padding:
+                                                      const EdgeInsetsDirectional
+                                                          .fromSTEB(
+                                                          20, 0, 0, 0),
+                                                  child: TextFormField(
+                                                    showCursor: true,
+                                                    onFieldSubmitted: (serialBusy)
+                                                        ? null
+                                                        : onExecuteCLICommand,
+                                                    autofocus: true,
+                                                    obscureText: false,
+                                                    decoration:
+                                                        const InputDecoration(
+                                                      labelText: "Command",
+                                                      hintText:
+                                                          '[Enter Command or type listcommands]',
+                                                      enabledBorder:
+                                                          UnderlineInputBorder(
+                                                        borderSide: BorderSide(
+                                                          color:
+                                                              Color(0x00000000),
+                                                          width: 1,
                                                         ),
-                                                        focusedBorder:
-                                                            UnderlineInputBorder(
-                                                          borderSide:
-                                                              BorderSide(
-                                                            color: Color(
-                                                                0x00000000),
-                                                            width: 1,
-                                                          ),
-                                                          borderRadius:
-                                                              BorderRadius.only(
-                                                            topLeft:
-                                                                Radius.circular(
-                                                                    4.0),
-                                                            topRight:
-                                                                Radius.circular(
-                                                                    4.0),
-                                                          ),
+                                                        borderRadius:
+                                                            BorderRadius.only(
+                                                          topLeft:
+                                                              Radius.circular(
+                                                                  4.0),
+                                                          topRight:
+                                                              Radius.circular(
+                                                                  4.0),
+                                                        ),
+                                                      ),
+                                                      focusedBorder:
+                                                          UnderlineInputBorder(
+                                                        borderSide: BorderSide(
+                                                          color:
+                                                              Color(0x00000000),
+                                                          width: 1,
+                                                        ),
+                                                        borderRadius:
+                                                            BorderRadius.only(
+                                                          topLeft:
+                                                              Radius.circular(
+                                                                  4.0),
+                                                          topRight:
+                                                              Radius.circular(
+                                                                  4.0),
                                                         ),
                                                       ),
                                                     ),
                                                   ),
                                                 ),
-                                              ],
-                                            ),
-                                            backgroundColor: Colors.white30,
-                                          ),
-                                          Expanded(
-                                            child: Container(
-                                              decoration: const BoxDecoration(
-                                                  color: Colors.black26),
-                                              child: ListView(
-                                                controller: cliScrollController,
-                                                padding:
-                                                    const EdgeInsets.all(20),
-                                                shrinkWrap: true,
-                                                scrollDirection: Axis.vertical,
-                                                children: cliHistory
-                                                    .map(
-                                                      (e) => Card(
-                                                        child: ListTile(
-                                                          title: Text(e),
-                                                        ),
-                                                      ),
-                                                    )
-                                                    .toList(),
                                               ),
+                                            ],
+                                          ),
+                                          backgroundColor: Colors.white30,
+                                        ),
+                                        Expanded(
+                                          child: Container(
+                                            decoration: const BoxDecoration(
+                                                color: Colors.black26),
+                                            child: ListView(
+                                              padding: const EdgeInsets.all(20),
+                                              shrinkWrap: true,
+                                              scrollDirection: Axis.vertical,
+                                              children: cliHistory
+                                                  .where((e) => e.length >= 2)
+                                                  .map(
+                                                    (e) => RichText(
+                                                      text: TextSpan(
+                                                        text:
+                                                            "${e.substring(2)}\n",
+                                                        style: TextStyle(
+                                                            color: (e.substring(
+                                                                        0, 2) ==
+                                                                    "a:")
+                                                                ? Colors
+                                                                    .blueGrey
+                                                                : (e.substring(
+                                                                            0,
+                                                                            2) ==
+                                                                        "c:")
+                                                                    ? Colors
+                                                                        .black87
+                                                                    : Colors
+                                                                        .red,
+                                                            fontSize: 18,
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .normal),
+                                                      ),
+                                                    ),
+                                                  )
+                                                  .toList(),
                                             ),
                                           ),
-                                        ],
-                                      ),
+                                        ),
+                                      ],
                                     ),
                             ],
                           ),
@@ -1297,6 +1315,11 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void onExecuteCLICommand(command) async {
     executeCLIAsync(command);
+    if (!cliCommandHistory.contains(command)) {
+      setState(() {
+        cliCommandHistory.add(command);
+      });
+    }
   }
 
   Future<void> setZCompass(e) async {
@@ -1366,7 +1389,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
     if (res == false) {
       setState(() {
-        cliHistory.add("Error Opening Port");
+        cliHistory.add("e:Error Opening Port");
         serialBusy = false;
         connected = false;
       });
@@ -1379,8 +1402,8 @@ class _MyHomePageState extends State<MyHomePage> {
         utf8.decode(commandnl.runes.toList()).runes.toList());
     int? nbwritten = mnemoPort.write(uint8list, timeout: 1000);
 
-    setState(() => cliHistory
-        .add((nbwritten == commandnl.length) ? command : "Error $command"));
+    setState(() => cliHistory.add(
+        (nbwritten == commandnl.length) ? "c:$command" : "e:Error $command"));
 
     String commandnoPara = "";
     if (command.contains(" ")) {
@@ -1410,8 +1433,8 @@ class _MyHomePageState extends State<MyHomePage> {
         startCodeInt.add(date.minute);
         var uint8list2 = Uint8List.fromList(startCodeInt);
         int? nbwritten = mnemoPort.write(uint8list2);
-        setState(() => cliHistory
-            .add((nbwritten == 5) ? "DateTime$date\n" : "Error in DateTime\n"));
+        setState(() => cliHistory.add(
+            (nbwritten == 5) ? "a:DateTime$date\n" : "e:Error in DateTime\n"));
 
         commandSent = true;
         mnemoPort.close();
@@ -1476,7 +1499,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void displayAnswer() {
-    setState(() => cliHistory.add(utf8.decode(transferBuffer)));
+    setState(() => cliHistory.add("a:${utf8.decode(transferBuffer)}"));
   }
 
   Future<void> onSaveDMP() async {
