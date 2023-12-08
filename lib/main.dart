@@ -371,7 +371,7 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
         actions: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(5),
             child: Row(
               children: connected
                   ? [
