@@ -41,6 +41,7 @@ dependencies:
   loading_animation_widget: null
   package_info_plus: null
   slugify: null
+  csv: ^5.1.1
 
 dev_dependencies:
   flutter_lints: null
