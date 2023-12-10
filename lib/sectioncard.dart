@@ -7,9 +7,9 @@ import 'mapsurvey.dart';
 
 class SectionCard extends StatelessWidget {
   final Section section;
-  SvgPicture? picture;
-  String rawSvg = "";
-  MapSurvey map = MapSurvey();
+  late final SvgPicture? picture;
+  late final String rawSvg;
+  late final MapSurvey map;
   static const double displayWidth = 256;
   static const double displayHeight = 256;
   static const double margin = 4;
