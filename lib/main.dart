@@ -869,7 +869,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                                       getCurrentStabilizationFactor()),
                                                           SettingActionRadioList(
                                                               "SYNC NOW",
-                                                              const {
+                                                              {
                                                                 "LOW": 5,
                                                                 "MID": 10,
                                                                 "HIGH": 20
@@ -914,11 +914,16 @@ class _MyHomePageState extends State<MyHomePage> {
                                                                       getCurrentClickThreshold()),
                                                           SettingActionRadioList(
                                                               "SYNC NOW",
-                                                              const {
-                                                                "LOW": 50,
-                                                                "MID": 40,
-                                                                "HIGH": 30,
-                                                                "ULTRA HIGH": 25
+                                                              {
+                                                                "LOW(50)": 50,
+                                                                "MID(40)": 40,
+                                                                "HIGH(30)": 30,
+                                                                "ULTRA HIGH(25)":
+                                                                    25,
+                                                                "MK.SPEC II (20)":
+                                                                    15,
+                                                                "MK.SPEC I (15)":
+                                                                    15
                                                               },
                                                               (serialBusy)
                                                                   ? null
@@ -960,7 +965,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                                       getCurrentBMClickDurationFactor()),
                                                           SettingActionRadioList(
                                                               "SYNC NOW",
-                                                              const {
+                                                              {
                                                                 "EXTRA FAST":
                                                                     25,
                                                                 "FAST": 50,
@@ -1007,7 +1012,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                                       getCurrentsafetySwitchON()),
                                                           SettingActionRadioList(
                                                               "SYNC NOW",
-                                                              const {
+                                                              {
                                                                 "DISABLED": 0,
                                                                 "ENABLED": 1
                                                               },
@@ -1051,7 +1056,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                                       getCurrentDoubleTap()),
                                                           SettingActionRadioList(
                                                               "SYNC NOW",
-                                                              const {
+                                                              {
                                                                 "DISABLED": 0,
                                                                 "LIGHT": 15,
                                                                 "NORMAL": 20,
@@ -1098,7 +1103,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                                       getCurrentXCompass()),
                                                           SettingActionRadioList(
                                                               "SYNC NOW",
-                                                              const {
+                                                              {
                                                                 "1": 1,
                                                                 "-1": 255,
                                                               },
@@ -1114,7 +1119,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                                       getCurrentYCompass()),
                                                           SettingActionRadioList(
                                                               "SYNC NOW",
-                                                              const {
+                                                              {
                                                                 "1": 1,
                                                                 "-1": 255,
                                                               },
@@ -1130,7 +1135,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                                       getCurrentZCompass()),
                                                           SettingActionRadioList(
                                                               "SYNC NOW",
-                                                              const {
+                                                              {
                                                                 "1": 1,
                                                                 "-1": 255,
                                                               },
@@ -1146,7 +1151,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                                       getCurrentCalMode()),
                                                           SettingActionRadioList(
                                                               "SYNC NOW",
-                                                              const {
+                                                              {
                                                                 "SLOW": 0,
                                                                 "FAST": 1,
                                                               },
