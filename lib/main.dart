@@ -1,7 +1,7 @@
 import 'dart:io';
-import 'dart:math';
 import 'dart:typed_data';
 import 'package:csv/csv.dart';
+import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_libserialport/flutter_libserialport.dart';
@@ -14,6 +14,8 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:mnemolink/excelexport.dart';
 import 'package:mnemolink/sectioncard.dart';
 import 'package:mnemolink/settingcard.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'dart:convert' show utf8;
 import './section.dart';
@@ -87,6 +89,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
   int timeSurvey = 0;
 
+  String ipMNemo = "";
+
 // ValueChanged<Color> callback
   void changeColor(Color color) {
     setState(() => pickerColor = color);
@@ -115,6 +119,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
   int timeFormat = -1;
 
+  var ipController = TextEditingController();
+
   Future<void> _initPackageInfo() async {
     final info = await PackageInfo.fromPlatform();
     setState(() {
@@ -125,6 +131,7 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
+// Load and obtain the shared preferences for this app.
 
     cliScrollController.addListener(() {
       if (cliScrollController.hasClients && commandSent) {
@@ -144,6 +151,7 @@ class _MyHomePageState extends State<MyHomePage> {
       return true;}();
     });
 */
+    initPrefs();
     _initPackageInfo();
     initMnemoPort();
   }
@@ -152,6 +160,12 @@ class _MyHomePageState extends State<MyHomePage> {
     return SerialPort.availablePorts.firstWhere(
         (element) => SerialPort(element).productName == "Nano RP2040 Connect",
         orElse: () => "");
+  }
+
+  Future<void> initPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    ipMNemo = prefs.getString('ipMNemo') ?? "192.168.4.1";
+    ipController.text = ipMNemo;
   }
 
   Future<void> initMnemoPort() async {
@@ -174,6 +188,13 @@ class _MyHomePageState extends State<MyHomePage> {
         getCurrentName()
             .then((value) => getTimeON().then((value) => getTimeSurvey()));
       }
+    });
+  }
+
+  void onReset() {
+    setState(() {
+      dmpLoaded = false;
+      sections.getSections().clear();
     });
   }
 
@@ -206,17 +227,40 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+  Future<void> onNetworkDMP() async {
+    final prefs = await SharedPreferences.getInstance();
+    prefs.setString('ipMNemo', ipMNemo);
+
+    var dir = await getTemporaryDirectory();
+
+    String url = "http://$ipMNemo/Download";
+    String fileName = 'mnemodata.txt';
+
+    Dio dio = Dio();
+    await dio.download(url, "${dir.path}/$fileName");
+
+    List<String> splits = List<String>.empty(growable: true);
+    await File("${dir.path}/$fileName")
+        .readAsString()
+        .then((value) => splits = value.split(";"));
+    transferBuffer = splits
+        .map((e) => (int.tryParse(e) == null) ? 0 : int.parse(e))
+        .toList();
+    analyzeTransferBuffer();
+    dmpLoaded = true;
+  }
+
   void onRefreshMnemo() {
     initMnemoPort();
   }
 
-  int readByteFromEEProm(int adresse) {
-    return transferBuffer.elementAt(adresse);
+  int readByteFromEEProm(int address) {
+    return transferBuffer.elementAt(address);
   }
 
-  int readIntFromEEProm(int adresse) {
+  int readIntFromEEProm(int address) {
     final bytes = Uint8List.fromList(
-        [transferBuffer[adresse], transferBuffer[adresse + 1]]);
+        [transferBuffer[address], transferBuffer[address + 1]]);
     final byteData = ByteData.sublistView(bytes);
     return byteData.getInt16(0);
   }
@@ -459,7 +503,11 @@ class _MyHomePageState extends State<MyHomePage> {
                         icon: const Icon(Icons.refresh),
                         tooltip: "Search for Device",
                       ),
-                      const Text("or open a DMP file"),
+                      const SizedBox(
+                        width: 10,
+                        height: 60,
+                      ),
+                      const Text("Open a DMP file"),
                       FileIcon(
                         icon: Icons.file_open,
                         onPressed: onOpenDMP,
@@ -468,6 +516,54 @@ class _MyHomePageState extends State<MyHomePage> {
                         size: 24,
                         color: Colors.black54,
                         extensionColor: Colors.black87,
+                      ),
+                      const SizedBox(
+                        width: 10,
+                        height: 60,
+                      ),
+                      const Text("Download from the network"),
+                      Container(alignment: Alignment.center,
+                        width: 140,
+                        child: TextField(
+                          textAlign: TextAlign.center,
+                          controller: ipController,
+                          showCursor: true,
+                          onChanged: (value) {
+                            ipMNemo = value;
+                          },
+                          autofocus: true,
+                          obscureText: false,
+                          decoration: const InputDecoration(
+                            floatingLabelAlignment: FloatingLabelAlignment.center,
+                            labelText: "IP",
+                            hintText: '[Enter the IP of the MNemo]',
+                            enabledBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(
+                                color: Color(0x00000000),
+                                width: 1,
+                              ),
+                              borderRadius: BorderRadius.only(
+                                topLeft: Radius.circular(4.0),
+                                topRight: Radius.circular(4.0),
+                              ),
+                            ),
+                            focusedBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(
+                                color: Color(0x00000000),
+                                width: 1,
+                              ),
+                              borderRadius: BorderRadius.only(
+                                topLeft: Radius.circular(4.0),
+                                topRight: Radius.circular(4.0),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: onNetworkDMP,
+                        icon: const Icon(Icons.wifi),
+                        tooltip: "Download from wifi connected device",
                       ),
                     ],
                   ),
@@ -502,6 +598,14 @@ class _MyHomePageState extends State<MyHomePage> {
                               Column(children: [
                                 AppBar(
                                   actions: [
+                                    IconButton(
+                                      onPressed: (serialBusy ||
+                                              sections.getSections().isEmpty)
+                                          ? null
+                                          : onReset,
+                                      icon: const Icon(Icons.backspace_rounded),
+                                      tooltip: "Clear local Data",
+                                    ),
                                     IconButton(
                                       onPressed: (serialBusy || !connected)
                                           ? null
