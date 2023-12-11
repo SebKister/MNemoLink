@@ -1,12 +1,13 @@
 import 'dart:io';
-import 'dart:math';
 import 'dart:typed_data';
 import 'package:csv/csv.dart';
+import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_libserialport/flutter_libserialport.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
+import 'package:masked_text_field/masked_text_field.dart';
 import 'package:mnemolink/fileicon.dart';
 import 'package:mnemolink/survexporter.dart';
 import 'package:mnemolink/thexporter.dart';
@@ -14,6 +15,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:mnemolink/excelexport.dart';
 import 'package:mnemolink/sectioncard.dart';
 import 'package:mnemolink/settingcard.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'dart:convert' show utf8;
 import './section.dart';
@@ -87,6 +89,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
   int timeSurvey = 0;
 
+  String ipMNemo = "";
+
 // ValueChanged<Color> callback
   void changeColor(Color color) {
     setState(() => pickerColor = color);
@@ -114,6 +118,8 @@ class _MyHomePageState extends State<MyHomePage> {
   int dateFormat = -1;
 
   int timeFormat = -1;
+
+  var ipController = TextEditingController();
 
   Future<void> _initPackageInfo() async {
     final info = await PackageInfo.fromPlatform();
@@ -177,6 +183,13 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
+  void onReset() {
+    setState(() {
+      dmpLoaded = false;
+      sections.getSections().clear();
+    });
+  }
+
   void onReadData() {
     executeCLIAsync("getdata").then((value) => analyzeTransferBuffer());
   }
@@ -206,17 +219,41 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+  Future<void> onNetworkDMP() async {
+    // gets the directory where we will download the file.
+    var dir = await getTemporaryDirectory();
+
+    // You should put the name you want for the file here.
+    // Take in account the extension.
+    String url = "http://$ipMNemo/Download";
+    String fileName = 'mnemodata.txt';
+
+    // downloads the file
+    Dio dio = Dio();
+    await dio.download(url, "${dir.path}/$fileName");
+
+    List<String> splits = List<String>.empty(growable: true);
+    await File("${dir.path}/$fileName")
+        .readAsString()
+        .then((value) => splits = value.split(";"));
+    transferBuffer = splits
+        .map((e) => (int.tryParse(e) == null) ? 0 : int.parse(e))
+        .toList();
+    analyzeTransferBuffer();
+    dmpLoaded = true;
+  }
+
   void onRefreshMnemo() {
     initMnemoPort();
   }
 
-  int readByteFromEEProm(int adresse) {
-    return transferBuffer.elementAt(adresse);
+  int readByteFromEEProm(int address) {
+    return transferBuffer.elementAt(address);
   }
 
-  int readIntFromEEProm(int adresse) {
+  int readIntFromEEProm(int address) {
     final bytes = Uint8List.fromList(
-        [transferBuffer[adresse], transferBuffer[adresse + 1]]);
+        [transferBuffer[address], transferBuffer[address + 1]]);
     final byteData = ByteData.sublistView(bytes);
     return byteData.getInt16(0);
   }
@@ -459,7 +496,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         icon: const Icon(Icons.refresh),
                         tooltip: "Search for Device",
                       ),
-                      const Text("or open a DMP file"),
+                      const Text("Open a DMP file"),
                       FileIcon(
                         icon: Icons.file_open,
                         onPressed: onOpenDMP,
@@ -468,6 +505,27 @@ class _MyHomePageState extends State<MyHomePage> {
                         size: 24,
                         color: Colors.black54,
                         extensionColor: Colors.black87,
+                      ),
+                      const Text("Download from the network"),
+                      IconButton(
+                        onPressed: onNetworkDMP,
+                        icon: const Icon(Icons.wifi),
+                        tooltip: "Download from wifi connected device",
+                      ),
+                      Container(
+                        width: 200,
+                        padding:
+                            const EdgeInsetsDirectional.fromSTEB(20, 0, 0, 0),
+                        child: MaskedTextField(
+                          textFieldController: ipController,
+                          autofocus: true,
+                          mask: 'xxx.xxx.xxx.xxx',
+                          maxLength: 15,
+                          keyboardType: TextInputType.number,
+                          onChange: (String value) {
+                            ipMNemo = value;
+                          },
+                        ),
                       ),
                     ],
                   ),
@@ -502,6 +560,14 @@ class _MyHomePageState extends State<MyHomePage> {
                               Column(children: [
                                 AppBar(
                                   actions: [
+                                    IconButton(
+                                      onPressed: (serialBusy ||
+                                              sections.getSections().isEmpty)
+                                          ? null
+                                          : onReset,
+                                      icon: const Icon(Icons.backspace_rounded),
+                                      tooltip: "Clear local Data",
+                                    ),
                                     IconButton(
                                       onPressed: (serialBusy || !connected)
                                           ? null
