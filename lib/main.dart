@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_libserialport/flutter_libserialport.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
-import 'package:masked_text_field/masked_text_field.dart';
 import 'package:mnemolink/fileicon.dart';
 import 'package:mnemolink/survexporter.dart';
 import 'package:mnemolink/thexporter.dart';
@@ -16,6 +15,7 @@ import 'package:mnemolink/excelexport.dart';
 import 'package:mnemolink/sectioncard.dart';
 import 'package:mnemolink/settingcard.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'dart:convert' show utf8;
 import './section.dart';
@@ -131,6 +131,7 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
+// Load and obtain the shared preferences for this app.
 
     cliScrollController.addListener(() {
       if (cliScrollController.hasClients && commandSent) {
@@ -150,6 +151,7 @@ class _MyHomePageState extends State<MyHomePage> {
       return true;}();
     });
 */
+    initPrefs();
     _initPackageInfo();
     initMnemoPort();
   }
@@ -158,6 +160,12 @@ class _MyHomePageState extends State<MyHomePage> {
     return SerialPort.availablePorts.firstWhere(
         (element) => SerialPort(element).productName == "Nano RP2040 Connect",
         orElse: () => "");
+  }
+
+  Future<void> initPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    ipMNemo = prefs.getString('ipMNemo') ?? "192.168.4.1";
+    ipController.text = ipMNemo;
   }
 
   Future<void> initMnemoPort() async {
@@ -220,15 +228,14 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<void> onNetworkDMP() async {
-    // gets the directory where we will download the file.
+    final prefs = await SharedPreferences.getInstance();
+    prefs.setString('ipMNemo', ipMNemo);
+
     var dir = await getTemporaryDirectory();
 
-    // You should put the name you want for the file here.
-    // Take in account the extension.
     String url = "http://$ipMNemo/Download";
     String fileName = 'mnemodata.txt';
 
-    // downloads the file
     Dio dio = Dio();
     await dio.download(url, "${dir.path}/$fileName");
 
@@ -496,6 +503,10 @@ class _MyHomePageState extends State<MyHomePage> {
                         icon: const Icon(Icons.refresh),
                         tooltip: "Search for Device",
                       ),
+                      const SizedBox(
+                        width: 10,
+                        height: 60,
+                      ),
                       const Text("Open a DMP file"),
                       FileIcon(
                         icon: Icons.file_open,
@@ -506,26 +517,53 @@ class _MyHomePageState extends State<MyHomePage> {
                         color: Colors.black54,
                         extensionColor: Colors.black87,
                       ),
+                      const SizedBox(
+                        width: 10,
+                        height: 60,
+                      ),
                       const Text("Download from the network"),
+                      Container(alignment: Alignment.center,
+                        width: 140,
+                        child: TextField(
+                          textAlign: TextAlign.center,
+                          controller: ipController,
+                          showCursor: true,
+                          onChanged: (value) {
+                            ipMNemo = value;
+                          },
+                          autofocus: true,
+                          obscureText: false,
+                          decoration: const InputDecoration(
+                            floatingLabelAlignment: FloatingLabelAlignment.center,
+                            labelText: "IP",
+                            hintText: '[Enter the IP of the MNemo]',
+                            enabledBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(
+                                color: Color(0x00000000),
+                                width: 1,
+                              ),
+                              borderRadius: BorderRadius.only(
+                                topLeft: Radius.circular(4.0),
+                                topRight: Radius.circular(4.0),
+                              ),
+                            ),
+                            focusedBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(
+                                color: Color(0x00000000),
+                                width: 1,
+                              ),
+                              borderRadius: BorderRadius.only(
+                                topLeft: Radius.circular(4.0),
+                                topRight: Radius.circular(4.0),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                       IconButton(
                         onPressed: onNetworkDMP,
                         icon: const Icon(Icons.wifi),
                         tooltip: "Download from wifi connected device",
-                      ),
-                      Container(
-                        width: 200,
-                        padding:
-                            const EdgeInsetsDirectional.fromSTEB(20, 0, 0, 0),
-                        child: MaskedTextField(
-                          textFieldController: ipController,
-                          autofocus: true,
-                          mask: 'xxx.xxx.xxx.xxx',
-                          maxLength: 15,
-                          keyboardType: TextInputType.number,
-                          onChange: (String value) {
-                            ipMNemo = value;
-                          },
-                        ),
                       ),
                     ],
                   ),
