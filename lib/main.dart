@@ -18,7 +18,7 @@ import 'package:mnemolink/settingcard.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'dart:convert' show utf8;
+import 'dart:convert' show json, utf8;
 import './section.dart';
 import './shot.dart';
 import './sectionlist.dart';
@@ -256,6 +256,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<void> onUpdateFirmware() async {
+
     // Download latest release info
     var dir = await getTemporaryDirectory();
 
@@ -266,20 +267,13 @@ class _MyHomePageState extends State<MyHomePage> {
     Dio dio = Dio();
     await dio.download(url, "${dir.path}/$fileName");
 
-    // Extract url
-    List<String> splits = List<String>.empty(growable: true);
-    await File("${dir.path}/$fileName")
-        .readAsString()
-        .then((value) => splits = value.split(","));
-    var urlFirmware = splits
-        .where((element) => element.contains("browser_download_url"))
-        .first;
-    urlFirmware = urlFirmware.substring(urlFirmware.indexOf(":"));
-    urlFirmware = urlFirmware.substring(urlFirmware.indexOf("\"") + 1);
-    urlFirmware = urlFirmware.substring(0, urlFirmware.indexOf("\""));
+    //Extract Json Data
+    final data =  await json.decode(await File("${dir.path}/$fileName").readAsString());
+    String urlFirmware= data['assets'][0]['browser_download_url'];
+    String version=data['tag_name'];
 
     //Download UF2 firmware file
-    fileName = 'mnemofirmware.uf2';
+    fileName = 'mnemofirmware$version.uf2';
     await dio.download(urlFirmware, "${dir.path}/$fileName");
 
     //Puts Mnemo in Boot mode by doing COM Port Open/Close at 1200bps
@@ -299,21 +293,27 @@ class _MyHomePageState extends State<MyHomePage> {
         ..baudRate = 1200;
 
       mnemoPort.close();
-      getCurrentName()
-          .then((value) => getTimeON().then((value) => getTimeSurvey()));
     }
     connected = false;
-    await Future.delayed(const Duration(seconds: 2));
+    await Future.delayed(const Duration(seconds: 5));
 
     // Scan for RPI RP2 Disk
     final repository = DisksRepository();
     final disks = await repository.query;
     var disk =
-        disks.where((element) => element.description.contains("RPI RP2")).first;
+        disks.where((element) => element.description.contains("RPI RP2")||element.description.contains("RPI-RP2")).first;
+
+    Map<String, String> envVars = Platform.environment;
+
 
     //Copy firmware on USB Key RPI-RP2
-    File("${dir.path}/$fileName")
-        .copySync("${disk.mountpoints[0].path}firmware.uf2");
+    if (Platform.isWindows) {
+      File("${dir.path}/$fileName")
+          .copySync("${disk.mountpoints[0].path}firmware.uf2");
+    } else if (Platform.isLinux) {
+      File("${dir.path}/$fileName")
+          .copySync("/media/${envVars['USER']!}/RPI-RP2/firmware.uf2");
+    }
   }
 
   int readByteFromEEProm(int address) {
