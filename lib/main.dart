@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:csv/csv.dart';
 import 'package:dio/dio.dart';
+import 'package:disks_desktop/disks_desktop.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_libserialport/flutter_libserialport.dart';
@@ -254,6 +255,67 @@ class _MyHomePageState extends State<MyHomePage> {
     initMnemoPort();
   }
 
+  Future<void> onUpdateFirmware() async {
+    // Download latest release info
+    var dir = await getTemporaryDirectory();
+
+    String url =
+        "https://api.github.com/repos/SebKister/Mnemo-V2/releases/latest";
+    String fileName = 'mnemofirmware.api';
+
+    Dio dio = Dio();
+    await dio.download(url, "${dir.path}/$fileName");
+
+    // Extract url
+    List<String> splits = List<String>.empty(growable: true);
+    await File("${dir.path}/$fileName")
+        .readAsString()
+        .then((value) => splits = value.split(","));
+    var urlFirmware = splits
+        .where((element) => element.contains("browser_download_url"))
+        .first;
+    urlFirmware = urlFirmware.substring(urlFirmware.indexOf(":"));
+    urlFirmware = urlFirmware.substring(urlFirmware.indexOf("\"") + 1);
+    urlFirmware = urlFirmware.substring(0, urlFirmware.indexOf("\""));
+
+    //Download UF2 firmware file
+    fileName = 'mnemofirmware.uf2';
+    await dio.download(urlFirmware, "${dir.path}/$fileName");
+
+    //Puts Mnemo in Boot mode by doing COM Port Open/Close at 1200bps
+    mnemoPortAddress = getMnemoAddress();
+    if (mnemoPortAddress == "") {
+      connected = false;
+    } else {
+      mnemoPort = SerialPort(mnemoPortAddress);
+      connected = mnemoPort.openReadWrite();
+      mnemoPort.flush();
+      mnemoPort.config = SerialPortConfig()
+        ..rts = SerialPortRts.flowControl
+        ..cts = SerialPortCts.flowControl
+        ..dsr = SerialPortDsr.flowControl
+        ..dtr = SerialPortDtr.flowControl
+        ..setFlowControl(SerialPortFlowControl.rtsCts)
+        ..baudRate = 1200;
+
+      mnemoPort.close();
+      getCurrentName()
+          .then((value) => getTimeON().then((value) => getTimeSurvey()));
+    }
+    connected = false;
+    await Future.delayed(const Duration(seconds: 2));
+
+    // Scan for RPI RP2 Disk
+    final repository = DisksRepository();
+    final disks = await repository.query;
+    var disk =
+        disks.where((element) => element.description.contains("RPI RP2")).first;
+
+    //Copy firmware on USB Key RPI-RP2
+    File("${dir.path}/$fileName")
+        .copySync("${disk.mountpoints[0].path}firmware.uf2");
+  }
+
   int readByteFromEEProm(int address) {
     return transferBuffer.elementAt(address);
   }
@@ -474,6 +536,11 @@ class _MyHomePageState extends State<MyHomePage> {
                         icon: const Icon(Icons.refresh),
                         tooltip: "Search for Device",
                       ),
+                      IconButton(
+                        onPressed: onUpdateFirmware,
+                        icon: const Icon(Icons.update),
+                        tooltip: "UpdateFirmware",
+                      ),
                     ]
                   : [
                       const Text("Mnemo Not detected"),
@@ -522,7 +589,8 @@ class _MyHomePageState extends State<MyHomePage> {
                         height: 60,
                       ),
                       const Text("Download from the network"),
-                      Container(alignment: Alignment.center,
+                      Container(
+                        alignment: Alignment.center,
                         width: 140,
                         child: TextField(
                           textAlign: TextAlign.center,
@@ -534,7 +602,8 @@ class _MyHomePageState extends State<MyHomePage> {
                           autofocus: true,
                           obscureText: false,
                           decoration: const InputDecoration(
-                            floatingLabelAlignment: FloatingLabelAlignment.center,
+                            floatingLabelAlignment:
+                                FloatingLabelAlignment.center,
                             labelText: "IP",
                             hintText: '[Enter the IP of the MNemo]',
                             enabledBorder: UnderlineInputBorder(
