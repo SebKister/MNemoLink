@@ -222,8 +222,12 @@ class _MyHomePageState extends State<MyHomePage> {
       for (var element in fields[0]) {
         if (element != "") transferBuffer.add(element);
       }
+      setState(() {
+        dmpLoaded = transferBuffer.isNotEmpty;
+      });
+
       analyzeTransferBuffer();
-      dmpLoaded = true;
+
     }
   }
 
@@ -246,8 +250,11 @@ class _MyHomePageState extends State<MyHomePage> {
     transferBuffer = splits
         .map((e) => (int.tryParse(e) == null) ? 0 : int.parse(e))
         .toList();
+    setState(() {
+      dmpLoaded = transferBuffer.isNotEmpty;
+    });
     analyzeTransferBuffer();
-    dmpLoaded = true;
+
   }
 
   void onRefreshMnemo() {
@@ -629,18 +636,18 @@ class _MyHomePageState extends State<MyHomePage> {
                                     ),
                                     FileIcon(
                                       onPressed: (serialBusy ||
-                                              sections.sections.isEmpty)
+                                             transferBuffer.isEmpty)
                                           ? null
                                           : onSaveDMP,
                                       extension: 'DMP',
                                       tooltip: "Save as DMP",
                                       size: 24,
                                       color: (serialBusy ||
-                                              sections.sections.isEmpty)
+                                          transferBuffer.isEmpty)
                                           ? Colors.black26
                                           : Colors.black54,
                                       extensionColor: (serialBusy ||
-                                              sections.sections.isEmpty)
+                                          transferBuffer.isEmpty)
                                           ? Colors.black26
                                           : Colors.black87,
                                     ),
