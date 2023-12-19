@@ -337,15 +337,19 @@ class _MyHomePageState extends State<MyHomePage> {
     await Future.delayed(const Duration(seconds: 5));
 
     // Scan for RPI RP2 Disk
-    final repository = DisksRepository();
-    final disks = await repository.query;
-    var disk = disks
-        .where((element) =>
-            element.description.contains("RPI RP2") ||
-            element.description.contains("RPI-RP2"))
-        .first;
+    // On Linux the user is required to manual mount the drive
+    //TODO: Linux - auto mount drive ?
 
-    Map<String, String> envVars = Platform.environment;
+    final repository = DisksRepository();
+    Disk disk;
+    do {
+      final disks = await repository.query;
+      disk = disks
+          .where((element) =>
+              element.description.contains("RPI RP2") ||
+              element.description.contains("RPI-RP2"))
+          .first;
+    } while (disk.mountpoints.isEmpty);
 
     //Copy firmware on USB Key RPI-RP2
     if (Platform.isWindows) {
@@ -353,7 +357,7 @@ class _MyHomePageState extends State<MyHomePage> {
           .copySync("${disk.mountpoints[0].path}firmware.uf2");
     } else if (Platform.isLinux) {
       File(upgradeFirmwarePath)
-          .copySync("/media/${envVars['USER']!}/RPI-RP2/firmware.uf2");
+          .copySync("${disk.mountpoints[0].path}/firmware.uf2");
     }
 
     await Future.delayed(const Duration(seconds: 15));
