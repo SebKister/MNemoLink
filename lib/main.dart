@@ -90,6 +90,19 @@ class _MyHomePageState extends State<MyHomePage> {
 
   int timeSurvey = 0;
 
+  int firmwareVersionMajor = 0;
+  int firmwareVersionMinor = 0;
+  int firmwareVersionRevision = 0;
+  int firmwareVersionBuild = 0;
+
+  int latestFirmwareVersionMajor = 0;
+  int latestFirmwareVersionMinor = 0;
+  int latestFirmwareVersionRevision = 0;
+
+  bool firmwareUpgradeAvailable = false;
+  String upgradeFirmwarePath = "";
+  String urlLatestFirmware = "";
+
   String ipMNemo = "";
 
 // ValueChanged<Color> callback
@@ -186,8 +199,9 @@ class _MyHomePageState extends State<MyHomePage> {
           ..setFlowControl(SerialPortFlowControl.rtsCts);
 
         mnemoPort.close();
-        getCurrentName()
-            .then((value) => getTimeON().then((value) => getTimeSurvey()));
+        getCurrentName().then((value) => getTimeON().then((value) =>
+            getTimeSurvey().then((value) => getDeviceFirmware()
+                .then((value) => getLatestFirmwareAvailable()))));
       }
     });
   }
@@ -255,8 +269,7 @@ class _MyHomePageState extends State<MyHomePage> {
     initMnemoPort();
   }
 
-  Future<void> onUpdateFirmware() async {
-
+  Future<void> getLatestFirmwareAvailable() async {
     // Download latest release info
     var dir = await getTemporaryDirectory();
 
@@ -268,13 +281,39 @@ class _MyHomePageState extends State<MyHomePage> {
     await dio.download(url, "${dir.path}/$fileName");
 
     //Extract Json Data
-    final data =  await json.decode(await File("${dir.path}/$fileName").readAsString());
-    String urlFirmware= data['assets'][0]['browser_download_url'];
-    String version=data['tag_name'];
+    final data =
+        await json.decode(await File("${dir.path}/$fileName").readAsString());
+    urlLatestFirmware = data['assets'][0]['browser_download_url'];
+    String version = data['tag_name'];
+    version = version.substring(1);
 
-    //Download UF2 firmware file
-    fileName = 'mnemofirmware$version.uf2';
-    await dio.download(urlFirmware, "${dir.path}/$fileName");
+    var splits = version.split('.');
+
+    latestFirmwareVersionMajor = int.parse(splits[0]);
+    latestFirmwareVersionMinor = int.parse(splits[1]);
+    latestFirmwareVersionRevision = int.parse(splits[2]);
+
+    if (latestFirmwareVersionMajor != firmwareVersionMajor ||
+        latestFirmwareVersionMinor != firmwareVersionMinor ||
+        latestFirmwareVersionRevision != firmwareVersionRevision) {
+      setState(() {
+        firmwareUpgradeAvailable = true;
+        upgradeFirmwarePath = '${dir.path}/mnemofirmware$version.uf2';
+      });
+    } else {
+      setState(() {
+        firmwareUpgradeAvailable = false;
+      });
+    }
+  }
+
+  Future<void> onUpdateFirmware() async {
+    setState(() {
+      serialBusy = true;
+    });
+    // Download the firmware
+    Dio dio = Dio();
+    await dio.download(urlLatestFirmware, upgradeFirmwarePath);
 
     //Puts Mnemo in Boot mode by doing COM Port Open/Close at 1200bps
     mnemoPortAddress = getMnemoAddress();
@@ -300,20 +339,28 @@ class _MyHomePageState extends State<MyHomePage> {
     // Scan for RPI RP2 Disk
     final repository = DisksRepository();
     final disks = await repository.query;
-    var disk =
-        disks.where((element) => element.description.contains("RPI RP2")||element.description.contains("RPI-RP2")).first;
+    var disk = disks
+        .where((element) =>
+            element.description.contains("RPI RP2") ||
+            element.description.contains("RPI-RP2"))
+        .first;
 
     Map<String, String> envVars = Platform.environment;
 
-
     //Copy firmware on USB Key RPI-RP2
     if (Platform.isWindows) {
-      File("${dir.path}/$fileName")
+      File(upgradeFirmwarePath)
           .copySync("${disk.mountpoints[0].path}firmware.uf2");
     } else if (Platform.isLinux) {
-      File("${dir.path}/$fileName")
+      File(upgradeFirmwarePath)
           .copySync("/media/${envVars['USER']!}/RPI-RP2/firmware.uf2");
     }
+
+    await Future.delayed(const Duration(seconds: 15));
+    await initMnemoPort();
+    setState(() {
+      serialBusy = false;
+    });
   }
 
   int readByteFromEEProm(int address) {
@@ -520,12 +567,19 @@ class _MyHomePageState extends State<MyHomePage> {
                                   color: Colors.white60, size: 20),
                             )
                           : const SizedBox.shrink(),
+                      if (firmwareUpgradeAvailable)
+                        IconButton(
+                          onPressed: onUpdateFirmware,
+                          icon: const Icon(Icons.update),
+                          tooltip:
+                              "Update Firmware to v$latestFirmwareVersionMajor.$latestFirmwareVersionMinor.$latestFirmwareVersionRevision",
+                        ),
                       Column(
                         children: [
                           Text("[$nameDevice] Connected on $mnemoPortAddress"),
                           Text(
                               style: const TextStyle(fontSize: 10),
-                              ' SN ${mnemoPort.serialNumber}'),
+                              ' SN ${mnemoPort.serialNumber} FW $firmwareVersionMajor.$firmwareVersionMinor.$firmwareVersionRevision'),
                           Text(
                               style: const TextStyle(fontSize: 9),
                               ' ON: $timeON min - Survey: $timeSurvey min')
@@ -535,11 +589,6 @@ class _MyHomePageState extends State<MyHomePage> {
                         onPressed: onRefreshMnemo,
                         icon: const Icon(Icons.refresh),
                         tooltip: "Search for Device",
-                      ),
-                      IconButton(
-                        onPressed: onUpdateFirmware,
-                        icon: const Icon(Icons.update),
-                        tooltip: "UpdateFirmware",
                       ),
                     ]
                   : [
@@ -1910,6 +1959,19 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<void> getTimeSurvey() async {
     await executeCLIAsync("gettimesurvey");
     timeSurvey = int.parse(utf8.decode(transferBuffer).trim());
+  }
+
+  Future<void> getDeviceFirmware() async {
+    await executeCLIAsync("getfirmwareversion");
+    var result = utf8.decode(transferBuffer).trim();
+    var splits = result.split('.');
+    var splitsplus = splits[2].split('+');
+    setState(() {
+      firmwareVersionMajor = int.parse(splits[0]);
+      firmwareVersionMinor = int.parse(splits[1]);
+      firmwareVersionRevision = int.parse(splitsplus[0]);
+      firmwareVersionBuild = int.parse(splitsplus[1]);
+    });
   }
 }
 
