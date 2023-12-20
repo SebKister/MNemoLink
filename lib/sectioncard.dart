@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mnemolink/section.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:mnemolink/shot.dart';
 
 import 'mapsurvey.dart';
 
@@ -30,7 +31,8 @@ class SectionCard extends StatelessWidget {
       elevation: 2,
       child: ListTile(
         title: Text(section.name),
-        subtitle: Text("#${section.shots.length-1}"),
+        subtitle: Text(
+            "${(section.direction == SurveyDirection.SURVEY_IN) ? "IN" : "OUT"}-#${section.shots.length - 1}"),
         trailing: Text(DateFormat('yyyy-MM-dd').format(section.dateSurvey)),
         leading: picture,
       ),
