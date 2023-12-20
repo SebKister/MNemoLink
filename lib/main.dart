@@ -100,10 +100,13 @@ class _MyHomePageState extends State<MyHomePage> {
   int latestFirmwareVersionRevision = 0;
 
   bool firmwareUpgradeAvailable = false;
+  bool updatingFirmware = false;
   String upgradeFirmwarePath = "";
   String urlLatestFirmware = "";
 
   String ipMNemo = "";
+
+  static const int maxRetryFirmware = 10;
 
 // ValueChanged<Color> callback
   void changeColor(Color color) {
@@ -307,10 +310,57 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+  Future<bool?> showUpdateDialog() async {
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false, // user must tap button!
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(
+              'MNemo Firmware Update to v$latestFirmwareVersionMajor.$latestFirmwareVersionMinor.$latestFirmwareVersionRevision'),
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                Text(
+                    'This will automatically update the firmware $firmwareVersionMajor.$firmwareVersionMinor.$firmwareVersionRevision of your MNemo to the latest version'),
+                const Text(
+                    'Do not disconnect the device during the process which can take up to 1 min'),
+                if (Platform.isLinux)
+                  const Text(
+                      'Linux users have to mount the RPI-RP2 USB drive that will appear when the MNemo goes in update mode.'),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop(false);
+              },
+            ),
+            TextButton(
+              child: const Text('Approve'),
+              onPressed: () {
+                Navigator.of(context).pop(true);
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> onUpdateFirmware() async {
+    bool? updateApproval = await showUpdateDialog();
+    if (!updateApproval!) {
+      return;
+    }
+
     setState(() {
+      updatingFirmware=true;
       serialBusy = true;
     });
+
     // Download the firmware
     Dio dio = Dio();
     await dio.download(urlLatestFirmware, upgradeFirmwarePath);
@@ -334,7 +384,6 @@ class _MyHomePageState extends State<MyHomePage> {
       mnemoPort.close();
     }
     connected = false;
-    await Future.delayed(const Duration(seconds: 5));
 
     // Scan for RPI RP2 Disk
     // On Linux the user is required to manual mount the drive
@@ -342,27 +391,32 @@ class _MyHomePageState extends State<MyHomePage> {
 
     final repository = DisksRepository();
     Disk disk;
+    int retryCounter = 0;
     do {
+      await Future.delayed(const Duration(seconds: 2));
       final disks = await repository.query;
       disk = disks
           .where((element) =>
               element.description.contains("RPI RP2") ||
               element.description.contains("RPI-RP2"))
           .first;
-    } while (disk.mountpoints.isEmpty);
+    } while (disk.mountpoints.isEmpty && retryCounter++ < maxRetryFirmware);
 
-    //Copy firmware on USB Key RPI-RP2
-    if (Platform.isWindows) {
-      File(upgradeFirmwarePath)
-          .copySync("${disk.mountpoints[0].path}firmware.uf2");
-    } else if (Platform.isLinux) {
-      File(upgradeFirmwarePath)
-          .copySync("${disk.mountpoints[0].path}/firmware.uf2");
+    if (retryCounter < maxRetryFirmware) {
+      //Copy firmware on USB Key RPI-RP2
+      if (Platform.isWindows) {
+        File(upgradeFirmwarePath)
+            .copySync("${disk.mountpoints[0].path}firmware.uf2");
+      } else if (Platform.isLinux) {
+        File(upgradeFirmwarePath)
+            .copySync("${disk.mountpoints[0].path}/firmware.uf2");
+      }
+      // Required in order to give the MNemo time to reboot and update settings
+      await Future.delayed(const Duration(seconds: 15));
     }
-
-    await Future.delayed(const Duration(seconds: 15));
     await initMnemoPort();
     setState(() {
+      updatingFirmware=false;
       serialBusy = false;
     });
   }
@@ -573,7 +627,9 @@ class _MyHomePageState extends State<MyHomePage> {
                           : const SizedBox.shrink(),
                       if (firmwareUpgradeAvailable)
                         IconButton(
-                          onPressed: onUpdateFirmware,
+                          color: Colors.yellowAccent,
+                          onPressed:
+                              (!updatingFirmware) ? onUpdateFirmware : null,
                           icon: const Icon(Icons.update),
                           tooltip:
                               "Update Firmware to v$latestFirmwareVersionMajor.$latestFirmwareVersionMinor.$latestFirmwareVersionRevision",
