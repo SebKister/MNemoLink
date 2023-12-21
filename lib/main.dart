@@ -194,7 +194,12 @@ class _MyHomePageState extends State<MyHomePage> {
         mnemoPort = SerialPort(mnemoPortAddress);
         connected = mnemoPort.openReadWrite();
         mnemoPort.flush();
-
+        mnemoPort.config = SerialPortConfig()
+          ..rts = SerialPortRts.flowControl
+          ..cts = SerialPortCts.flowControl
+          ..dsr = SerialPortDsr.flowControl
+          ..dtr = SerialPortDtr.flowControl
+          ..setFlowControl(SerialPortFlowControl.rtsCts);
         mnemoPort.close();
         getCurrentName().then((value) => getTimeON().then((value) =>
             getTimeSurvey().then((value) => getDeviceFirmware()
@@ -318,11 +323,18 @@ class _MyHomePageState extends State<MyHomePage> {
                 Text(
                     'This will automatically update the firmware $firmwareVersionMajor.$firmwareVersionMinor.$firmwareVersionRevision of your MNemo to the latest version'),
                 const Text(
-                    'Do not disconnect the device during the process which can take up to 1 min'),
+                  'Do not disconnect the device during the process which can take up to 1 min',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 if (Platform.isMacOS)
                   const Text(
-                      'Mac OSX users have to mount the RPI-RP2 USB drive that will appear when the MNemo goes in update mode.'),
-
+                    'Mac OSX users have open in the Finder the RPI-RP2 USB drive that will appear when the MNemo goes in update mode.',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 if (Platform.isLinux)
                   const Text(
                       'Linux users have to mount the RPI-RP2 USB drive that will appear when the MNemo goes in update mode.'),
@@ -355,7 +367,7 @@ class _MyHomePageState extends State<MyHomePage> {
     }
 
     setState(() {
-      updatingFirmware=true;
+      updatingFirmware = true;
       serialBusy = true;
     });
 
@@ -405,11 +417,10 @@ class _MyHomePageState extends State<MyHomePage> {
       if (Platform.isWindows) {
         File(upgradeFirmwarePath)
             .copySync("${disk.mountpoints[0].path}firmware.uf2");
-      } else if (Platform.isLinux ) {
+      } else if (Platform.isLinux) {
         File(upgradeFirmwarePath)
             .copySync("${disk.mountpoints[0].path}/firmware.uf2");
-      }
-      else if (Platform.isMacOS ) {
+      } else if (Platform.isMacOS) {
         File(upgradeFirmwarePath)
             .copySync("${disk.mountpoints[0].path}/firmware.uf2");
       }
@@ -418,7 +429,7 @@ class _MyHomePageState extends State<MyHomePage> {
     }
     await initMnemoPort();
     setState(() {
-      updatingFirmware=false;
+      updatingFirmware = false;
       serialBusy = false;
     });
   }
