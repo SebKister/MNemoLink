@@ -1,0 +1,54 @@
+// For format details, see https://aka.ms/vscode-remote/devcontainer.json or this file's README at:
+// https://github.com/lucashilles/flutter-dev-container
+{
+	"name": "Flutter",
+	"dockerFile": "Dockerfile",
+    "workspaceFolder": "/workspace/",
+    "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
+	"customizations": {
+		"vscode": {
+			// Add the IDs of extensions you want installed when the container is created.
+			"extensions": [
+				"dart-code.dart-code",
+				"dart-code.flutter",
+                // Build Tools
+                "ms-azuretools.vscode-docker",
+                // Git & Github
+                "GitHub.vscode-pull-request-github",
+				// Makefile
+				"ms-vscode.makefile-tools",
+				// Cmake
+				"ms-vscode.cmake-tools",
+				// C/C++
+				"ms-vscode.cpptools-extension-pack"
+			],	
+			// Set *default* container specific settings.json values on container create.
+			"settings": {
+				"cmake.configureOnOpen": false,
+				"makefile.configureOnOpen": false,
+				"terminal.integrated.shell.linux": "/bin/bash"
+			}
+		}
+	},
+	"containerEnv": {
+		"DISPLAY": "127.0.0.1:0.0"
+	},
+	// This command create an example project after the container is created.
+	// "postCreateCommand": "flutter create test_project",
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	//"forwardPorts": [],
+	// Uncomment to connect as a non-root user. See https://aka.ms/vscode-remote/containers/non-root.
+	"remoteUser": "vscode",
+    "features": {
+        "ghcr.io/devcontainers/features/common-utils:2": {
+            "username": "vscode",
+            "installZsh": true,
+            "installOhMyZsh": true,
+            "configureZshAsDefaultShell": false,
+            "upgradePackages": false
+        },
+        "ghcr.io/devcontainers/features/git:1": {
+            "version": "latest"
+        }
+    }
+}
