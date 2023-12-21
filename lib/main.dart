@@ -2,7 +2,6 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:csv/csv.dart';
 import 'package:dio/dio.dart';
-import 'package:disks_desktop/disks_desktop.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_libserialport/flutter_libserialport.dart';
@@ -106,8 +105,6 @@ class _MyHomePageState extends State<MyHomePage> {
 
   String ipMNemo = "";
 
-  static const int maxRetryFirmware = 10;
-
 // ValueChanged<Color> callback
   void changeColor(Color color) {
     setState(() => pickerColor = color);
@@ -194,7 +191,12 @@ class _MyHomePageState extends State<MyHomePage> {
         mnemoPort = SerialPort(mnemoPortAddress);
         connected = mnemoPort.openReadWrite();
         mnemoPort.flush();
-
+        mnemoPort.config = SerialPortConfig()
+          ..rts = SerialPortRts.flowControl
+          ..cts = SerialPortCts.flowControl
+          ..dsr = SerialPortDsr.flowControl
+          ..dtr = SerialPortDtr.flowControl
+          ..setFlowControl(SerialPortFlowControl.rtsCts);
         mnemoPort.close();
         getCurrentName().then((value) => getTimeON().then((value) =>
             getTimeSurvey().then((value) => getDeviceFirmware()
@@ -272,7 +274,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
     String url =
         "https://api.github.com/repos/SebKister/Mnemo-V2/releases/latest";
-    String fileName = 'mnemofirmware.api';
+    String fileName = 'mnemofirmware.json';
 
     Dio dio = Dio();
     await dio.download(url, "${dir.path}/$fileName");
@@ -290,16 +292,21 @@ class _MyHomePageState extends State<MyHomePage> {
     latestFirmwareVersionMinor = int.parse(splits[1]);
     latestFirmwareVersionRevision = int.parse(splits[2]);
 
+
     if (latestFirmwareVersionMajor != firmwareVersionMajor ||
         latestFirmwareVersionMinor != firmwareVersionMinor ||
         latestFirmwareVersionRevision != firmwareVersionRevision) {
       setState(() {
         firmwareUpgradeAvailable = true;
-        upgradeFirmwarePath = '${dir.path}/mnemofirmware$version.uf2';
+        upgradeFirmwarePath = '${dir.path}\\mnemofirmware$version.elf';
       });
     } else {
       setState(() {
-        firmwareUpgradeAvailable = false;
+
+      //  firmwareUpgradeAvailable = true; //TODO: Uncomment after debug
+        firmwareUpgradeAvailable = true; //TODO: Remove line after debug
+        upgradeFirmwarePath = '${dir.path}\\mnemofirmware$version.elf'; // TODO: Remove line after debug
+
       });
     }
   }
@@ -322,7 +329,6 @@ class _MyHomePageState extends State<MyHomePage> {
                 if (Platform.isMacOS)
                   const Text(
                       'Mac OSX users have to mount the RPI-RP2 USB drive that will appear when the MNemo goes in update mode.'),
-
                 if (Platform.isLinux)
                   const Text(
                       'Linux users have to mount the RPI-RP2 USB drive that will appear when the MNemo goes in update mode.'),
@@ -355,7 +361,7 @@ class _MyHomePageState extends State<MyHomePage> {
     }
 
     setState(() {
-      updatingFirmware=true;
+      updatingFirmware = true;
       serialBusy = true;
     });
 
@@ -382,43 +388,37 @@ class _MyHomePageState extends State<MyHomePage> {
       mnemoPort.close();
     }
     connected = false;
+    await Future.delayed(const Duration(seconds: 5));
+    //Use picotool to upload firmware
+    if (Platform.isWindows) {
+// returns the abolute path of the executable file of your app:
+      String mainPath = Platform.resolvedExecutable;
+      mainPath = mainPath.substring(0, mainPath.lastIndexOf("\\"));
+      Directory directoryExe =
+          Directory("$mainPath\\data\\flutter_assets\\assets\\shell");
 
-    // Scan for RPI RP2 Disk
-    // On Linux the user is required to manual mount the drive
-    //TODO: Linux - auto mount drive ?
+      var process = await Process.start(
+          "${directoryExe.path}\\picotool.exe", ['load', upgradeFirmwarePath]);
+      stdout.addStream(process.stdout);
+      stderr.addStream(process.stderr);
+      await process.exitCode;
 
-    final repository = DisksRepository();
-    Disk disk;
-    int retryCounter = 0;
-    do {
-      await Future.delayed(const Duration(seconds: 2));
-      final disks = await repository.query;
-      disk = disks
-          .where((element) =>
-              element.description.contains("RPI RP2") ||
-              element.description.contains("RPI-RP2"))
-          .first;
-    } while (disk.mountpoints.isEmpty && retryCounter++ < maxRetryFirmware);
-
-    if (retryCounter < maxRetryFirmware) {
-      //Copy firmware on USB Key RPI-RP2
-      if (Platform.isWindows) {
-        File(upgradeFirmwarePath)
-            .copySync("${disk.mountpoints[0].path}firmware.uf2");
-      } else if (Platform.isLinux ) {
-        File(upgradeFirmwarePath)
-            .copySync("${disk.mountpoints[0].path}/firmware.uf2");
-      }
-      else if (Platform.isMacOS ) {
-        File(upgradeFirmwarePath)
-            .copySync("${disk.mountpoints[0].path}/firmware.uf2");
-      }
-      // Required in order to give the MNemo time to reboot and update settings
-      await Future.delayed(const Duration(seconds: 15));
+      var processreboot =
+          await Process.start("${directoryExe.path}\\picotool.exe", ['reboot']);
+      stdout.addStream(processreboot.stdout);
+      stderr.addStream(processreboot.stderr);
+      await processreboot.exitCode;
+    } else if (Platform.isLinux) {
+      //TODO: Implement Linux picotool
+    } else if (Platform.isMacOS) {
+      //TODO: Implement Mac picotool
     }
+
+    // Required in order to give the MNemo time to reboot and update settings
+    await Future.delayed(const Duration(seconds: 15));
     await initMnemoPort();
     setState(() {
-      updatingFirmware=false;
+      updatingFirmware = false;
       serialBusy = false;
     });
   }
