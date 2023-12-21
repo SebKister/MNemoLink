@@ -328,13 +328,6 @@ class _MyHomePageState extends State<MyHomePage> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                if (Platform.isMacOS)
-                  const Text(
-                    'Mac OSX users have open in the Finder the RPI-RP2 USB drive that will appear when the MNemo goes in update mode.',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
                 if (Platform.isLinux)
                   const Text(
                       'Linux users have to mount the RPI-RP2 USB drive that will appear when the MNemo goes in update mode.'),
