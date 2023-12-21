@@ -17,13 +17,28 @@ import 'package:mnemolink/sectioncard.dart';
 import 'package:mnemolink/settingcard.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:window_manager/window_manager.dart';
 
 import 'dart:convert' show json, utf8;
 import './section.dart';
 import './shot.dart';
 import './sectionlist.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Must add this line.
+  await windowManager.ensureInitialized();
+
+  WindowOptions windowOptions = const WindowOptions(
+    size: Size(1280, 768),
+    center: true,
+  );
+
+  windowManager.waitUntilReadyToShow(windowOptions, () async {
+    await windowManager.maximize();
+    await windowManager.show();
+    await windowManager.focus();
+  });
   runApp(const MyApp());
 }
 
@@ -402,10 +417,10 @@ class _MyHomePageState extends State<MyHomePage> {
     if (retryCounter < maxRetryFirmware) {
       //Copy firmware on USB Key RPI-RP2
       if (Platform.isWindows) {
-       await File(upgradeFirmwarePath)
+        await File(upgradeFirmwarePath)
             .copy("${disk.mountpoints[0].path}firmware.uf2");
       } else if (Platform.isLinux || Platform.isMacOS) {
-       await File(upgradeFirmwarePath)
+        await File(upgradeFirmwarePath)
             .copy("${disk.mountpoints[0].path}/firmware.uf2");
       }
 
