@@ -157,17 +157,7 @@ class _MyHomePageState extends State<MyHomePage> {
         commandSent = false;
       }
     });
-/*
-    FlutterWindowClose.setWindowShouldCloseHandler(() async {
-    return await (){  if (mnemoPort != null &&
-          mnemoPort.isOpen != null &&
-          mnemoPort.isOpen == true) {
-        mnemoPort.flush();
-        mnemoPort.close();
-      }
-      return true;}();
-    });
-*/
+
     initPrefs();
     _initPackageInfo();
     initMnemoPort();
@@ -244,7 +234,6 @@ class _MyHomePageState extends State<MyHomePage> {
       });
 
       analyzeTransferBuffer();
-
     }
   }
 
@@ -271,7 +260,6 @@ class _MyHomePageState extends State<MyHomePage> {
       dmpLoaded = transferBuffer.isNotEmpty;
     });
     analyzeTransferBuffer();
-
   }
 
   void onRefreshMnemo() {
@@ -397,7 +385,6 @@ class _MyHomePageState extends State<MyHomePage> {
 
     // Scan for RPI RP2 Disk
     // On Linux the user is required to manual mount the drive
-    //TODO: Linux - auto mount drive ?
 
     final repository = DisksRepository();
     Disk disk;
@@ -415,15 +402,13 @@ class _MyHomePageState extends State<MyHomePage> {
     if (retryCounter < maxRetryFirmware) {
       //Copy firmware on USB Key RPI-RP2
       if (Platform.isWindows) {
-        File(upgradeFirmwarePath)
-            .copySync("${disk.mountpoints[0].path}firmware.uf2");
-      } else if (Platform.isLinux) {
-        File(upgradeFirmwarePath)
-            .copySync("${disk.mountpoints[0].path}/firmware.uf2");
-      } else if (Platform.isMacOS) {
-        File(upgradeFirmwarePath)
-            .copySync("${disk.mountpoints[0].path}/firmware.uf2");
+       await File(upgradeFirmwarePath)
+            .copy("${disk.mountpoints[0].path}firmware.uf2");
+      } else if (Platform.isLinux || Platform.isMacOS) {
+       await File(upgradeFirmwarePath)
+            .copy("${disk.mountpoints[0].path}/firmware.uf2");
       }
+
       // Required in order to give the MNemo time to reboot and update settings
       await Future.delayed(const Duration(seconds: 15));
     }
@@ -819,21 +804,21 @@ class _MyHomePageState extends State<MyHomePage> {
                                           : Colors.black87,
                                     ),
                                     FileIcon(
-                                      onPressed: (serialBusy ||
-                                             transferBuffer.isEmpty)
-                                          ? null
-                                          : onSaveDMP,
+                                      onPressed:
+                                          (serialBusy || transferBuffer.isEmpty)
+                                              ? null
+                                              : onSaveDMP,
                                       extension: 'DMP',
                                       tooltip: "Save as DMP",
                                       size: 24,
-                                      color: (serialBusy ||
-                                          transferBuffer.isEmpty)
-                                          ? Colors.black26
-                                          : Colors.black54,
-                                      extensionColor: (serialBusy ||
-                                          transferBuffer.isEmpty)
-                                          ? Colors.black26
-                                          : Colors.black87,
+                                      color:
+                                          (serialBusy || transferBuffer.isEmpty)
+                                              ? Colors.black26
+                                              : Colors.black54,
+                                      extensionColor:
+                                          (serialBusy || transferBuffer.isEmpty)
+                                              ? Colors.black26
+                                              : Colors.black87,
                                     ),
                                     FileIcon(
                                       onPressed: (serialBusy ||
