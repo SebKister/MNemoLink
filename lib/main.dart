@@ -1764,7 +1764,7 @@ class _MyHomePageState extends State<MyHomePage> {
     final mnemoPort = this.mnemoPort;
 
     while (counterWait == 0) {
-      while (mnemoPort != null && mnemoPort.bytesAvailable <= 0) {
+      while (mnemoPort.bytesAvailable <= 0) {
         await Future.delayed(const Duration(milliseconds: 20));
 
         counterWait++;
@@ -1780,13 +1780,11 @@ class _MyHomePageState extends State<MyHomePage> {
 
       counterWait = 0;
 
-      if (mnemoPort != null) {
-        var readBuffer8 =
-            mnemoPort.read(mnemoPort.bytesAvailable, timeout: 5000);
-        for (int i = 0; i < readBuffer8.length; i++) {
-          transferBuffer.add(readBuffer8[i]);
-        }
+      var readBuffer8 = mnemoPort.read(mnemoPort.bytesAvailable, timeout: 5000);
+      for (int i = 0; i < readBuffer8.length; i++) {
+        transferBuffer.add(readBuffer8[i]);
       }
+
       //Check if ending with transmissionovermessage
       if (utf8
           .decode(transferBuffer, allowMalformed: true)
