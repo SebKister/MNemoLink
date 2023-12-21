@@ -3,6 +3,7 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  disks_desktop
   flutter_libserialport
 )
 

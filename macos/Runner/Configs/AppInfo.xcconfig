@@ -8,7 +8,7 @@
 PRODUCT_NAME = mnemolink
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.arianesline.mnemolink
+PRODUCT_BUNDLE_IDENTIFIER = com.example.mnemolink
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2022 com.arianesline. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2023 com.example. All rights reserved.

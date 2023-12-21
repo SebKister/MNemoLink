@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:csv/csv.dart';
 import 'package:dio/dio.dart';
+import 'package:disks_desktop/disks_desktop.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_libserialport/flutter_libserialport.dart';
@@ -17,7 +18,7 @@ import 'package:mnemolink/settingcard.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'dart:convert' show utf8;
+import 'dart:convert' show json, utf8;
 import './section.dart';
 import './shot.dart';
 import './sectionlist.dart';
@@ -89,7 +90,23 @@ class _MyHomePageState extends State<MyHomePage> {
 
   int timeSurvey = 0;
 
+  int firmwareVersionMajor = 0;
+  int firmwareVersionMinor = 0;
+  int firmwareVersionRevision = 0;
+  int firmwareVersionBuild = 0;
+
+  int latestFirmwareVersionMajor = 0;
+  int latestFirmwareVersionMinor = 0;
+  int latestFirmwareVersionRevision = 0;
+
+  bool firmwareUpgradeAvailable = false;
+  bool updatingFirmware = false;
+  String upgradeFirmwarePath = "";
+  String urlLatestFirmware = "";
+
   String ipMNemo = "";
+
+  static const int maxRetryFirmware = 10;
 
 // ValueChanged<Color> callback
   void changeColor(Color color) {
@@ -183,10 +200,10 @@ class _MyHomePageState extends State<MyHomePage> {
           ..dsr = SerialPortDsr.flowControl
           ..dtr = SerialPortDtr.flowControl
           ..setFlowControl(SerialPortFlowControl.rtsCts);
-
         mnemoPort.close();
-        getCurrentName()
-            .then((value) => getTimeON().then((value) => getTimeSurvey()));
+        getCurrentName().then((value) => getTimeON().then((value) =>
+            getTimeSurvey().then((value) => getDeviceFirmware()
+                .then((value) => getLatestFirmwareAvailable()))));
       }
     });
   }
@@ -259,6 +276,162 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void onRefreshMnemo() {
     initMnemoPort();
+  }
+
+  Future<void> getLatestFirmwareAvailable() async {
+    // Download latest release info
+    var dir = await getTemporaryDirectory();
+
+    String url =
+        "https://api.github.com/repos/SebKister/Mnemo-V2/releases/latest";
+    String fileName = 'mnemofirmware.api';
+
+    Dio dio = Dio();
+    await dio.download(url, "${dir.path}/$fileName");
+
+    //Extract Json Data
+    final data =
+        await json.decode(await File("${dir.path}/$fileName").readAsString());
+    urlLatestFirmware = data['assets'][0]['browser_download_url'];
+    String version = data['tag_name'];
+    version = version.substring(1);
+
+    var splits = version.split('.');
+
+    latestFirmwareVersionMajor = int.parse(splits[0]);
+    latestFirmwareVersionMinor = int.parse(splits[1]);
+    latestFirmwareVersionRevision = int.parse(splits[2]);
+
+    if (latestFirmwareVersionMajor != firmwareVersionMajor ||
+        latestFirmwareVersionMinor != firmwareVersionMinor ||
+        latestFirmwareVersionRevision != firmwareVersionRevision) {
+      setState(() {
+        firmwareUpgradeAvailable = true;
+        upgradeFirmwarePath = '${dir.path}/mnemofirmware$version.uf2';
+      });
+    } else {
+      setState(() {
+        firmwareUpgradeAvailable = false;
+      });
+    }
+  }
+
+  Future<bool?> showUpdateDialog() async {
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false, // user must tap button!
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(
+              'MNemo Firmware Update to v$latestFirmwareVersionMajor.$latestFirmwareVersionMinor.$latestFirmwareVersionRevision'),
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                Text(
+                    'This will automatically update the firmware $firmwareVersionMajor.$firmwareVersionMinor.$firmwareVersionRevision of your MNemo to the latest version'),
+                const Text(
+                  'Do not disconnect the device during the process which can take up to 1 min',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                if (Platform.isLinux)
+                  const Text(
+                      'Linux users have to mount the RPI-RP2 USB drive that will appear when the MNemo goes in update mode.'),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop(false);
+              },
+            ),
+            TextButton(
+              child: const Text('Approve'),
+              onPressed: () {
+                Navigator.of(context).pop(true);
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> onUpdateFirmware() async {
+    bool? updateApproval = await showUpdateDialog();
+    if (!updateApproval!) {
+      return;
+    }
+
+    setState(() {
+      updatingFirmware = true;
+      serialBusy = true;
+    });
+
+    // Download the firmware
+    Dio dio = Dio();
+    await dio.download(urlLatestFirmware, upgradeFirmwarePath);
+
+    //Puts Mnemo in Boot mode by doing COM Port Open/Close at 1200bps
+    mnemoPortAddress = getMnemoAddress();
+    if (mnemoPortAddress == "") {
+      connected = false;
+    } else {
+      mnemoPort = SerialPort(mnemoPortAddress);
+      connected = mnemoPort.openReadWrite();
+      mnemoPort.flush();
+      mnemoPort.config = SerialPortConfig()
+        ..rts = SerialPortRts.flowControl
+        ..cts = SerialPortCts.flowControl
+        ..dsr = SerialPortDsr.flowControl
+        ..dtr = SerialPortDtr.flowControl
+        ..setFlowControl(SerialPortFlowControl.rtsCts)
+        ..baudRate = 1200;
+
+      mnemoPort.close();
+    }
+    connected = false;
+
+    // Scan for RPI RP2 Disk
+    // On Linux the user is required to manual mount the drive
+    //TODO: Linux - auto mount drive ?
+
+    final repository = DisksRepository();
+    Disk disk;
+    int retryCounter = 0;
+    do {
+      await Future.delayed(const Duration(seconds: 2));
+      final disks = await repository.query;
+      disk = disks
+          .where((element) =>
+              element.description.contains("RPI RP2") ||
+              element.description.contains("RPI-RP2"))
+          .first;
+    } while (disk.mountpoints.isEmpty && retryCounter++ < maxRetryFirmware);
+
+    if (retryCounter < maxRetryFirmware) {
+      //Copy firmware on USB Key RPI-RP2
+      if (Platform.isWindows) {
+        File(upgradeFirmwarePath)
+            .copySync("${disk.mountpoints[0].path}firmware.uf2");
+      } else if (Platform.isLinux) {
+        File(upgradeFirmwarePath)
+            .copySync("${disk.mountpoints[0].path}/firmware.uf2");
+      } else if (Platform.isMacOS) {
+        File(upgradeFirmwarePath)
+            .copySync("${disk.mountpoints[0].path}/firmware.uf2");
+      }
+      // Required in order to give the MNemo time to reboot and update settings
+      await Future.delayed(const Duration(seconds: 15));
+    }
+    await initMnemoPort();
+    setState(() {
+      updatingFirmware = false;
+      serialBusy = false;
+    });
   }
 
   int readByteFromEEProm(int address) {
@@ -465,12 +638,21 @@ class _MyHomePageState extends State<MyHomePage> {
                                   color: Colors.white60, size: 20),
                             )
                           : const SizedBox.shrink(),
+                      if (firmwareUpgradeAvailable)
+                        IconButton(
+                          color: Colors.yellowAccent,
+                          onPressed:
+                              (!updatingFirmware) ? onUpdateFirmware : null,
+                          icon: const Icon(Icons.update),
+                          tooltip:
+                              "Update Firmware to v$latestFirmwareVersionMajor.$latestFirmwareVersionMinor.$latestFirmwareVersionRevision",
+                        ),
                       Column(
                         children: [
                           Text("[$nameDevice] Connected on $mnemoPortAddress"),
                           Text(
                               style: const TextStyle(fontSize: 10),
-                              ' SN ${mnemoPort.serialNumber}'),
+                              ' SN ${mnemoPort.serialNumber} FW $firmwareVersionMajor.$firmwareVersionMinor.$firmwareVersionRevision'),
                           Text(
                               style: const TextStyle(fontSize: 9),
                               ' ON: $timeON min - Survey: $timeSurvey min')
@@ -529,7 +711,8 @@ class _MyHomePageState extends State<MyHomePage> {
                         height: 60,
                       ),
                       const Text("Download from the network"),
-                      Container(alignment: Alignment.center,
+                      Container(
+                        alignment: Alignment.center,
                         width: 140,
                         child: TextField(
                           textAlign: TextAlign.center,
@@ -541,7 +724,8 @@ class _MyHomePageState extends State<MyHomePage> {
                           autofocus: true,
                           obscureText: false,
                           decoration: const InputDecoration(
-                            floatingLabelAlignment: FloatingLabelAlignment.center,
+                            floatingLabelAlignment:
+                                FloatingLabelAlignment.center,
                             labelText: "IP",
                             hintText: '[Enter the IP of the MNemo]',
                             enabledBorder: UnderlineInputBorder(
@@ -1580,7 +1764,7 @@ class _MyHomePageState extends State<MyHomePage> {
     final mnemoPort = this.mnemoPort;
 
     while (counterWait == 0) {
-      while (mnemoPort != null && mnemoPort.bytesAvailable <= 0) {
+      while (mnemoPort.bytesAvailable <= 0) {
         await Future.delayed(const Duration(milliseconds: 20));
 
         counterWait++;
@@ -1596,13 +1780,11 @@ class _MyHomePageState extends State<MyHomePage> {
 
       counterWait = 0;
 
-      if (mnemoPort != null) {
-        var readBuffer8 =
-            mnemoPort.read(mnemoPort.bytesAvailable, timeout: 5000);
-        for (int i = 0; i < readBuffer8.length; i++) {
-          transferBuffer.add(readBuffer8[i]);
-        }
+      var readBuffer8 = mnemoPort.read(mnemoPort.bytesAvailable, timeout: 5000);
+      for (int i = 0; i < readBuffer8.length; i++) {
+        transferBuffer.add(readBuffer8[i]);
       }
+
       //Check if ending with transmissionovermessage
       if (utf8
           .decode(transferBuffer, allowMalformed: true)
@@ -1848,6 +2030,19 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<void> getTimeSurvey() async {
     await executeCLIAsync("gettimesurvey");
     timeSurvey = int.parse(utf8.decode(transferBuffer).trim());
+  }
+
+  Future<void> getDeviceFirmware() async {
+    await executeCLIAsync("getfirmwareversion");
+    var result = utf8.decode(transferBuffer).trim();
+    var splits = result.split('.');
+    var splitsplus = splits[2].split('+');
+    setState(() {
+      firmwareVersionMajor = int.parse(splits[0]);
+      firmwareVersionMinor = int.parse(splits[1]);
+      firmwareVersionRevision = int.parse(splitsplus[0]);
+      firmwareVersionBuild = int.parse(splitsplus[1]);
+    });
   }
 }
 
