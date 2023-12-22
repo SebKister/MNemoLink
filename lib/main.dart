@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:csv/csv.dart';
@@ -168,6 +169,7 @@ class _MyHomePageState extends State<MyHomePage> {
     initPrefs();
     _initPackageInfo();
     initMnemoPort();
+    initPeriodicTask();
   }
 
   String getMnemoAddress() {
@@ -295,6 +297,20 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void onRefreshMnemo() {
     initMnemoPort();
+  }
+
+  void initPeriodicTask() {
+    Timer.periodic(const Duration(seconds: 5), (timer) {
+      if (connected && !serialBusy) {
+        if (!mnemoPort.openRead()) {
+          setState(() {
+            connected = false;
+          });
+        } else {
+          mnemoPort.close();
+        }
+      }
+    });
   }
 
   Future<void> getLatestFirmwareAvailable() async {
