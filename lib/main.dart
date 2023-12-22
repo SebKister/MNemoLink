@@ -18,7 +18,6 @@ import 'package:mnemolink/settingcard.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:window_manager/window_manager.dart';
-
 import 'dart:convert' show json, utf8;
 import './section.dart';
 import './shot.dart';
@@ -69,6 +68,8 @@ class _MyHomePageState extends State<MyHomePage> {
   String mnemoPortAddress = "";
   late SerialPort mnemoPort;
   bool connected = false;
+  bool detectedOnly = false;
+  bool detected = true;
   bool dmpLoaded = false;
   List<String> cliHistory = [""];
   List<String> cliCommandHistory = [""];
@@ -84,16 +85,7 @@ class _MyHomePageState extends State<MyHomePage> {
   int safetySwitchON = -1;
   int doubleTap = -1;
   List<String> wifiList = [];
-  PackageInfo _packageInfo = PackageInfo(
-    appName: 'Unknown',
-    packageName: 'Unknown',
-    version: 'Unknown',
-    buildNumber: 'Unknown',
-    buildSignature: 'Unknown',
-    installerStore: 'Unknown',
-  );
 
-// create some values
   Color pickerColor = const Color(0xff443a49);
   Color readingAColor = const Color(0x00000000);
   Color readingBColor = const Color(0x00000000);
@@ -102,7 +94,6 @@ class _MyHomePageState extends State<MyHomePage> {
   Color readyColor = const Color(0x00000000);
 
   int timeON = 0;
-
   int timeSurvey = 0;
 
   int firmwareVersionMajor = 0;
@@ -123,35 +114,36 @@ class _MyHomePageState extends State<MyHomePage> {
 
   static const int maxRetryFirmware = 10;
 
-// ValueChanged<Color> callback
-  void changeColor(Color color) {
-    setState(() => pickerColor = color);
-  }
-
   int xCompass = 0;
   int yCompass = 0;
   int zCompass = 0;
   int calMode = -1;
 
   bool factorySettingsLockSafetyON = true;
-
   bool factorySettingsLock = true;
-
-  var factorySettingsLockSlider = true;
-
+  bool factorySettingsLockSlider = true;
   bool factorySettingsLockBMDuration = true;
-
   bool factorySettingsLockStabilizationFactor = true;
-
   bool factorySettingsDoubleTapON = true;
-
   bool serialBusy = false;
 
   int dateFormat = -1;
-
   int timeFormat = -1;
 
   var ipController = TextEditingController();
+
+  PackageInfo _packageInfo = PackageInfo(
+    appName: 'Unknown',
+    packageName: 'Unknown',
+    version: 'Unknown',
+    buildNumber: 'Unknown',
+    buildSignature: 'Unknown',
+    installerStore: 'Unknown',
+  );
+
+  void changeColor(Color color) {
+    setState(() => pickerColor = color);
+  }
 
   Future<void> _initPackageInfo() async {
     final info = await PackageInfo.fromPlatform();
@@ -192,25 +184,49 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> initMnemoPort() async {
     setState(() {
-      mnemoPortAddress = getMnemoAddress();
-      if (mnemoPortAddress == "") {
-        connected = false;
-      } else {
-        mnemoPort = SerialPort(mnemoPortAddress);
-        connected = mnemoPort.openReadWrite();
-        mnemoPort.flush();
-        mnemoPort.config = SerialPortConfig()
-          ..rts = SerialPortRts.flowControl
-          ..cts = SerialPortCts.flowControl
-          ..dsr = SerialPortDsr.flowControl
-          ..dtr = SerialPortDtr.flowControl
-          ..setFlowControl(SerialPortFlowControl.rtsCts);
-        mnemoPort.close();
-        getCurrentName().then((value) => getTimeON().then((value) =>
+      updatingFirmware = false;
+      connected = false;
+      detected = false;
+      detectedOnly = false;
+      serialBusy = true;
+    });
+
+    mnemoPortAddress = getMnemoAddress();
+
+    if (mnemoPortAddress.isNotEmpty) {
+      setState(() {
+        detected = true;
+      });
+      mnemoPort = SerialPort(mnemoPortAddress);
+
+      var isopenrw = mnemoPort.openReadWrite();
+
+      mnemoPort.flush();
+      mnemoPort.config = SerialPortConfig()
+        ..rts = SerialPortRts.flowControl
+        ..cts = SerialPortCts.flowControl
+        ..dsr = SerialPortDsr.flowControl
+        ..dtr = SerialPortDtr.flowControl
+        ..setFlowControl(SerialPortFlowControl.rtsCts);
+      mnemoPort.close();
+      try {
+        await getCurrentName().then((value) => getTimeON().then((value) =>
             getTimeSurvey().then((value) => getDeviceFirmware()
                 .then((value) => getLatestFirmwareAvailable()))));
+        setState(() {
+          detectedOnly = false;
+          connected = isopenrw;
+          serialBusy = false;
+        });
+      } catch (e) {
+        setState(() {
+          detectedOnly = true;
+          connected = false;
+          serialBusy = false;
+        });
+        await nonResponsiveWarning();
       }
-    });
+    }
   }
 
   void onReset() {
@@ -317,6 +333,35 @@ class _MyHomePageState extends State<MyHomePage> {
         firmwareUpgradeAvailable = false;
       });
     }
+  }
+
+  Future<void> nonResponsiveWarning() async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false, // user must tap button!
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Connection failed'),
+          content: const SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                Text('A device was found but it was not responding'),
+                Text(
+                    'Make sure the main menu screen is displayed than press the Connect button again'),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Ok'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<bool?> showUpdateDialog() async {
@@ -629,7 +674,7 @@ class _MyHomePageState extends State<MyHomePage> {
           Container(
             padding: const EdgeInsets.all(5),
             child: Row(
-              children: connected
+              children: connected || detected
                   ? [
                       (serialBusy)
                           ? Container(
@@ -638,7 +683,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                   color: Colors.white60, size: 20),
                             )
                           : const SizedBox.shrink(),
-                      if (firmwareUpgradeAvailable)
+                      if (connected && firmwareUpgradeAvailable)
                         IconButton(
                           color: Colors.yellowAccent,
                           onPressed:
@@ -647,17 +692,19 @@ class _MyHomePageState extends State<MyHomePage> {
                           tooltip:
                               "Update Firmware to v$latestFirmwareVersionMajor.$latestFirmwareVersionMinor.$latestFirmwareVersionRevision",
                         ),
-                      Column(
-                        children: [
-                          Text("[$nameDevice] Connected on $mnemoPortAddress"),
-                          Text(
-                              style: const TextStyle(fontSize: 10),
-                              ' SN ${mnemoPort.serialNumber} FW $firmwareVersionMajor.$firmwareVersionMinor.$firmwareVersionRevision'),
-                          Text(
-                              style: const TextStyle(fontSize: 9),
-                              ' ON: $timeON min - Survey: $timeSurvey min')
-                        ],
-                      ),
+                      if (connected)
+                        Column(
+                          children: [
+                            Text(
+                                "[$nameDevice] Connected on $mnemoPortAddress"),
+                            Text(
+                                style: const TextStyle(fontSize: 10),
+                                ' SN ${mnemoPort.serialNumber} FW $firmwareVersionMajor.$firmwareVersionMinor.$firmwareVersionRevision'),
+                            Text(
+                                style: const TextStyle(fontSize: 9),
+                                ' ON: $timeON min - Survey: $timeSurvey min')
+                          ],
+                        ),
                       IconButton(
                         onPressed: onRefreshMnemo,
                         icon: const Icon(Icons.refresh),
@@ -665,7 +712,9 @@ class _MyHomePageState extends State<MyHomePage> {
                       ),
                     ]
                   : [
-                      const Text("Mnemo Not detected"),
+                      (detectedOnly)
+                          ? const Text("Mnemo detected -Connection failed-")
+                          : const Text("Mnemo Not detected"),
                       IconButton(
                         onPressed: onRefreshMnemo,
                         icon: const Icon(Icons.refresh),
@@ -1514,7 +1563,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                         const InputDecoration(
                                                       labelText: "Command",
                                                       hintText:
-                                                          '[Enter Command or type listcommands]',
+                                                          '[Enter Command or type help]',
                                                       enabledBorder:
                                                           UnderlineInputBorder(
                                                         borderSide: BorderSide(
