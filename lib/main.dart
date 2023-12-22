@@ -111,6 +111,19 @@ class _MyHomePageState extends State<MyHomePage> {
   String upgradeFirmwarePath = "";
   String urlLatestFirmware = "";
 
+  int latestSoftwareVersionMajor = 0;
+  int latestSoftwareVersionMinor = 0;
+  int latestSoftwareVersionRevision = 0;
+
+  int softwareVersionMajor = 0;
+  int softwareVersionMinor = 0;
+  int softwareVersionRevision = 0;
+
+  bool softwareUpgradeAvailable = false;
+  bool updatingSoftware = false;
+  String urlLatestSoftware = "";
+  String upgradeSoftwarePath = "";
+
   String ipMNemo = "";
 
   static const int maxRetryFirmware = 10;
@@ -151,6 +164,10 @@ class _MyHomePageState extends State<MyHomePage> {
     setState(() {
       _packageInfo = info;
     });
+    var splits = _packageInfo.version.split('.');
+    softwareVersionMajor = int.parse(splits[0]);
+    softwareVersionMinor = int.parse(splits[1]);
+    softwareVersionRevision = int.parse(splits[2]);
   }
 
   @override
@@ -170,6 +187,7 @@ class _MyHomePageState extends State<MyHomePage> {
     _initPackageInfo();
     initMnemoPort();
     initPeriodicTask();
+    getLatestSoftwareAvailable();
   }
 
   String getMnemoAddress() {
@@ -313,13 +331,64 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
+  Future<void> getLatestSoftwareAvailable() async {
+    // Download latest release info
+    var dir = await getTemporaryDirectory();
+    var dirDownloads = await getDownloadsDirectory();
+
+    String url =
+        "https://api.github.com/repos/SebKister/MnemoLink/releases/latest";
+    String fileName = 'mnemolink.json';
+    Dio dio = Dio();
+    await dio.download(url, "${dir.path}/$fileName");
+
+    //Extract Json Data
+    final data =
+    await json.decode(await File("${dir.path}/$fileName").readAsString());
+    String version = data['tag_name'];
+    version = version.substring(1); // Remove the 'v'
+
+    var splits = version.split('.');
+
+    latestSoftwareVersionMajor = int.parse(splits[0]);
+    latestSoftwareVersionMinor = int.parse(splits[1]);
+    latestSoftwareVersionRevision = int.parse(splits[2]);
+
+    if (latestSoftwareVersionMajor != softwareVersionMajor ||
+        latestSoftwareVersionMinor != softwareVersionMinor ||
+        latestSoftwareVersionRevision != softwareVersionRevision) {
+
+      if (Platform.isLinux) {
+        urlLatestSoftware = data['assets'][0]['browser_download_url'];
+        upgradeSoftwarePath =
+            '${dirDownloads?.path}/${data['assets'][0]['name']}';
+      } else if (Platform.isMacOS) {
+        urlLatestSoftware = data['assets'][1]['browser_download_url'];
+        upgradeSoftwarePath =
+            '${dirDownloads?.path}/${data['assets'][1]['name']}';
+      } else if (Platform.isWindows) {
+        urlLatestSoftware = data['assets'][2]['browser_download_url'];
+        upgradeSoftwarePath =
+            '${dirDownloads?.path}/${data['assets'][2]['name']}';
+      }
+
+      setState(() {
+        softwareUpgradeAvailable = true;
+      });
+    } else {
+      setState(() {
+        firmwareUpgradeAvailable = false;
+      });
+    }
+  }
+
   Future<void> getLatestFirmwareAvailable() async {
     // Download latest release info
     var dir = await getTemporaryDirectory();
 
     String url =
         "https://api.github.com/repos/SebKister/Mnemo-V2/releases/latest";
-    String fileName = 'mnemofirmware.api';
+    String fileName = 'mnemofirmware.json';
 
     Dio dio = Dio();
     await dio.download(url, "${dir.path}/$fileName");
@@ -329,7 +398,7 @@ class _MyHomePageState extends State<MyHomePage> {
         await json.decode(await File("${dir.path}/$fileName").readAsString());
     urlLatestFirmware = data['assets'][0]['browser_download_url'];
     String version = data['tag_name'];
-    version = version.substring(1);
+    version = version.substring(1); // Remove the 'v'
 
     var splits = version.split('.');
 
@@ -340,9 +409,9 @@ class _MyHomePageState extends State<MyHomePage> {
     if (latestFirmwareVersionMajor != firmwareVersionMajor ||
         latestFirmwareVersionMinor != firmwareVersionMinor ||
         latestFirmwareVersionRevision != firmwareVersionRevision) {
+      upgradeFirmwarePath = '${dir.path}/mnemofirmware$version.uf2';
       setState(() {
         firmwareUpgradeAvailable = true;
-        upgradeFirmwarePath = '${dir.path}/mnemofirmware$version.uf2';
       });
     } else {
       setState(() {
@@ -380,7 +449,7 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  Future<bool?> showUpdateDialog() async {
+  Future<bool?> showFirmwareUpdateDialog() async {
     return showDialog<bool>(
       context: context,
       barrierDismissible: false, // user must tap button!
@@ -424,8 +493,53 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
+  Future<bool?> showSoftwareUpdateDialog() async {
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false, // user must tap button!
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(
+              'Software Update to v$latestSoftwareVersionMajor.$latestSoftwareVersionMinor.$latestSoftwareVersionRevision'),
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                Text(
+                    'This will download MnemoLink v$latestSoftwareVersionMajor.$latestSoftwareVersionMinor.$latestSoftwareVersionRevision in your Downloads folder'),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop(false);
+              },
+            ),
+            TextButton(
+              child: const Text('Approve'),
+              onPressed: () {
+                Navigator.of(context).pop(true);
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> onUpdateSoftware() async {
+    bool? updateApproval = await showSoftwareUpdateDialog();
+    if (!updateApproval!) {
+      return;
+    }
+
+    Dio dio = Dio();
+    await dio.download(urlLatestSoftware, upgradeSoftwarePath);
+  }
+
   Future<void> onUpdateFirmware() async {
-    bool? updateApproval = await showUpdateDialog();
+    bool? updateApproval = await showFirmwareUpdateDialog();
     if (!updateApproval!) {
       return;
     }
@@ -679,13 +793,23 @@ class _MyHomePageState extends State<MyHomePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(widget.title),
-            Text(style: const TextStyle(fontSize: 12), _packageInfo.version)
-          ],
-        ),
+        title: Row(children: [
+          if (softwareUpgradeAvailable)
+            IconButton(
+              color: Colors.yellowAccent,
+              onPressed: (!updatingSoftware) ? onUpdateSoftware : null,
+              icon: const Icon(Icons.update),
+              tooltip:
+                  "Update Software to v$latestSoftwareVersionMajor.$latestSoftwareVersionMinor.$latestSoftwareVersionRevision",
+            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(widget.title),
+              Text(style: const TextStyle(fontSize: 12), _packageInfo.version)
+            ],
+          ),
+        ]),
         actions: [
           Container(
             padding: const EdgeInsets.all(5),
