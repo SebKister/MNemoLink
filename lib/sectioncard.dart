@@ -15,7 +15,7 @@ class SectionCard extends StatelessWidget {
   static const double displayHeight = 256;
   static const double margin = 4;
 
-  SectionCard(this.section) {
+  SectionCard(this.section, {super.key}) {
     map = MapSurvey.build(section);
     rawSvg = buildSVG(map.buildDisplayMap(displayWidth, displayHeight));
     picture = SvgPicture.string(
@@ -32,7 +32,7 @@ class SectionCard extends StatelessWidget {
       child: ListTile(
         title: Text(section.name),
         subtitle: Text(
-            "${(section.direction == SurveyDirection.SURVEY_IN) ? "IN" : "OUT"}-#${section.shots.length - 1}"),
+            "${(section.direction == SurveyDirection.surveyIn) ? "IN" : "OUT"}-#${section.shots.length - 1}"),
         trailing: Text(DateFormat('yyyy-MM-dd').format(section.dateSurvey)),
         leading: picture,
       ),

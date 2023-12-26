@@ -46,7 +46,7 @@ class THExporter with ShotExport {
     contents.write('\n');
 
     // Unit handling
-    if (unitType == UnitType.METRIC) {
+    if (unitType == UnitType.metric) {
       contents.write(newLine('units tape depth metres'));
     } else {
       contents.write(newLine('units tape depth feet'));

@@ -8,7 +8,8 @@ class SettingCard extends StatelessWidget {
   final bool locked;
 
   const SettingCard(
-      {this.name = "",
+      {super.key,
+      this.name = "",
       this.subtitle = "",
       this.icon = Icons.add,
       this.actionWidget = const Text("Action"),
@@ -43,49 +44,52 @@ class SettingCard extends StatelessWidget {
 class SettingActionButton extends StatelessWidget {
   final String actionText;
   final void Function()? callback;
-  double widthButton = 0.0;
-  double heightButton = 0.0;
+  final double widthButton;
+  final double heightButton;
 
-  SettingActionButton(this.actionText, this.callback);
+  const SettingActionButton(this.actionText, this.callback,
+      {super.key, this.widthButton = 0.0, this.heightButton = 0.0});
 
-  SettingActionButton.sized(
-      this.actionText, this.callback, this.widthButton, this.heightButton);
+  const SettingActionButton.sized(
+      this.actionText, this.callback, this.widthButton, this.heightButton,
+      {super.key});
 
   @override
   Widget build(BuildContext context) {
-    if (widthButton != 0.0 && heightButton != 0.0)
+    if (widthButton != 0.0 && heightButton != 0.0) {
       return SizedBox(
         height: heightButton,
         width: widthButton,
         child: TextButton(
-          style: ButtonStyle(alignment: AlignmentDirectional.centerStart),
+          style: const ButtonStyle(alignment: AlignmentDirectional.centerStart),
           onPressed: callback,
           child: Text(actionText),
         ),
       );
-    else if (widthButton != 0.0)
+    } else if (widthButton != 0.0) {
       return SizedBox(
         width: widthButton,
         child: TextButton(
-          style: ButtonStyle(alignment: AlignmentDirectional.centerStart),
+          style: const ButtonStyle(alignment: AlignmentDirectional.centerStart),
           onPressed: callback,
           child: Text(actionText),
         ),
       );
-    else if (heightButton != 0.0)
+    } else if (heightButton != 0.0) {
       return SizedBox(
         height: heightButton,
         child: TextButton(
-          style: ButtonStyle(alignment: AlignmentDirectional.centerStart),
+          style: const ButtonStyle(alignment: AlignmentDirectional.centerStart),
           onPressed: callback,
           child: Text(actionText),
         ),
       );
-    else
+    } else {
       return TextButton(
         onPressed: callback,
         child: Text(actionText),
       );
+    }
   }
 }
 
@@ -93,7 +97,7 @@ class SettingWifiActionButton extends StatelessWidget {
   final String actionText;
   final void Function(String e, String f)? callback;
 
-  const SettingWifiActionButton(this.actionText, this.callback);
+  const SettingWifiActionButton(this.actionText, this.callback, {super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -106,11 +110,11 @@ class SettingWifiActionButton extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           TextButton(
-            child: Text(actionText),
             onPressed: callback == null
                 ? null
                 : () => callback!(
                     controllerName.value.text, controllerPasswd.value.text),
+            child: Text(actionText),
           ),
           Container(
             padding: const EdgeInsets.only(left: 20),
@@ -148,7 +152,8 @@ class SettingActionRadioList extends StatelessWidget {
   final int selectedValue;
 
   const SettingActionRadioList(
-      this.actionText, this.actionMap, this.callback, this.selectedValue);
+      this.actionText, this.actionMap, this.callback, this.selectedValue,
+      {super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -160,7 +165,7 @@ class SettingActionRadioList extends StatelessWidget {
                   Radio<int>(
                     key: null,
                     groupValue: selectedValue,
-                    value: actionMap.putIfAbsent(k, () => 0),
+                    value: actionMap[k]!.toInt(),
                     onChanged: callback,
                   ),
                   Text(k),
@@ -175,7 +180,7 @@ class SettingWifiList extends StatelessWidget {
   final List<String> wifiNets;
   final void Function(String? i)? callback;
 
-  const SettingWifiList(this.wifiNets, this.callback);
+  const SettingWifiList(this.wifiNets, this.callback, {super.key});
 
   @override
   Widget build(BuildContext context) {
