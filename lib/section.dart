@@ -5,7 +5,7 @@ class Section {
     shots = [];
   }
 
-  SurveyDirection direction = SurveyDirection.SURVEY_IN;
+  SurveyDirection direction = SurveyDirection.surveyIn;
 
   /// Get the value of direction
   ///
@@ -55,17 +55,17 @@ class Section {
 
   DateTime dateSurvey = DateTime.now();
 
-  /// Get the value of dateSurey
+  /// Get the value of dateSurvey
   ///
-  /// @return the value of dateSurey
-  DateTime getDateSurey() {
+  /// @return the value of dateSurvey
+  DateTime getDateSurvey() {
     return dateSurvey;
   }
 
-  /// Set the value of dateSurey
+  /// Set the value of dateSurvey
   ///
-  /// @param dateSurey new value of dateSurey
-  void setDateSurey(DateTime dateSurey) {
-    this.dateSurvey = dateSurey;
+  /// @param dateSurvey new value of dateSurvey
+  void setDateSurvey(DateTime dateSurvey) {
+    dateSurvey = dateSurvey;
   }
 }

@@ -78,7 +78,7 @@ class _MyHomePageState extends State<MyHomePage> {
   SectionList sections = SectionList();
   var cliScrollController = ScrollController();
   bool commandSent = false;
-  UnitType unitType = UnitType.METRIC;
+  UnitType unitType = UnitType.metric;
   int stabilizationFactor = 0;
   String nameDevice = "";
   int clickThreshold = 30;
@@ -344,7 +344,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
     //Extract Json Data
     final data =
-    await json.decode(await File("${dir.path}/$fileName").readAsString());
+        await json.decode(await File("${dir.path}/$fileName").readAsString());
     String version = data['tag_name'];
     version = version.substring(1); // Remove the 'v'
 
@@ -357,7 +357,6 @@ class _MyHomePageState extends State<MyHomePage> {
     if (latestSoftwareVersionMajor != softwareVersionMajor ||
         latestSoftwareVersionMinor != softwareVersionMinor ||
         latestSoftwareVersionRevision != softwareVersionRevision) {
-
       if (Platform.isLinux) {
         urlLatestSoftware = data['assets'][0]['browser_download_url'];
         upgradeSoftwarePath =
@@ -624,25 +623,26 @@ class _MyHomePageState extends State<MyHomePage> {
     int currentMemory = transferBuffer.length;
     int cursor = 0;
 
-    var FILEVERSION_VALA = 68;
-    var FILEVERSION_VALB = 89;
-    var FILEVERSION_VALC = 101;
+    var fileVersionValueA = 68;
+    var fileVersionValueB = 89;
+    var fileVersionValueC = 101;
 
-    var SHOTSTART_VALA = 57;
-    var SHOTSTART_VALB = 67;
-    var SHOTSTART_VALC = 77;
+    var shotStartValueA = 57;
+    var shotStartValueB = 67;
+    var shotStartValueC = 77;
 
-    var SHOTEND_VALA = 95;
-    var SHOTEND_VALB = 25;
-    var SHOTEND_VALC = 35;
+    var shotEndValueA = 95;
+    var shotEndValueB = 25;
+    var shotEndValueC = 35;
 
     while (cursor < currentMemory - 2) {
       Section section = Section();
 
       int fileVersion = 0;
-      int checkbyteA = 0;
-      int checkbyteB = 0;
-      int checkbyteC = 0;
+      int checkByteA = 0;
+      int checkByteB = 0;
+      int checkByteC = 0;
+
       while (fileVersion != 2 &&
           fileVersion != 3 &&
           fileVersion != 4 &&
@@ -652,12 +652,12 @@ class _MyHomePageState extends State<MyHomePage> {
       }
 
       if (fileVersion >= 5) {
-        checkbyteA = readByteFromEEProm(cursor++);
-        checkbyteB = readByteFromEEProm(cursor++);
-        checkbyteC = readByteFromEEProm(cursor++);
-        if (checkbyteA != FILEVERSION_VALA ||
-            checkbyteB != FILEVERSION_VALB ||
-            checkbyteC != FILEVERSION_VALC) return;
+        checkByteA = readByteFromEEProm(cursor++);
+        checkByteB = readByteFromEEProm(cursor++);
+        checkByteC = readByteFromEEProm(cursor++);
+        if (checkByteA != fileVersionValueA ||
+            checkByteB != fileVersionValueB ||
+            checkByteC != fileVersionValueC) return;
       }
 
       int year = 0;
@@ -679,7 +679,7 @@ class _MyHomePageState extends State<MyHomePage> {
       cursor++;
       DateTime dateSection = DateTime(year, month, day, hour, minute);
       //  LocalDateTime dateSection = LocalDateTime.now();
-      section.setDateSurey(dateSection);
+      section.setDateSurvey(dateSection);
       // Read section type and name
       StringBuffer stbuilder = StringBuffer();
       stbuilder.write(utf8.decode([readByteFromEEProm(cursor++)]));
@@ -696,7 +696,7 @@ class _MyHomePageState extends State<MyHomePage> {
       }
 
       double conversionFactor = 0.0;
-      if (unitType == UnitType.METRIC) {
+      if (unitType == UnitType.metric) {
         conversionFactor = 1.0;
       } else {
         conversionFactor = 3.28084;
@@ -707,12 +707,12 @@ class _MyHomePageState extends State<MyHomePage> {
         shot = Shot.zero();
         int typeShot = 0;
         if (fileVersion >= 5) {
-          checkbyteA = readByteFromEEProm(cursor++);
-          checkbyteB = readByteFromEEProm(cursor++);
-          checkbyteC = readByteFromEEProm(cursor++);
-          if (checkbyteA != SHOTSTART_VALA ||
-              checkbyteB != SHOTSTART_VALB ||
-              checkbyteC != SHOTSTART_VALC) return;
+          checkByteA = readByteFromEEProm(cursor++);
+          checkByteB = readByteFromEEProm(cursor++);
+          checkByteC = readByteFromEEProm(cursor++);
+          if (checkByteA != shotStartValueA ||
+              checkByteB != shotStartValueB ||
+              checkByteC != shotStartValueC) return;
         }
         typeShot = readByteFromEEProm(cursor++);
 
@@ -768,15 +768,15 @@ class _MyHomePageState extends State<MyHomePage> {
 
         shot.setMarkerIndex(readByteFromEEProm(cursor++));
         if (fileVersion >= 5) {
-          checkbyteA = readByteFromEEProm(cursor++);
-          checkbyteB = readByteFromEEProm(cursor++);
-          checkbyteC = readByteFromEEProm(cursor++);
-          if (checkbyteA != SHOTEND_VALA ||
-              checkbyteB != SHOTEND_VALB ||
-              checkbyteC != SHOTEND_VALC) return;
+          checkByteA = readByteFromEEProm(cursor++);
+          checkByteB = readByteFromEEProm(cursor++);
+          checkByteC = readByteFromEEProm(cursor++);
+          if (checkByteA != shotEndValueA ||
+              checkByteB != shotEndValueB ||
+              checkByteC != shotEndValueC) return;
         }
         section.getShots().add(shot);
-      } while (shot.getTypeShot() != TypeShot.EOC);
+      } while (shot.getTypeShot() != TypeShot.eoc);
 
       setState(() {
         // Adding section only if it contains data. Note : EOC shot should always be present at end of section.
@@ -1140,7 +1140,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                                 getCurrentTimeFormat()),
                                                     SettingActionRadioList(
                                                         "",
-                                                        {
+                                                        const {
                                                           "24H": 0,
                                                           "12AM/12PM": 1,
                                                         },
@@ -1156,7 +1156,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                                 getCurrentDateFormat()),
                                                     SettingActionRadioList(
                                                         "",
-                                                        {
+                                                        const {
                                                           "DD/MM": 0,
                                                           "MM/DD": 1,
                                                         },
@@ -1353,7 +1353,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                                       getCurrentStabilizationFactor()),
                                                           SettingActionRadioList(
                                                               "SYNC NOW",
-                                                              {
+                                                              const {
                                                                 "LOW": 5,
                                                                 "MID": 10,
                                                                 "HIGH": 20
@@ -1398,7 +1398,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                                       getCurrentClickThreshold()),
                                                           SettingActionRadioList(
                                                               "SYNC NOW",
-                                                              {
+                                                              const {
                                                                 "LOW(50)": 50,
                                                                 "MID(40)": 40,
                                                                 "HIGH(30)": 30,
@@ -1449,7 +1449,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                                       getCurrentBMClickDurationFactor()),
                                                           SettingActionRadioList(
                                                               "SYNC NOW",
-                                                              {
+                                                              const {
                                                                 "EXTRA FAST":
                                                                     25,
                                                                 "FAST": 50,
@@ -1496,7 +1496,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                                       getCurrentsafetySwitchON()),
                                                           SettingActionRadioList(
                                                               "SYNC NOW",
-                                                              {
+                                                              const {
                                                                 "DISABLED": 0,
                                                                 "ENABLED": 1
                                                               },
@@ -1540,7 +1540,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                                       getCurrentDoubleTap()),
                                                           SettingActionRadioList(
                                                               "SYNC NOW",
-                                                              {
+                                                              const {
                                                                 "DISABLED": 0,
                                                                 "LIGHT": 15,
                                                                 "NORMAL": 20,
@@ -1587,7 +1587,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                                       getCurrentXCompass()),
                                                           SettingActionRadioList(
                                                               "SYNC NOW",
-                                                              {
+                                                              const {
                                                                 "1": 1,
                                                                 "-1": 255,
                                                               },
@@ -1603,7 +1603,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                                       getCurrentYCompass()),
                                                           SettingActionRadioList(
                                                               "SYNC NOW",
-                                                              {
+                                                              const {
                                                                 "1": 1,
                                                                 "-1": 255,
                                                               },
@@ -1619,7 +1619,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                                       getCurrentZCompass()),
                                                           SettingActionRadioList(
                                                               "SYNC NOW",
-                                                              {
+                                                              const {
                                                                 "1": 1,
                                                                 "-1": 255,
                                                               },
@@ -1635,7 +1635,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                                       getCurrentCalMode()),
                                                           SettingActionRadioList(
                                                               "SYNC NOW",
-                                                              {
+                                                              const {
                                                                 "SLOW": 0,
                                                                 "FAST": 1,
                                                               },

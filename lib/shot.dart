@@ -1,5 +1,5 @@
 class Shot {
-  TypeShot typeShot = TypeShot.STD;
+  TypeShot typeShot = TypeShot.std;
 
   /// Get the value of typeShot
   ///
@@ -197,7 +197,7 @@ class Shot {
     hr = 0;
     min = 0;
     sec = 0;
-    typeShot = TypeShot.STD;
+    typeShot = TypeShot.std;
   }
 
   void setLeft(double left) {
@@ -217,8 +217,8 @@ class Shot {
   }
 }
 
-enum SurveyDirection { SURVEY_IN, SURVEY_OUT }
+enum SurveyDirection { surveyIn, surveyOut }
 
-enum TypeShot { CSA, CSB, STD, EOC }
+enum TypeShot { csa, csb, std, eoc }
 
-enum UnitType { METRIC, IMPERIAL }
+enum UnitType { metric, imperial }

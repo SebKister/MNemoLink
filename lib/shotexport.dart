@@ -109,7 +109,7 @@ mixin ShotExport {
     List<ExportShot> svxShots = [];
 
     for (final shot in shots) {
-      if (shot.typeShot != TypeShot.STD) {
+      if (shot.typeShot != TypeShot.std) {
         continue;
       }
 
