@@ -298,14 +298,14 @@ class _MyHomePageState extends State<MyHomePage> {
         latestFirmwareVersionRevision != firmwareVersionRevision) {
       setState(() {
         firmwareUpgradeAvailable = true;
-        upgradeFirmwarePath = '${dir.path}\\mnemofirmware$version.elf';
+        upgradeFirmwarePath = '${dir.path}/mnemofirmware$version.elf';
       });
     } else {
       setState(() {
 
       //  firmwareUpgradeAvailable = true; //TODO: Uncomment after debug
         firmwareUpgradeAvailable = true; //TODO: Remove line after debug
-        upgradeFirmwarePath = '${dir.path}\\mnemofirmware$version.elf'; // TODO: Remove line after debug
+        upgradeFirmwarePath = '${dir.path}/mnemofirmware$version.elf'; // TODO: Remove line after debug
 
       });
     }
@@ -391,7 +391,7 @@ class _MyHomePageState extends State<MyHomePage> {
     await Future.delayed(const Duration(seconds: 5));
     //Use picotool to upload firmware
     if (Platform.isWindows) {
-// returns the abolute path of the executable file of your app:
+
       String mainPath = Platform.resolvedExecutable;
       mainPath = mainPath.substring(0, mainPath.lastIndexOf("\\"));
       Directory directoryExe =
@@ -409,7 +409,23 @@ class _MyHomePageState extends State<MyHomePage> {
       stderr.addStream(processreboot.stderr);
       await processreboot.exitCode;
     } else if (Platform.isLinux) {
-      //TODO: Implement Linux picotool
+
+      String mainPath = Platform.resolvedExecutable;
+      mainPath = mainPath.substring(0, mainPath.lastIndexOf("/"));
+      Directory directoryExe =
+      Directory("$mainPath/data/flutter_assets/assets/shell");
+
+      var process = await Process.start(
+          "${directoryExe.path}/picotool-linux", ['load', upgradeFirmwarePath]);
+      stdout.addStream(process.stdout);
+      stderr.addStream(process.stderr);
+      await process.exitCode;
+
+      var processreboot =
+      await Process.start("${directoryExe.path}/picotool-linux", ['reboot']);
+      stdout.addStream(processreboot.stdout);
+      stderr.addStream(processreboot.stderr);
+      await processreboot.exitCode;
     } else if (Platform.isMacOS) {
       //TODO: Implement Mac picotool
     }
