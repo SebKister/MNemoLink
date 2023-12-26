@@ -20,6 +20,10 @@ samples, guidance on mobile development, and a full API reference.
 
 ### Windows
 
+On Windows, you can find precise indication on installation requirements [here](https://docs.flutter.dev/get-started/install/windows/desktop).
+
+Following those steps and getting a `flutter doctor` result similar to the one shown is enough to build and run the MNemoLink project.
+
 ### Linux
 On Linux, we offer a `VS CODE` devcontainer https://code.visualstudio.com/docs/devcontainers/containers to improve the speed and portability of the development environment.
 
@@ -43,3 +47,6 @@ make run      # run the application in debug mode
 ```
 
 ### MAC OS
+On Mac, you can find precise indication on installation requirements [here](https://docs.flutter.dev/get-started/install/macos/desktop).
+
+Following those steps and getting a `flutter doctor` result similar to the one shown is enough to build and run the MNemoLink project.
