@@ -144,7 +144,7 @@ class _MyHomePageState extends State<MyHomePage> {
   int timeFormat = -1;
 
   var ipController = TextEditingController();
-  final _controller = ScrollController();
+  final cliScrollController = ScrollController();
 
   PackageInfo _packageInfo = PackageInfo(
     appName: 'Unknown',
@@ -1751,7 +1751,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                               decoration: const BoxDecoration(
                                                   color: Colors.black),
                                               child: ListView(
-                                                controller: _controller,
+                                                controller: cliScrollController,
                                                 padding:
                                                     const EdgeInsets.all(20),
                                                 shrinkWrap: true,
@@ -1815,8 +1815,8 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _scrollDown() {
-    _controller.animateTo(
-      _controller.position.maxScrollExtent,
+    cliScrollController.animateTo(
+      cliScrollController.position.maxScrollExtent,
       curve: Curves.easeOut,
       duration: const Duration(milliseconds: 1000),
     );
