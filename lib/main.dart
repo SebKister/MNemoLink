@@ -32,10 +32,10 @@ void main() async {
   WindowOptions windowOptions = const WindowOptions(
     size: Size(1280, 768),
     center: true,
+    minimumSize: Size(1024, 600),
   );
 
   windowManager.waitUntilReadyToShow(windowOptions, () async {
-    await windowManager.maximize();
     await windowManager.show();
     await windowManager.focus();
   });
@@ -1321,7 +1321,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                       ),
                                                       const SizedBox(width: 50),
                                                       SizedBox(
-                                                        height: 200,
+                                                        height: 200,width:400,
                                                         child: MaterialPicker(
                                                           pickerColor:
                                                               pickerColor,
