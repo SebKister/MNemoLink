@@ -76,7 +76,6 @@ class _MyHomePageState extends State<MyHomePage> {
   List<String> cliCommandHistory = [""];
   var transferBuffer = List<int>.empty(growable: true);
   SectionList sections = SectionList();
-  var cliScrollController = ScrollController();
   bool commandSent = false;
   UnitType unitType = UnitType.metric;
   int stabilizationFactor = 0;
@@ -145,6 +144,7 @@ class _MyHomePageState extends State<MyHomePage> {
   int timeFormat = -1;
 
   var ipController = TextEditingController();
+  final _controller = ScrollController();
 
   PackageInfo _packageInfo = PackageInfo(
     appName: 'Unknown',
@@ -173,15 +173,6 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
-// Load and obtain the shared preferences for this app.
-
-    cliScrollController.addListener(() {
-      if (cliScrollController.hasClients && commandSent) {
-        final position = cliScrollController.position.maxScrollExtent;
-        cliScrollController.jumpTo(position);
-        commandSent = false;
-      }
-    });
 
     initPrefs();
     _initPackageInfo();
@@ -1321,7 +1312,8 @@ class _MyHomePageState extends State<MyHomePage> {
                                                       ),
                                                       const SizedBox(width: 50),
                                                       SizedBox(
-                                                        height: 200,width:400,
+                                                        height: 200,
+                                                        width: 400,
                                                         child: MaterialPicker(
                                                           pickerColor:
                                                               pickerColor,
@@ -1747,42 +1739,53 @@ class _MyHomePageState extends State<MyHomePage> {
                                           backgroundColor: Colors.white30,
                                         ),
                                         Expanded(
-                                          child: Container(
-                                            decoration: const BoxDecoration(
-                                                color: Colors.black26),
-                                            child: ListView(
-                                              padding: const EdgeInsets.all(20),
-                                              shrinkWrap: true,
-                                              scrollDirection: Axis.vertical,
-                                              children: cliHistory
-                                                  .where((e) => e.length >= 2)
-                                                  .map(
-                                                    (e) => RichText(
-                                                      text: TextSpan(
-                                                        text:
-                                                            "${e.substring(2)}\n",
-                                                        style: TextStyle(
-                                                            color: (e.substring(
-                                                                        0, 2) ==
-                                                                    "a:")
-                                                                ? Colors
-                                                                    .blueGrey
-                                                                : (e.substring(
-                                                                            0,
-                                                                            2) ==
-                                                                        "c:")
-                                                                    ? Colors
-                                                                        .black87
-                                                                    : Colors
-                                                                        .red,
-                                                            fontSize: 18,
-                                                            fontWeight:
-                                                                FontWeight
-                                                                    .normal),
+                                          child: Scaffold(
+                                            backgroundColor: Colors.black,
+                                            floatingActionButton:
+                                                FloatingActionButton.small(
+                                              onPressed: _scrollDown,
+                                              child: const Icon(
+                                                  Icons.arrow_downward),
+                                            ),
+                                            body: Container(
+                                              decoration: const BoxDecoration(
+                                                  color: Colors.black),
+                                              child: ListView(
+                                                controller: _controller,
+                                                padding:
+                                                    const EdgeInsets.all(20),
+                                                shrinkWrap: true,
+                                                scrollDirection: Axis.vertical,
+                                                children: cliHistory
+                                                    .where((e) => e.length >= 2)
+                                                    .map(
+                                                      (e) => RichText(
+                                                        text: TextSpan(
+                                                          text: e.substring(2),
+                                                          style: TextStyle(
+                                                              color: (e.substring(
+                                                                          0,
+                                                                          2) ==
+                                                                      "a:")
+                                                                  ? Colors
+                                                                      .white70
+                                                                  : (e.substring(
+                                                                              0,
+                                                                              2) ==
+                                                                          "c:")
+                                                                      ? Colors
+                                                                          .yellow
+                                                                      : Colors
+                                                                          .red,
+                                                              fontSize: 18,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .normal),
+                                                        ),
                                                       ),
-                                                    ),
-                                                  )
-                                                  .toList(),
+                                                    )
+                                                    .toList(),
+                                              ),
                                             ),
                                           ),
                                         ),
@@ -1809,6 +1812,14 @@ class _MyHomePageState extends State<MyHomePage> {
         cliCommandHistory.add(command);
       });
     }
+  }
+
+  void _scrollDown() {
+    _controller.animateTo(
+      _controller.position.maxScrollExtent,
+      curve: Curves.easeOut,
+      duration: const Duration(milliseconds: 1000),
+    );
   }
 
   Future<void> setZCompass(e) async {
@@ -1922,8 +1933,8 @@ class _MyHomePageState extends State<MyHomePage> {
         startCodeInt.add(date.minute);
         var uint8list2 = Uint8List.fromList(startCodeInt);
         int? nbwritten = mnemoPort.write(uint8list2);
-        setState(() => cliHistory.add(
-            (nbwritten == 5) ? "a:DateTime$date\n" : "e:Error in DateTime\n"));
+        setState(() => cliHistory
+            .add((nbwritten == 5) ? "a:DateTime$date" : "e:Error in DateTime"));
 
         commandSent = true;
         mnemoPort.close();
@@ -1986,7 +1997,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void displayAnswer() {
-    setState(() => cliHistory.add("a:${utf8.decode(transferBuffer)}"));
+    setState(() => cliHistory.add("a:${utf8.decode(transferBuffer).trim()}"));
   }
 
   Future<void> onSaveDMP() async {
