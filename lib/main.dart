@@ -122,6 +122,7 @@ class _MyHomePageState extends State<MyHomePage> {
   bool updatingSoftware = false;
   String urlLatestSoftware = "";
   String upgradeSoftwarePath = "";
+  double downloadProgressValue = 0.0;
 
   String ipMNemo = "";
 
@@ -483,6 +484,34 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
+  Future<bool?> showSoftwareDownloadFinishedDialog() async {
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false, // user must tap button!
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Download completed'),
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                Text(
+                    'The MNemoLink update file has been successfully downloaded as $upgradeSoftwarePath '),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('OK'),
+              onPressed: () {
+                Navigator.of(context).pop(true);
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<bool?> showSoftwareUpdateDialog() async {
     return showDialog<bool>(
       context: context,
@@ -523,9 +552,26 @@ class _MyHomePageState extends State<MyHomePage> {
     if (!updateApproval!) {
       return;
     }
-
+    setState(() {
+      downloadProgressValue = 0;
+      updatingSoftware = true;
+    });
     Dio dio = Dio();
-    await dio.download(urlLatestSoftware, upgradeSoftwarePath);
+
+    await dio.download(
+      urlLatestSoftware,
+      upgradeSoftwarePath,
+      onReceiveProgress: (received, total) {
+        if (total <= 0) return;
+        setState(() {
+          downloadProgressValue = received / total;
+        });
+      },
+    );
+    await showSoftwareDownloadFinishedDialog();
+    setState(() {
+      updatingSoftware = false;
+    });
   }
 
   Future<void> onUpdateFirmware() async {
@@ -793,6 +839,16 @@ class _MyHomePageState extends State<MyHomePage> {
               tooltip:
                   "Update Software to v$latestSoftwareVersionMajor.$latestSoftwareVersionMinor.$latestSoftwareVersionRevision",
             ),
+          if (updatingSoftware)
+            Padding(
+              padding: EdgeInsets.all(16.0),
+              child: CircularProgressIndicator(
+                value: downloadProgressValue,
+                color: Colors.yellow,
+                strokeWidth: 5,
+              ),
+            ),
+
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
