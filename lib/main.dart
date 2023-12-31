@@ -490,7 +490,7 @@ class _MyHomePageState extends State<MyHomePage> {
       barrierDismissible: false, // user must tap button!
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Download completed'),
+          title: const Text('Download completed'),
           content: SingleChildScrollView(
             child: ListBody(
               children: <Widget>[
@@ -841,7 +841,7 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
           if (updatingSoftware)
             Padding(
-              padding: EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(16.0),
               child: CircularProgressIndicator(
                 value: downloadProgressValue,
                 color: Colors.yellow,
