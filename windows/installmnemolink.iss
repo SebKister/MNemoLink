@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "MnemoLink"
-#define MyAppVersion "1.3.0"
+#define MyAppVersion "1.4.0"
 #define MyAppPublisher "Ariane's Line"
 #define MyAppURL "https://www.arianesline.com/"
 #define MyAppExeName "MnemoLink.exe"
