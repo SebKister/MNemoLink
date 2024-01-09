@@ -193,6 +193,10 @@ class _MyHomePageState extends State<MyHomePage> {
     final prefs = await SharedPreferences.getInstance();
     ipMNemo = prefs.getString('ipMNemo') ?? "192.168.4.1";
     ipController.text = ipMNemo;
+    await syncNetworkDeviceFound();
+  }
+
+  Future<void> syncNetworkDeviceFound() async {
     var response = await scanIPforMNemo(ipMNemo);
     setState(() {
       networkDeviceFound = response;
@@ -201,8 +205,12 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<bool> scanIPforMNemo(String ipString) async {
     Dio dio = Dio();
-    var response = await dio.get("http://$ipString/IsMNemoHere");
-    return (response.data.toString().contains("MNEMO IS HERE"));
+    try {
+      var response = await dio.get("http://$ipString/IsMNemoHere");
+      return (response.data.toString().contains("MNEMO IS HERE"));
+    } catch (e) {
+      return false;
+    }
   }
 
   Future<void> initMnemoPort() async {
@@ -966,6 +974,7 @@ class _MyHomePageState extends State<MyHomePage> {
                           showCursor: true,
                           onChanged: (value) {
                             ipMNemo = value;
+                            syncNetworkDeviceFound();
                           },
                           autofocus: true,
                           obscureText: false,
