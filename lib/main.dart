@@ -140,6 +140,7 @@ class _MyHomePageState extends State<MyHomePage> {
   bool factorySettingsLockStabilizationFactor = true;
   bool factorySettingsDoubleTapON = true;
   bool serialBusy = false;
+  bool networkDeviceFound = false;
 
   int dateFormat = -1;
   int timeFormat = -1;
@@ -192,6 +193,16 @@ class _MyHomePageState extends State<MyHomePage> {
     final prefs = await SharedPreferences.getInstance();
     ipMNemo = prefs.getString('ipMNemo') ?? "192.168.4.1";
     ipController.text = ipMNemo;
+    var response = await scanIPforMNemo(ipMNemo);
+    setState(() {
+      networkDeviceFound = response;
+    });
+  }
+
+  Future<bool> scanIPforMNemo(String ipString) async {
+    Dio dio = Dio();
+    var response = await dio.get("http://$ipString/IsMNemoHere");
+    return (response.data.toString().contains("MNEMO IS HERE"));
   }
 
   Future<void> initMnemoPort() async {
@@ -848,7 +859,6 @@ class _MyHomePageState extends State<MyHomePage> {
                 strokeWidth: 5,
               ),
             ),
-
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -988,7 +998,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         ),
                       ),
                       IconButton(
-                        onPressed: onNetworkDMP,
+                        onPressed: (!networkDeviceFound) ? null : onNetworkDMP,
                         icon: const Icon(Icons.wifi),
                         tooltip: "Download from wifi connected device",
                       ),
