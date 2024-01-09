@@ -1036,10 +1036,10 @@ class _MyHomePageState extends State<MyHomePage> {
                                 AppBar(
                                   actions: [
                                     IconButton(
-                                      onPressed: (serialBusy ||
-                                              sections.getSections().isEmpty)
-                                          ? null
-                                          : onReset,
+                                      onPressed:
+                                          (sections.getSections().isEmpty)
+                                              ? null
+                                              : onReset,
                                       icon: const Icon(Icons.backspace_rounded),
                                       tooltip: "Clear local Data",
                                     ),
