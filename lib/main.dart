@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:csv/csv.dart';
+import 'package:dart_ping/dart_ping.dart';
 import 'package:dio/dio.dart';
 import 'package:disks_desktop/disks_desktop.dart';
 import 'package:file_picker/file_picker.dart';
@@ -12,6 +13,7 @@ import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:mnemolink/fileicon.dart';
 import 'package:mnemolink/survexporter.dart';
 import 'package:mnemolink/thexporter.dart';
+import 'package:network_info_plus/network_info_plus.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:mnemolink/excelexport.dart';
 import 'package:mnemolink/sectioncard.dart';
@@ -141,6 +143,8 @@ class _MyHomePageState extends State<MyHomePage> {
   bool factorySettingsDoubleTapON = true;
   bool serialBusy = false;
   bool networkDeviceFound = false;
+  bool scanningNetwork = false;
+  String networkScanProgress = "";
 
   int dateFormat = -1;
   int timeFormat = -1;
@@ -205,7 +209,16 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<bool> scanIPforMNemo(String ipString) async {
     Dio dio = Dio();
+    dio.options.receiveTimeout = const Duration(seconds: 1);
+    final ping = Ping(ipString, count: 1, timeout: 1);
     try {
+      //First ping ip
+      var pingResult = await ping.stream.first;
+      if (pingResult.error?.error == ErrorType.requestTimedOut ||
+          pingResult.error?.error == ErrorType.unknown) return false;
+
+      //Than GET IsMNemoHere to see if ip is a MNemo
+      debugPrint(ipString);
       var response = await dio.get("http://$ipString/IsMNemoHere");
       return (response.data.toString().contains("MNEMO IS HERE"));
     } catch (e) {
@@ -299,18 +312,62 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+  Future<void> onNetworkScan() async {
+    setState(() {
+      scanningNetwork = true;
+      ipController.text = "Scanning in progress";
+    });
+    var wifiIP = await NetworkInfo().getWifiIP();
+    var lio = wifiIP?.lastIndexOf(".");
+    var ipPart = wifiIP?.substring(0, lio);
+
+    List<Future<bool>> listResult = List<Future<bool>>.empty(growable: true);
+    for (int j = 0; j < 256; j++) {
+      listResult.add(scanIPforMNemo("$ipPart.$j"));
+    }
+    for (int j = 0; j < 256; j++) {
+      setState(() {
+        networkScanProgress = "$ipPart.$j ...";
+      });
+      if (await listResult[j]) {
+        setState(() {
+          ipController.text = "$ipPart.$j";
+          ipMNemo = ipController.text;
+          scanningNetwork = false;
+          networkDeviceFound = true;
+        });
+        return;
+      }
+    }
+
+    setState(() {
+      ipController.text = "No device found";
+      scanningNetwork = false;
+    });
+  }
+
   Future<void> onNetworkDMP() async {
     final prefs = await SharedPreferences.getInstance();
     prefs.setString('ipMNemo', ipMNemo);
+
+    //check if device at current ip
+
+    await syncNetworkDeviceFound();
+    if (!networkDeviceFound) return;
 
     var dir = await getTemporaryDirectory();
 
     String url = "http://$ipMNemo/Download";
     String fileName = 'mnemodata.txt';
-
-    Dio dio = Dio();
-    await dio.download(url, "${dir.path}/$fileName");
-
+    try {
+      Dio dio = Dio();
+      await dio.download(url, "${dir.path}/$fileName");
+    } catch (e) {
+      setState(() {
+        networkDeviceFound = false;
+      });
+      return;
+    }
     List<String> splits = List<String>.empty(growable: true);
     await File("${dir.path}/$fileName")
         .readAsString()
@@ -965,43 +1022,47 @@ class _MyHomePageState extends State<MyHomePage> {
                         height: 60,
                       ),
                       const Text("Download from the network"),
-                      Container(
-                        alignment: Alignment.center,
-                        width: 140,
-                        child: TextField(
-                          textAlign: TextAlign.center,
-                          controller: ipController,
-                          showCursor: true,
-                          onChanged: (value) {
-                            ipMNemo = value;
-                            syncNetworkDeviceFound();
-                          },
-                          autofocus: true,
-                          obscureText: false,
-                          decoration: const InputDecoration(
-                            floatingLabelAlignment:
-                                FloatingLabelAlignment.center,
-                            labelText: "IP",
-                            hintText: '[Enter the IP of the MNemo]',
-                            enabledBorder: UnderlineInputBorder(
-                              borderSide: BorderSide(
-                                color: Color(0x00000000),
-                                width: 1,
-                              ),
-                              borderRadius: BorderRadius.only(
-                                topLeft: Radius.circular(4.0),
-                                topRight: Radius.circular(4.0),
-                              ),
+                      IconButton(
+                        onPressed: (networkDeviceFound || scanningNetwork)
+                            ? null
+                            : onNetworkScan,
+                        icon: const Icon(Icons.search),
+                        tooltip:
+                            "Scan local network for wifi connected devices",
+                      ),
+                      TextField(
+                        textAlign: TextAlign.center,
+                        controller: ipController,
+                        showCursor: true,
+                        onChanged: (value) {
+                          ipMNemo = value;
+                          syncNetworkDeviceFound();
+                        },
+                        autofocus: true,
+                        obscureText: false,
+                        decoration: InputDecoration(
+                          floatingLabelAlignment: FloatingLabelAlignment.center,
+                          labelText:
+                              (scanningNetwork) ? networkScanProgress : "IP",
+                          hintText: '[Enter the IP of the MNemo]',
+                          enabledBorder: const UnderlineInputBorder(
+                            borderSide: BorderSide(
+                              color: Color(0x00000000),
+                              width: 1,
                             ),
-                            focusedBorder: UnderlineInputBorder(
-                              borderSide: BorderSide(
-                                color: Color(0x00000000),
-                                width: 1,
-                              ),
-                              borderRadius: BorderRadius.only(
-                                topLeft: Radius.circular(4.0),
-                                topRight: Radius.circular(4.0),
-                              ),
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(4.0),
+                              topRight: Radius.circular(4.0),
+                            ),
+                          ),
+                          focusedBorder: const UnderlineInputBorder(
+                            borderSide: BorderSide(
+                              color: Color(0x00000000),
+                              width: 1,
+                            ),
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(4.0),
+                              topRight: Radius.circular(4.0),
                             ),
                           ),
                         ),
