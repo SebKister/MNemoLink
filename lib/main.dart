@@ -215,7 +215,8 @@ class _MyHomePageState extends State<MyHomePage> {
       //First ping ip
       var pingResult = await ping.stream.first;
       if (pingResult.error?.error == ErrorType.requestTimedOut ||
-          pingResult.error?.error == ErrorType.unknown) return false;
+          pingResult.error?.error == ErrorType.unknown ||
+          pingResult.response == null) return false;
 
       //Than GET IsMNemoHere to see if ip is a MNemo
       debugPrint(ipString);
