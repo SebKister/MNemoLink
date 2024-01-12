@@ -152,6 +152,8 @@ class _MyHomePageState extends State<MyHomePage> {
   var ipController = TextEditingController();
   final cliScrollController = ScrollController();
 
+  final NetworkInfo _networkInfo = NetworkInfo();
+
   PackageInfo _packageInfo = PackageInfo(
     appName: 'Unknown',
     packageName: 'Unknown',
@@ -209,7 +211,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<bool> scanIPforMNemo(String ipString) async {
     Dio dio = Dio();
-    dio.options.receiveTimeout = const Duration(seconds: 1);
+    dio.options.receiveTimeout = const Duration(seconds: 3);
     final ping = Ping(ipString, count: 1, timeout: 1);
     try {
       //First ping ip
@@ -318,9 +320,12 @@ class _MyHomePageState extends State<MyHomePage> {
       scanningNetwork = true;
       ipController.text = "Scanning in progress";
     });
-    var wifiIP = await NetworkInfo().getWifiIP();
-    var lio = wifiIP?.lastIndexOf(".");
-    var ipPart = wifiIP?.substring(0, lio);
+    var wifiIP = await _networkInfo.getWifiIP();
+
+    //On mac os Sonoma there no access allowed to wifi info for the moment, so using latest working IP
+    wifiIP ??= ipMNemo;
+
+    var ipPart = wifiIP.substring(0, wifiIP.lastIndexOf("."));
 
     List<Future<bool>> listResult = List<Future<bool>>.empty(growable: true);
     for (int j = 0; j < 256; j++) {
