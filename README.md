@@ -24,8 +24,8 @@ On Windows, you can find precise indication on installation requirements [here](
 
 Following those steps and getting a `flutter doctor` result similar to the one shown is enough to build and run the MNemoLink project.
 
-### Linux
-On Linux, we offer a `VS CODE` devcontainer https://code.visualstudio.com/docs/devcontainers/containers to improve the speed and portability of the development environment.
+### Linux or Windows 11 + WSL2
+On Linux and Windows 11 + WSL2, we offer a `VS CODE` devcontainer https://code.visualstudio.com/docs/devcontainers/containers to improve the speed and portability of the development environment.
 
 It requires `VS Code`, Docker and Devcontainer Extension (`ms-vscode-remote.remote-containers`) installed.
 
