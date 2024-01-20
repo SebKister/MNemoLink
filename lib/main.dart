@@ -243,6 +243,7 @@ class _MyHomePageState extends State<MyHomePage> {
     if (mnemoPortAddress.isNotEmpty) {
       setState(() {
         detected = true;
+        serialBusy = false;
       });
       mnemoPort = SerialPort(mnemoPortAddress);
 
@@ -309,7 +310,6 @@ class _MyHomePageState extends State<MyHomePage> {
       }
       setState(() {
         dmpLoaded = transferBuffer.isNotEmpty;
-        serialBusy = false;
       });
 
       analyzeTransferBuffer();
