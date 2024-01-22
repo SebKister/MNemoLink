@@ -1046,7 +1046,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         showCursor: true,
                         onChanged: (value) {
                           ipMNemo = value;
-                          syncNetworkDeviceFound();
+                          if (isIPFormat(value)) syncNetworkDeviceFound();
                         },
                         autofocus: true,
                         obscureText: false,
@@ -2389,6 +2389,22 @@ class _MyHomePageState extends State<MyHomePage> {
       firmwareVersionRevision = int.parse(splitsplus[0]);
       firmwareVersionBuild = int.parse(splitsplus[1]);
     });
+  }
+
+  bool isIPFormat(String value) {
+    var splits = value.split(".");
+
+    if (splits.length != 4) return false;
+    if (int.tryParse(splits[0]) == null ||
+        int.tryParse(splits[1]) == null ||
+        int.tryParse(splits[2]) == null ||
+        int.tryParse(splits[3]) == null) return false;
+
+    for (int i = 0; i < 4; i++) {
+      var s = int.parse(splits[i]);
+      if (s < 0 || s > 255) return false;
+    }
+    return true;
   }
 }
 
