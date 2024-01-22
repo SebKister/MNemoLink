@@ -273,6 +273,10 @@ class _MyHomePageState extends State<MyHomePage> {
         });
         await nonResponsiveWarning();
       }
+    } else {
+      setState(() {
+        serialBusy = false;
+      });
     }
   }
 
@@ -289,7 +293,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> onOpenDMP() async {
     var result = await FilePicker.platform.pickFiles(
-        dialogTitle: "Save as DMP",
+        dialogTitle: "Open DMP",
         type: FileType.custom,
         allowedExtensions: ["dmp"],
         allowMultiple: false);
