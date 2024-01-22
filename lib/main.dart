@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:csv/csv.dart';
 import 'package:dart_ping/dart_ping.dart';
 import 'package:dio/dio.dart';
 import 'package:disks_desktop/disks_desktop.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_libserialport/flutter_libserialport.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
@@ -26,22 +26,27 @@ import './section.dart';
 import './shot.dart';
 import './sectionlist.dart';
 
+
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
   // Must add this line.
-  await windowManager.ensureInitialized();
+  if (!Platform.isAndroid) {
+    WidgetsFlutterBinding.ensureInitialized();
+    await windowManager.ensureInitialized();
 
-  WindowOptions windowOptions = const WindowOptions(
-    size: Size(1280, 768),
-    center: true,
-    minimumSize: Size(1024, 600),
-  );
+    WindowOptions windowOptions = const WindowOptions(
+      size: Size(1280, 768),
+      center: true,
+      minimumSize: Size(1024, 600),
+    );
 
-  windowManager.waitUntilReadyToShow(windowOptions, () async {
-    await windowManager.show();
-    await windowManager.focus();
-  });
+    windowManager.waitUntilReadyToShow(windowOptions, () async {
+      await windowManager.show();
+      await windowManager.focus();
+    });
+  }
+
   runApp(const MyApp());
+
 }
 
 class MyApp extends StatelessWidget {
@@ -182,7 +187,9 @@ class _MyHomePageState extends State<MyHomePage> {
 
     initPrefs();
     _initPackageInfo();
-    initMnemoPort();
+    if (!Platform.isAndroid) {
+      initMnemoPort();
+    }
     initPeriodicTask();
     getLatestSoftwareAvailable();
   }
@@ -209,7 +216,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<bool> scanIPforMNemo(String ipString) async {
     Dio dio = Dio();
-    dio.options.receiveTimeout = const Duration(seconds: 1);
+    dio.options.receiveTimeout = const Duration(seconds: 2);
+    dio.options.connectTimeout = const Duration(seconds: 2);
     final ping = Ping(ipString, count: 1, timeout: 1);
     try {
       //First ping ip
@@ -286,11 +294,17 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<void> onOpenDMP() async {
-    var result = await FilePicker.platform.pickFiles(
-        dialogTitle: "Save as DMP",
-        type: FileType.custom,
-        allowedExtensions: ["dmp"],
-        allowMultiple: false);
+    FilePickerResult? result;
+    if (Platform.isAndroid) {
+      result = await FilePicker.platform.pickFiles(
+          dialogTitle: "Open DMP", type: FileType.any, allowMultiple: false);
+    } else {
+      result = await FilePicker.platform.pickFiles(
+          dialogTitle: "Open DMP",
+          type: FileType.custom,
+          allowedExtensions: ["dmp"],
+          allowMultiple: false);
+    }
 
 // The result will be null, if the user aborted the dialog
     if (result != null) {
@@ -312,7 +326,12 @@ class _MyHomePageState extends State<MyHomePage> {
       analyzeTransferBuffer();
     }
   }
+  void onNetworkScanStop(){
+    setState(() {
+      scanningNetwork = false;
+    });
 
+  }
   Future<void> onNetworkScan() async {
     setState(() {
       scanningNetwork = true;
@@ -321,23 +340,56 @@ class _MyHomePageState extends State<MyHomePage> {
     var wifiIP = await NetworkInfo().getWifiIP();
     var lio = wifiIP?.lastIndexOf(".");
     var ipPart = wifiIP?.substring(0, lio);
+    if (Platform.isAndroid) {
 
-    List<Future<bool>> listResult = List<Future<bool>>.empty(growable: true);
-    for (int j = 0; j < 256; j++) {
-      listResult.add(scanIPforMNemo("$ipPart.$j"));
-    }
-    for (int j = 0; j < 256; j++) {
-      setState(() {
-        networkScanProgress = "$ipPart.$j ...";
-      });
-      if (await listResult[j]) {
+      for (int j = 0; j < 256; j++) {
+        if(!scanningNetwork){
+          //Scan has been stopped by user
+          setState(() {
+            ipController.text = "Scanning Stopped";
+            networkDeviceFound = false;
+          });
+          return;
+        }
         setState(() {
-          ipController.text = "$ipPart.$j";
-          ipMNemo = ipController.text;
-          scanningNetwork = false;
-          networkDeviceFound = true;
+          networkScanProgress = "$ipPart.$j ...";
         });
-        return;
+        if (await scanIPforMNemo("$ipPart.$j")) {
+          setState(() {
+            ipController.text = "$ipPart.$j";
+            ipMNemo = ipController.text;
+            scanningNetwork = false;
+            networkDeviceFound = true;
+          });
+          return;
+        }
+      }
+    } else {
+      List<Future<bool>> listResult = List<Future<bool>>.empty(growable: true);
+      for (int j = 0; j < 256; j++) {
+        listResult.add(scanIPforMNemo("$ipPart.$j"));
+      }
+      for (int j = 0; j < 256; j++) {
+        if(!scanningNetwork){
+          //Scan has been stopped by user
+          setState(() {
+            ipController.text = "Scanning Stopped";
+            networkDeviceFound = false;
+          });
+          return;
+        }
+        setState(() {
+          networkScanProgress = "$ipPart.$j ...";
+        });
+        if (await listResult[j]) {
+          setState(() {
+            ipController.text = "$ipPart.$j";
+            ipMNemo = ipController.text;
+            scanningNetwork = false;
+            networkDeviceFound = true;
+          });
+          return;
+        }
       }
     }
 
@@ -934,58 +986,59 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         ]),
         actions: [
-          Container(
-            padding: const EdgeInsets.all(5),
-            child: Row(
-              children: connected || detected
-                  ? [
-                      (serialBusy)
-                          ? Container(
-                              padding: const EdgeInsets.only(right: 30),
-                              child: LoadingAnimationWidget.inkDrop(
-                                  color: Colors.white60, size: 20),
-                            )
-                          : const SizedBox.shrink(),
-                      if (connected && firmwareUpgradeAvailable)
+          if (!Platform.isAndroid)
+            Container(
+              padding: const EdgeInsets.all(5),
+              child: Row(
+                children: connected || detected
+                    ? [
+                        (serialBusy)
+                            ? Container(
+                                padding: const EdgeInsets.only(right: 30),
+                                child: LoadingAnimationWidget.inkDrop(
+                                    color: Colors.white60, size: 20),
+                              )
+                            : const SizedBox.shrink(),
+                        if (connected && firmwareUpgradeAvailable)
+                          IconButton(
+                            color: Colors.yellowAccent,
+                            onPressed:
+                                (!updatingFirmware) ? onUpdateFirmware : null,
+                            icon: const Icon(Icons.update),
+                            tooltip:
+                                "Update Firmware to v$latestFirmwareVersionMajor.$latestFirmwareVersionMinor.$latestFirmwareVersionRevision",
+                          ),
+                        if (connected)
+                          Column(
+                            children: [
+                              Text(
+                                  "[$nameDevice] Connected on $mnemoPortAddress"),
+                              Text(
+                                  style: const TextStyle(fontSize: 10),
+                                  ' SN ${mnemoPort.serialNumber} FW $firmwareVersionMajor.$firmwareVersionMinor.$firmwareVersionRevision'),
+                              Text(
+                                  style: const TextStyle(fontSize: 9),
+                                  ' ON: $timeON min - Survey: $timeSurvey min')
+                            ],
+                          ),
                         IconButton(
-                          color: Colors.yellowAccent,
-                          onPressed:
-                              (!updatingFirmware) ? onUpdateFirmware : null,
-                          icon: const Icon(Icons.update),
-                          tooltip:
-                              "Update Firmware to v$latestFirmwareVersionMajor.$latestFirmwareVersionMinor.$latestFirmwareVersionRevision",
+                          onPressed: onRefreshMnemo,
+                          icon: const Icon(Icons.refresh),
+                          tooltip: "Search for Device",
                         ),
-                      if (connected)
-                        Column(
-                          children: [
-                            Text(
-                                "[$nameDevice] Connected on $mnemoPortAddress"),
-                            Text(
-                                style: const TextStyle(fontSize: 10),
-                                ' SN ${mnemoPort.serialNumber} FW $firmwareVersionMajor.$firmwareVersionMinor.$firmwareVersionRevision'),
-                            Text(
-                                style: const TextStyle(fontSize: 9),
-                                ' ON: $timeON min - Survey: $timeSurvey min')
-                          ],
+                      ]
+                    : [
+                        (detectedOnly)
+                            ? const Text("Mnemo detected -Connection failed-")
+                            : const Text("Mnemo Not detected"),
+                        IconButton(
+                          onPressed: onRefreshMnemo,
+                          icon: const Icon(Icons.refresh),
+                          tooltip: "Search for Device",
                         ),
-                      IconButton(
-                        onPressed: onRefreshMnemo,
-                        icon: const Icon(Icons.refresh),
-                        tooltip: "Search for Device",
-                      ),
-                    ]
-                  : [
-                      (detectedOnly)
-                          ? const Text("Mnemo detected -Connection failed-")
-                          : const Text("Mnemo Not detected"),
-                      IconButton(
-                        onPressed: onRefreshMnemo,
-                        icon: const Icon(Icons.refresh),
-                        tooltip: "Search for Device",
-                      ),
-                    ],
-            ),
-          )
+                      ],
+              ),
+            )
         ],
       ),
       body: Column(
@@ -997,13 +1050,15 @@ class _MyHomePageState extends State<MyHomePage> {
                 Center(
                   child: Column(
                     children: [
-                      const Text(
-                          "Connect the Mnemo to your computer and press the refresh button"),
-                      IconButton(
-                        onPressed: onRefreshMnemo,
-                        icon: const Icon(Icons.refresh),
-                        tooltip: "Search for Device",
-                      ),
+                      if (!Platform.isAndroid)
+                        const Text(
+                            "Connect the Mnemo to your computer and press the refresh button"),
+                      if (!Platform.isAndroid)
+                        IconButton(
+                          onPressed: onRefreshMnemo,
+                          icon: const Icon(Icons.refresh),
+                          tooltip: "Search for Device",
+                        ),
                       const SizedBox(
                         width: 10,
                         height: 60,
@@ -1024,8 +1079,8 @@ class _MyHomePageState extends State<MyHomePage> {
                       ),
                       const Text("Download from the network"),
                       IconButton(
-                        onPressed: (networkDeviceFound || scanningNetwork)
-                            ? null
+                        onPressed: ( scanningNetwork)
+                            ? onNetworkScanStop
                             : onNetworkScan,
                         icon: const Icon(Icons.search),
                         tooltip:
@@ -1037,7 +1092,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         showCursor: true,
                         onChanged: (value) {
                           ipMNemo = value;
-                          syncNetworkDeviceFound();
+                          if (isIPFormat(value)) syncNetworkDeviceFound();
                         },
                         autofocus: true,
                         obscureText: false,
@@ -1081,22 +1136,24 @@ class _MyHomePageState extends State<MyHomePage> {
                 // Generated code for this TabBar Widget...
                 Expanded(
                   child: DefaultTabController(
-                    length: 3,
+                    length: (!Platform.isAndroid) ? 3 : 1,
                     initialIndex: 0,
                     child: Column(
                       children: [
-                        const TabBar(
+                        TabBar(
                           labelColor: Colors.blueGrey,
                           tabs: [
-                            Tab(
+                            const Tab(
                               text: 'Data',
                             ),
-                            Tab(
-                              text: 'Settings',
-                            ),
-                            Tab(
-                              text: 'CLI',
-                            ),
+                            if (!Platform.isAndroid)
+                              const Tab(
+                                text: 'Settings',
+                              ),
+                            if (!Platform.isAndroid)
+                              const Tab(
+                                text: 'CLI',
+                              ),
                           ],
                         ),
                         Expanded(
@@ -1225,709 +1282,727 @@ class _MyHomePageState extends State<MyHomePage> {
                                 ),
                               ]),
                               //Settings----------------------------------------
-                              (!connected)
-                                  ? Column(
-                                      children: [
-                                        const Text(
-                                            "Connect the Mnemo to your computer and press the refresh button"),
-                                        IconButton(
-                                          onPressed: onRefreshMnemo,
-                                          icon: const Icon(Icons.refresh),
-                                          tooltip: "Search for Device",
-                                        ),
-                                      ],
-                                    )
-                                  : Column(
-                                      children: [
-                                        Expanded(
-                                          child: Container(
-                                            decoration: const BoxDecoration(
-                                                color: Colors.black26),
-                                            child: ListView(
-                                              padding: const EdgeInsets.all(20),
-                                              shrinkWrap: true,
-                                              scrollDirection: Axis.vertical,
-                                              children: [
-                                                SettingCard(
-                                                  name: "Date & Time",
-                                                  subtitle:
-                                                      "Synchronize date and time with the computer",
-                                                  icon: Icons.timer,
-                                                  actionWidget: Row(children: [
-                                                    SettingActionButton(
-                                                        "SYNC NOW",
-                                                        (serialBusy)
-                                                            ? null
-                                                            : () =>
-                                                                onSyncDateTime()),
-                                                    SettingActionButton(
-                                                        "GET TIME FORMAT",
-                                                        (serialBusy)
-                                                            ? null
-                                                            : () =>
-                                                                getCurrentTimeFormat()),
-                                                    SettingActionRadioList(
-                                                        "",
-                                                        const {
-                                                          "24H": 0,
-                                                          "12AM/12PM": 1,
-                                                        },
-                                                        (serialBusy)
-                                                            ? null
-                                                            : setTimeFormat,
-                                                        timeFormat),
-                                                    SettingActionButton(
-                                                        "GET DATE FORMAT",
-                                                        (serialBusy)
-                                                            ? null
-                                                            : () =>
-                                                                getCurrentDateFormat()),
-                                                    SettingActionRadioList(
-                                                        "",
-                                                        const {
-                                                          "DD/MM": 0,
-                                                          "MM/DD": 1,
-                                                        },
-                                                        (serialBusy)
-                                                            ? null
-                                                            : setDateFormat,
-                                                        dateFormat),
-                                                  ]),
-                                                ),
-                                                SettingCard(
-                                                  name: "WIFI",
-                                                  subtitle:
-                                                      "Manage known WIFI networks",
-                                                  icon: Icons.wifi,
-                                                  actionWidget: Row(
-                                                    mainAxisAlignment:
-                                                        MainAxisAlignment
-                                                            .spaceEvenly,
-                                                    children: [
-                                                      SettingActionButton(
-                                                          "GET CURRENT",
-                                                          (serialBusy)
-                                                              ? null
-                                                              : () =>
-                                                                  getCurrentWifiList()),
-                                                      SettingWifiList(
-                                                          wifiList,
-                                                          (serialBusy)
-                                                              ? null
-                                                              : removeFromWifiList),
-                                                      SettingWifiActionButton(
-                                                          "ADD NEW",
-                                                          (serialBusy)
-                                                              ? null
-                                                              : (e, f) =>
-                                                                  addToWifiList(
-                                                                      e, f)),
-                                                    ],
-                                                  ),
-                                                ),
-                                                SettingCard(
-                                                  name: "Color Scheme",
-                                                  subtitle:
-                                                      "Colors defining survey steps",
-                                                  icon:
-                                                      Icons.color_lens_outlined,
-                                                  actionWidget: Row(
-                                                    children: [
-                                                      SettingActionButton.sized(
-                                                          "GET CURRENT",
-                                                          (serialBusy)
-                                                              ? null
-                                                              : () =>
-                                                                  getCurrentColorScheme(),
-                                                          widthColorButton,
-                                                          0.0),
-                                                      Column(
-                                                        children: [
-                                                          SettingActionButton.sized(
-                                                              "RESET TO DEFAULT",
-                                                              (serialBusy)
-                                                                  ? null
-                                                                  : () =>
-                                                                      resetColorScheme(),
-                                                              widthColorButton,
-                                                              0.0),
-                                                          Row(children: [
-                                                            SettingActionButton.sized(
-                                                                "SET READINGA",
-                                                                (serialBusy)
-                                                                    ? null
-                                                                    : () =>
-                                                                        setCurrentColorSchemeReadingA(),
-                                                                widthColorButton,
-                                                                0.0),
-                                                            Placeholder(
-                                                              fallbackWidth:
-                                                                  100,
-                                                              fallbackHeight:
-                                                                  10,
-                                                              strokeWidth: 10,
-                                                              color:
-                                                                  readingAColor,
-                                                            ),
-                                                          ]),
-                                                          Row(children: [
-                                                            SettingActionButton.sized(
-                                                                "SET READINGB",
-                                                                (serialBusy)
-                                                                    ? null
-                                                                    : () =>
-                                                                        setCurrentColorSchemeReadingB(),
-                                                                widthColorButton,
-                                                                0.0),
-                                                            Placeholder(
-                                                              fallbackWidth:
-                                                                  100,
-                                                              fallbackHeight:
-                                                                  10,
-                                                              strokeWidth: 10,
-                                                              color:
-                                                                  readingBColor,
-                                                            ),
-                                                          ]),
-                                                          Row(children: [
-                                                            SettingActionButton.sized(
-                                                                "SET STANDBY",
-                                                                (serialBusy)
-                                                                    ? null
-                                                                    : () =>
-                                                                        setCurrentColorSchemeStandBy(),
-                                                                widthColorButton,
-                                                                0.0),
-                                                            Placeholder(
-                                                              fallbackWidth:
-                                                                  100,
-                                                              fallbackHeight:
-                                                                  10,
-                                                              strokeWidth: 10,
-                                                              color:
-                                                                  standbyColor,
-                                                            ),
-                                                          ]),
-                                                          Row(children: [
-                                                            SettingActionButton.sized(
-                                                                "SET READY",
-                                                                (serialBusy)
-                                                                    ? null
-                                                                    : () =>
-                                                                        setCurrentColorSchemeReady(),
-                                                                widthColorButton,
-                                                                0.0),
-                                                            Placeholder(
-                                                              fallbackWidth:
-                                                                  100,
-                                                              fallbackHeight:
-                                                                  10,
-                                                              strokeWidth: 10,
-                                                              color: readyColor,
-                                                            ),
-                                                          ]),
-                                                          Row(children: [
-                                                            SettingActionButton.sized(
-                                                                "SET STABILIZE",
-                                                                (serialBusy)
-                                                                    ? null
-                                                                    : () =>
-                                                                        setCurrentColorSchemeStabilize(),
-                                                                widthColorButton,
-                                                                0.0),
-                                                            Placeholder(
-                                                              fallbackWidth:
-                                                                  100,
-                                                              fallbackHeight:
-                                                                  10,
-                                                              strokeWidth: 10,
-                                                              color:
-                                                                  stabilizeColor,
-                                                            ),
-                                                          ]),
-                                                        ],
-                                                      ),
-                                                      const SizedBox(width: 50),
-                                                      SizedBox(
-                                                        height: 200,
-                                                        width: 400,
-                                                        child: MaterialPicker(
-                                                          pickerColor:
-                                                              pickerColor,
-                                                          onColorChanged:
-                                                              changeColor,
-                                                          enableLabel: true,
-                                                        ),
-                                                      ),
-                                                      const SizedBox(width: 50),
-                                                    ],
-                                                  ),
-                                                ),
-                                                Stack(
-                                                  children: [
-                                                    SettingCard(
-                                                      locked:
-                                                          factorySettingsLockStabilizationFactor,
-                                                      name: "Stabilization",
-                                                      subtitle:
-                                                          "How much stability is required to get a compass reading",
-                                                      icon: Icons.vibration,
-                                                      actionWidget: Row(
-                                                        children: [
-                                                          SettingActionButton(
-                                                              "GET CURRENT",
-                                                              (serialBusy)
-                                                                  ? null
-                                                                  : () =>
-                                                                      getCurrentStabilizationFactor()),
-                                                          SettingActionRadioList(
-                                                              "SYNC NOW",
-                                                              const {
-                                                                "LOW": 5,
-                                                                "MID": 10,
-                                                                "HIGH": 20
-                                                              },
-                                                              (serialBusy)
-                                                                  ? null
-                                                                  : setStabilizationFactor,
-                                                              stabilizationFactor),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                    IconButton(
-                                                        onPressed: () {
-                                                          setState(() {
-                                                            factorySettingsLockStabilizationFactor =
-                                                                !factorySettingsLockStabilizationFactor;
-                                                          });
-                                                        },
-                                                        icon: factorySettingsLockStabilizationFactor
-                                                            ? const Icon(
-                                                                Icons.lock)
-                                                            : const Icon(Icons
-                                                                .lock_open)),
-                                                  ],
-                                                ),
-                                                Stack(
-                                                  children: [
-                                                    SettingCard(
-                                                      locked:
-                                                          factorySettingsLockSlider,
-                                                      name: "Slider Button",
-                                                      subtitle:
-                                                          "Adjust the sensitivity of the slider button",
-                                                      icon: Icons.smart_button,
-                                                      actionWidget: Row(
-                                                        children: [
-                                                          SettingActionButton(
-                                                              "GET CURRENT",
-                                                              (serialBusy)
-                                                                  ? null
-                                                                  : () =>
-                                                                      getCurrentClickThreshold()),
-                                                          SettingActionRadioList(
-                                                              "SYNC NOW",
-                                                              const {
-                                                                "LOW(50)": 50,
-                                                                "MID(40)": 40,
-                                                                "HIGH(30)": 30,
-                                                                "ULTRA HIGH(25)":
-                                                                    25,
-                                                                "MK.SPEC II (20)":
-                                                                    15,
-                                                                "MK.SPEC I (15)":
-                                                                    15
-                                                              },
-                                                              (serialBusy)
-                                                                  ? null
-                                                                  : setClickThreshold,
-                                                              clickThreshold),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                    IconButton(
-                                                        onPressed: () {
-                                                          setState(() {
-                                                            factorySettingsLockSlider =
-                                                                !factorySettingsLockSlider;
-                                                          });
-                                                        },
-                                                        icon: factorySettingsLockSlider
-                                                            ? const Icon(
-                                                                Icons.lock)
-                                                            : const Icon(Icons
-                                                                .lock_open)),
-                                                  ],
-                                                ),
-                                                Stack(
-                                                  children: [
-                                                    SettingCard(
-                                                      locked:
-                                                          factorySettingsLockBMDuration,
-                                                      name: "Basic Mode",
-                                                      subtitle:
-                                                          "Adjust the duration required to validate a command with the slider button",
-                                                      icon: Icons.smart_button,
-                                                      actionWidget: Row(
-                                                        children: [
-                                                          SettingActionButton(
-                                                              "GET CURRENT",
-                                                              (serialBusy)
-                                                                  ? null
-                                                                  : () =>
-                                                                      getCurrentBMClickDurationFactor()),
-                                                          SettingActionRadioList(
-                                                              "SYNC NOW",
-                                                              const {
-                                                                "EXTRA FAST":
-                                                                    25,
-                                                                "FAST": 50,
-                                                                "NORMAL": 100,
-                                                                "SLOW": 150
-                                                              },
-                                                              (serialBusy)
-                                                                  ? null
-                                                                  : setBMDurationFactor,
-                                                              clickBMDurationFactor),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                    IconButton(
-                                                        onPressed: () {
-                                                          setState(() {
-                                                            factorySettingsLockBMDuration =
-                                                                !factorySettingsLockBMDuration;
-                                                          });
-                                                        },
-                                                        icon: factorySettingsLockBMDuration
-                                                            ? const Icon(
-                                                                Icons.lock)
-                                                            : const Icon(Icons
-                                                                .lock_open)),
-                                                  ],
-                                                ),
-                                                Stack(
-                                                  children: [
-                                                    SettingCard(
-                                                      locked:
-                                                          factorySettingsLockSafetyON,
-                                                      name: "Switch ON Safety",
-                                                      subtitle:
-                                                          "Require to click right before switching on the device",
-                                                      icon: Icons.smart_button,
-                                                      actionWidget: Row(
-                                                        children: [
-                                                          SettingActionButton(
-                                                              "GET CURRENT",
-                                                              (serialBusy)
-                                                                  ? null
-                                                                  : () =>
-                                                                      getCurrentsafetySwitchON()),
-                                                          SettingActionRadioList(
-                                                              "SYNC NOW",
-                                                              const {
-                                                                "DISABLED": 0,
-                                                                "ENABLED": 1
-                                                              },
-                                                              (serialBusy)
-                                                                  ? null
-                                                                  : setCurrentsafetySwitchON,
-                                                              safetySwitchON),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                    IconButton(
-                                                        onPressed: () {
-                                                          setState(() {
-                                                            factorySettingsLockSafetyON =
-                                                                !factorySettingsLockSafetyON;
-                                                          });
-                                                        },
-                                                        icon: factorySettingsLockSafetyON
-                                                            ? const Icon(
-                                                                Icons.lock)
-                                                            : const Icon(Icons
-                                                                .lock_open)),
-                                                  ],
-                                                ),
-                                                Stack(
-                                                  children: [
-                                                    SettingCard(
-                                                      locked:
-                                                          factorySettingsDoubleTapON,
-                                                      name: "Double Tap",
-                                                      subtitle:
-                                                          "Double tap sensitivity to display the current survey",
-                                                      icon: Icons.smart_button,
-                                                      actionWidget: Row(
-                                                        children: [
-                                                          SettingActionButton(
-                                                              "GET CURRENT",
-                                                              (serialBusy)
-                                                                  ? null
-                                                                  : () =>
-                                                                      getCurrentDoubleTap()),
-                                                          SettingActionRadioList(
-                                                              "SYNC NOW",
-                                                              const {
-                                                                "DISABLED": 0,
-                                                                "LIGHT": 15,
-                                                                "NORMAL": 20,
-                                                                "HARD": 28
-                                                              },
-                                                              (serialBusy)
-                                                                  ? null
-                                                                  : setCurrentDoubleTap,
-                                                              doubleTap),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                    IconButton(
-                                                        onPressed: () {
-                                                          setState(() {
-                                                            factorySettingsDoubleTapON =
-                                                                !factorySettingsDoubleTapON;
-                                                          });
-                                                        },
-                                                        icon: factorySettingsDoubleTapON
-                                                            ? const Icon(
-                                                                Icons.lock)
-                                                            : const Icon(Icons
-                                                                .lock_open)),
-                                                  ],
-                                                ),
-                                                Stack(
-                                                  children: [
-                                                    SettingCard(
-                                                      locked:
-                                                          factorySettingsLock,
-                                                      name:
-                                                          "Compass HW parameter",
-                                                      subtitle:
-                                                          "Set Compass Orientation (Factory Settings)",
-                                                      icon: Icons.hardware,
-                                                      actionWidget: Row(
-                                                        children: [
-                                                          SettingActionButton(
-                                                              "GET X",
-                                                              (serialBusy)
-                                                                  ? null
-                                                                  : () =>
-                                                                      getCurrentXCompass()),
-                                                          SettingActionRadioList(
-                                                              "SYNC NOW",
-                                                              const {
-                                                                "1": 1,
-                                                                "-1": 255,
-                                                              },
-                                                              (serialBusy)
-                                                                  ? null
-                                                                  : setXCompass,
-                                                              xCompass),
-                                                          SettingActionButton(
-                                                              "GET Y",
-                                                              (serialBusy)
-                                                                  ? null
-                                                                  : () =>
-                                                                      getCurrentYCompass()),
-                                                          SettingActionRadioList(
-                                                              "SYNC NOW",
-                                                              const {
-                                                                "1": 1,
-                                                                "-1": 255,
-                                                              },
-                                                              (serialBusy)
-                                                                  ? null
-                                                                  : setYCompass,
-                                                              yCompass),
-                                                          SettingActionButton(
-                                                              "GET Z",
-                                                              (serialBusy)
-                                                                  ? null
-                                                                  : () =>
-                                                                      getCurrentZCompass()),
-                                                          SettingActionRadioList(
-                                                              "SYNC NOW",
-                                                              const {
-                                                                "1": 1,
-                                                                "-1": 255,
-                                                              },
-                                                              (serialBusy)
-                                                                  ? null
-                                                                  : setZCompass,
-                                                              zCompass),
-                                                          SettingActionButton(
-                                                              "GET CAL. MODE",
-                                                              (serialBusy)
-                                                                  ? null
-                                                                  : () =>
-                                                                      getCurrentCalMode()),
-                                                          SettingActionRadioList(
-                                                              "SYNC NOW",
-                                                              const {
-                                                                "SLOW": 0,
-                                                                "FAST": 1,
-                                                              },
-                                                              (serialBusy)
-                                                                  ? null
-                                                                  : setCalMode,
-                                                              calMode),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                    IconButton(
-                                                        onPressed: () {
-                                                          setState(() {
-                                                            factorySettingsLock =
-                                                                !factorySettingsLock;
-                                                          });
-                                                        },
-                                                        icon: factorySettingsLock
-                                                            ? const Icon(
-                                                                Icons.lock)
-                                                            : const Icon(Icons
-                                                                .lock_open)),
-                                                  ],
-                                                ),
-                                              ],
-                                            ),
+                              if (!Platform.isAndroid)
+                                (!connected)
+                                    ? Column(
+                                        children: [
+                                          const Text(
+                                              "Connect the Mnemo to your computer and press the refresh button"),
+                                          IconButton(
+                                            onPressed: onRefreshMnemo,
+                                            icon: const Icon(Icons.refresh),
+                                            tooltip: "Search for Device",
                                           ),
-                                        ),
-                                      ],
-                                    ),
-                              //CLI ---------------------------------------------------
-                              (!connected)
-                                  ? Column(
-                                      children: [
-                                        const Text(
-                                            "Connect the Mnemo to your computer and press the refresh button"),
-                                        IconButton(
-                                          onPressed: onRefreshMnemo,
-                                          icon: const Icon(Icons.refresh),
-                                          tooltip: "Search for Device",
-                                        ),
-                                      ],
-                                    )
-                                  : Column(
-                                      mainAxisSize: MainAxisSize.max,
-                                      children: [
-                                        AppBar(
-                                          title: Row(
-                                            mainAxisSize: MainAxisSize.max,
-                                            children: [
-                                              Expanded(
-                                                child: Padding(
-                                                  padding:
-                                                      const EdgeInsetsDirectional
-                                                          .fromSTEB(
-                                                          20, 0, 0, 0),
-                                                  child: TextFormField(
-                                                    showCursor: true,
-                                                    onFieldSubmitted: (serialBusy)
-                                                        ? null
-                                                        : onExecuteCLICommand,
-                                                    autofocus: true,
-                                                    obscureText: false,
-                                                    decoration:
-                                                        const InputDecoration(
-                                                      labelText: "Command",
-                                                      hintText:
-                                                          '[Enter Command or type help]',
-                                                      enabledBorder:
-                                                          UnderlineInputBorder(
-                                                        borderSide: BorderSide(
-                                                          color:
-                                                              Color(0x00000000),
-                                                          width: 1,
-                                                        ),
-                                                        borderRadius:
-                                                            BorderRadius.only(
-                                                          topLeft:
-                                                              Radius.circular(
-                                                                  4.0),
-                                                          topRight:
-                                                              Radius.circular(
-                                                                  4.0),
-                                                        ),
-                                                      ),
-                                                      focusedBorder:
-                                                          UnderlineInputBorder(
-                                                        borderSide: BorderSide(
-                                                          color:
-                                                              Color(0x00000000),
-                                                          width: 1,
-                                                        ),
-                                                        borderRadius:
-                                                            BorderRadius.only(
-                                                          topLeft:
-                                                              Radius.circular(
-                                                                  4.0),
-                                                          topRight:
-                                                              Radius.circular(
-                                                                  4.0),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          backgroundColor: Colors.white30,
-                                        ),
-                                        Expanded(
-                                          child: Scaffold(
-                                            backgroundColor: Colors.black,
-                                            floatingActionButton:
-                                                FloatingActionButton.small(
-                                              onPressed: _scrollDown,
-                                              child: const Icon(
-                                                  Icons.arrow_downward),
-                                            ),
-                                            body: Container(
+                                        ],
+                                      )
+                                    : Column(
+                                        children: [
+                                          Expanded(
+                                            child: Container(
                                               decoration: const BoxDecoration(
-                                                  color: Colors.black),
+                                                  color: Colors.black26),
                                               child: ListView(
-                                                controller: cliScrollController,
                                                 padding:
                                                     const EdgeInsets.all(20),
                                                 shrinkWrap: true,
                                                 scrollDirection: Axis.vertical,
-                                                children: cliHistory
-                                                    .where((e) => e.length >= 2)
-                                                    .map(
-                                                      (e) => RichText(
-                                                        text: TextSpan(
-                                                          text: e.substring(2),
-                                                          style: TextStyle(
-                                                              color: (e.substring(
-                                                                          0,
-                                                                          2) ==
-                                                                      "a:")
-                                                                  ? Colors
-                                                                      .white70
-                                                                  : (e.substring(
-                                                                              0,
-                                                                              2) ==
-                                                                          "c:")
-                                                                      ? Colors
-                                                                          .yellow
-                                                                      : Colors
-                                                                          .red,
-                                                              fontSize: 18,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .normal),
+                                                children: [
+                                                  SettingCard(
+                                                    name: "Date & Time",
+                                                    subtitle:
+                                                        "Synchronize date and time with the computer",
+                                                    icon: Icons.timer,
+                                                    actionWidget:
+                                                        Row(children: [
+                                                      SettingActionButton(
+                                                          "SYNC NOW",
+                                                          (serialBusy)
+                                                              ? null
+                                                              : () =>
+                                                                  onSyncDateTime()),
+                                                      SettingActionButton(
+                                                          "GET TIME FORMAT",
+                                                          (serialBusy)
+                                                              ? null
+                                                              : () =>
+                                                                  getCurrentTimeFormat()),
+                                                      SettingActionRadioList(
+                                                          "",
+                                                          const {
+                                                            "24H": 0,
+                                                            "12AM/12PM": 1,
+                                                          },
+                                                          (serialBusy)
+                                                              ? null
+                                                              : setTimeFormat,
+                                                          timeFormat),
+                                                      SettingActionButton(
+                                                          "GET DATE FORMAT",
+                                                          (serialBusy)
+                                                              ? null
+                                                              : () =>
+                                                                  getCurrentDateFormat()),
+                                                      SettingActionRadioList(
+                                                          "",
+                                                          const {
+                                                            "DD/MM": 0,
+                                                            "MM/DD": 1,
+                                                          },
+                                                          (serialBusy)
+                                                              ? null
+                                                              : setDateFormat,
+                                                          dateFormat),
+                                                    ]),
+                                                  ),
+                                                  SettingCard(
+                                                    name: "WIFI",
+                                                    subtitle:
+                                                        "Manage known WIFI networks",
+                                                    icon: Icons.wifi,
+                                                    actionWidget: Row(
+                                                      mainAxisAlignment:
+                                                          MainAxisAlignment
+                                                              .spaceEvenly,
+                                                      children: [
+                                                        SettingActionButton(
+                                                            "GET CURRENT",
+                                                            (serialBusy)
+                                                                ? null
+                                                                : () =>
+                                                                    getCurrentWifiList()),
+                                                        SettingWifiList(
+                                                            wifiList,
+                                                            (serialBusy)
+                                                                ? null
+                                                                : removeFromWifiList),
+                                                        SettingWifiActionButton(
+                                                            "ADD NEW",
+                                                            (serialBusy)
+                                                                ? null
+                                                                : (e, f) =>
+                                                                    addToWifiList(
+                                                                        e, f)),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                  SettingCard(
+                                                    name: "Color Scheme",
+                                                    subtitle:
+                                                        "Colors defining survey steps",
+                                                    icon: Icons
+                                                        .color_lens_outlined,
+                                                    actionWidget: Row(
+                                                      children: [
+                                                        SettingActionButton.sized(
+                                                            "GET CURRENT",
+                                                            (serialBusy)
+                                                                ? null
+                                                                : () =>
+                                                                    getCurrentColorScheme(),
+                                                            widthColorButton,
+                                                            0.0),
+                                                        Column(
+                                                          children: [
+                                                            SettingActionButton.sized(
+                                                                "RESET TO DEFAULT",
+                                                                (serialBusy)
+                                                                    ? null
+                                                                    : () =>
+                                                                        resetColorScheme(),
+                                                                widthColorButton,
+                                                                0.0),
+                                                            Row(children: [
+                                                              SettingActionButton.sized(
+                                                                  "SET READINGA",
+                                                                  (serialBusy)
+                                                                      ? null
+                                                                      : () =>
+                                                                          setCurrentColorSchemeReadingA(),
+                                                                  widthColorButton,
+                                                                  0.0),
+                                                              Placeholder(
+                                                                fallbackWidth:
+                                                                    100,
+                                                                fallbackHeight:
+                                                                    10,
+                                                                strokeWidth: 10,
+                                                                color:
+                                                                    readingAColor,
+                                                              ),
+                                                            ]),
+                                                            Row(children: [
+                                                              SettingActionButton.sized(
+                                                                  "SET READINGB",
+                                                                  (serialBusy)
+                                                                      ? null
+                                                                      : () =>
+                                                                          setCurrentColorSchemeReadingB(),
+                                                                  widthColorButton,
+                                                                  0.0),
+                                                              Placeholder(
+                                                                fallbackWidth:
+                                                                    100,
+                                                                fallbackHeight:
+                                                                    10,
+                                                                strokeWidth: 10,
+                                                                color:
+                                                                    readingBColor,
+                                                              ),
+                                                            ]),
+                                                            Row(children: [
+                                                              SettingActionButton.sized(
+                                                                  "SET STANDBY",
+                                                                  (serialBusy)
+                                                                      ? null
+                                                                      : () =>
+                                                                          setCurrentColorSchemeStandBy(),
+                                                                  widthColorButton,
+                                                                  0.0),
+                                                              Placeholder(
+                                                                fallbackWidth:
+                                                                    100,
+                                                                fallbackHeight:
+                                                                    10,
+                                                                strokeWidth: 10,
+                                                                color:
+                                                                    standbyColor,
+                                                              ),
+                                                            ]),
+                                                            Row(children: [
+                                                              SettingActionButton.sized(
+                                                                  "SET READY",
+                                                                  (serialBusy)
+                                                                      ? null
+                                                                      : () =>
+                                                                          setCurrentColorSchemeReady(),
+                                                                  widthColorButton,
+                                                                  0.0),
+                                                              Placeholder(
+                                                                fallbackWidth:
+                                                                    100,
+                                                                fallbackHeight:
+                                                                    10,
+                                                                strokeWidth: 10,
+                                                                color:
+                                                                    readyColor,
+                                                              ),
+                                                            ]),
+                                                            Row(children: [
+                                                              SettingActionButton.sized(
+                                                                  "SET STABILIZE",
+                                                                  (serialBusy)
+                                                                      ? null
+                                                                      : () =>
+                                                                          setCurrentColorSchemeStabilize(),
+                                                                  widthColorButton,
+                                                                  0.0),
+                                                              Placeholder(
+                                                                fallbackWidth:
+                                                                    100,
+                                                                fallbackHeight:
+                                                                    10,
+                                                                strokeWidth: 10,
+                                                                color:
+                                                                    stabilizeColor,
+                                                              ),
+                                                            ]),
+                                                          ],
+                                                        ),
+                                                        const SizedBox(
+                                                            width: 50),
+                                                        SizedBox(
+                                                          height: 200,
+                                                          width: 400,
+                                                          child: MaterialPicker(
+                                                            pickerColor:
+                                                                pickerColor,
+                                                            onColorChanged:
+                                                                changeColor,
+                                                            enableLabel: true,
+                                                          ),
+                                                        ),
+                                                        const SizedBox(
+                                                            width: 50),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                  Stack(
+                                                    children: [
+                                                      SettingCard(
+                                                        locked:
+                                                            factorySettingsLockStabilizationFactor,
+                                                        name: "Stabilization",
+                                                        subtitle:
+                                                            "How much stability is required to get a compass reading",
+                                                        icon: Icons.vibration,
+                                                        actionWidget: Row(
+                                                          children: [
+                                                            SettingActionButton(
+                                                                "GET CURRENT",
+                                                                (serialBusy)
+                                                                    ? null
+                                                                    : () =>
+                                                                        getCurrentStabilizationFactor()),
+                                                            SettingActionRadioList(
+                                                                "SYNC NOW",
+                                                                const {
+                                                                  "LOW": 5,
+                                                                  "MID": 10,
+                                                                  "HIGH": 20
+                                                                },
+                                                                (serialBusy)
+                                                                    ? null
+                                                                    : setStabilizationFactor,
+                                                                stabilizationFactor),
+                                                          ],
                                                         ),
                                                       ),
-                                                    )
-                                                    .toList(),
+                                                      IconButton(
+                                                          onPressed: () {
+                                                            setState(() {
+                                                              factorySettingsLockStabilizationFactor =
+                                                                  !factorySettingsLockStabilizationFactor;
+                                                            });
+                                                          },
+                                                          icon: factorySettingsLockStabilizationFactor
+                                                              ? const Icon(
+                                                                  Icons.lock)
+                                                              : const Icon(Icons
+                                                                  .lock_open)),
+                                                    ],
+                                                  ),
+                                                  Stack(
+                                                    children: [
+                                                      SettingCard(
+                                                        locked:
+                                                            factorySettingsLockSlider,
+                                                        name: "Slider Button",
+                                                        subtitle:
+                                                            "Adjust the sensitivity of the slider button",
+                                                        icon:
+                                                            Icons.smart_button,
+                                                        actionWidget: Row(
+                                                          children: [
+                                                            SettingActionButton(
+                                                                "GET CURRENT",
+                                                                (serialBusy)
+                                                                    ? null
+                                                                    : () =>
+                                                                        getCurrentClickThreshold()),
+                                                            SettingActionRadioList(
+                                                                "SYNC NOW",
+                                                                const {
+                                                                  "LOW(50)": 50,
+                                                                  "MID(40)": 40,
+                                                                  "HIGH(30)":
+                                                                      30,
+                                                                  "ULTRA HIGH(25)":
+                                                                      25,
+                                                                  "MK.SPEC II (20)":
+                                                                      15,
+                                                                  "MK.SPEC I (15)":
+                                                                      15
+                                                                },
+                                                                (serialBusy)
+                                                                    ? null
+                                                                    : setClickThreshold,
+                                                                clickThreshold),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                      IconButton(
+                                                          onPressed: () {
+                                                            setState(() {
+                                                              factorySettingsLockSlider =
+                                                                  !factorySettingsLockSlider;
+                                                            });
+                                                          },
+                                                          icon: factorySettingsLockSlider
+                                                              ? const Icon(
+                                                                  Icons.lock)
+                                                              : const Icon(Icons
+                                                                  .lock_open)),
+                                                    ],
+                                                  ),
+                                                  Stack(
+                                                    children: [
+                                                      SettingCard(
+                                                        locked:
+                                                            factorySettingsLockBMDuration,
+                                                        name: "Basic Mode",
+                                                        subtitle:
+                                                            "Adjust the duration required to validate a command with the slider button",
+                                                        icon:
+                                                            Icons.smart_button,
+                                                        actionWidget: Row(
+                                                          children: [
+                                                            SettingActionButton(
+                                                                "GET CURRENT",
+                                                                (serialBusy)
+                                                                    ? null
+                                                                    : () =>
+                                                                        getCurrentBMClickDurationFactor()),
+                                                            SettingActionRadioList(
+                                                                "SYNC NOW",
+                                                                const {
+                                                                  "EXTRA FAST":
+                                                                      25,
+                                                                  "FAST": 50,
+                                                                  "NORMAL": 100,
+                                                                  "SLOW": 150
+                                                                },
+                                                                (serialBusy)
+                                                                    ? null
+                                                                    : setBMDurationFactor,
+                                                                clickBMDurationFactor),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                      IconButton(
+                                                          onPressed: () {
+                                                            setState(() {
+                                                              factorySettingsLockBMDuration =
+                                                                  !factorySettingsLockBMDuration;
+                                                            });
+                                                          },
+                                                          icon: factorySettingsLockBMDuration
+                                                              ? const Icon(
+                                                                  Icons.lock)
+                                                              : const Icon(Icons
+                                                                  .lock_open)),
+                                                    ],
+                                                  ),
+                                                  Stack(
+                                                    children: [
+                                                      SettingCard(
+                                                        locked:
+                                                            factorySettingsLockSafetyON,
+                                                        name:
+                                                            "Switch ON Safety",
+                                                        subtitle:
+                                                            "Require to click right before switching on the device",
+                                                        icon:
+                                                            Icons.smart_button,
+                                                        actionWidget: Row(
+                                                          children: [
+                                                            SettingActionButton(
+                                                                "GET CURRENT",
+                                                                (serialBusy)
+                                                                    ? null
+                                                                    : () =>
+                                                                        getCurrentsafetySwitchON()),
+                                                            SettingActionRadioList(
+                                                                "SYNC NOW",
+                                                                const {
+                                                                  "DISABLED": 0,
+                                                                  "ENABLED": 1
+                                                                },
+                                                                (serialBusy)
+                                                                    ? null
+                                                                    : setCurrentsafetySwitchON,
+                                                                safetySwitchON),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                      IconButton(
+                                                          onPressed: () {
+                                                            setState(() {
+                                                              factorySettingsLockSafetyON =
+                                                                  !factorySettingsLockSafetyON;
+                                                            });
+                                                          },
+                                                          icon: factorySettingsLockSafetyON
+                                                              ? const Icon(
+                                                                  Icons.lock)
+                                                              : const Icon(Icons
+                                                                  .lock_open)),
+                                                    ],
+                                                  ),
+                                                  Stack(
+                                                    children: [
+                                                      SettingCard(
+                                                        locked:
+                                                            factorySettingsDoubleTapON,
+                                                        name: "Double Tap",
+                                                        subtitle:
+                                                            "Double tap sensitivity to display the current survey",
+                                                        icon:
+                                                            Icons.smart_button,
+                                                        actionWidget: Row(
+                                                          children: [
+                                                            SettingActionButton(
+                                                                "GET CURRENT",
+                                                                (serialBusy)
+                                                                    ? null
+                                                                    : () =>
+                                                                        getCurrentDoubleTap()),
+                                                            SettingActionRadioList(
+                                                                "SYNC NOW",
+                                                                const {
+                                                                  "DISABLED": 0,
+                                                                  "LIGHT": 15,
+                                                                  "NORMAL": 20,
+                                                                  "HARD": 28
+                                                                },
+                                                                (serialBusy)
+                                                                    ? null
+                                                                    : setCurrentDoubleTap,
+                                                                doubleTap),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                      IconButton(
+                                                          onPressed: () {
+                                                            setState(() {
+                                                              factorySettingsDoubleTapON =
+                                                                  !factorySettingsDoubleTapON;
+                                                            });
+                                                          },
+                                                          icon: factorySettingsDoubleTapON
+                                                              ? const Icon(
+                                                                  Icons.lock)
+                                                              : const Icon(Icons
+                                                                  .lock_open)),
+                                                    ],
+                                                  ),
+                                                  Stack(
+                                                    children: [
+                                                      SettingCard(
+                                                        locked:
+                                                            factorySettingsLock,
+                                                        name:
+                                                            "Compass HW parameter",
+                                                        subtitle:
+                                                            "Set Compass Orientation (Factory Settings)",
+                                                        icon: Icons.hardware,
+                                                        actionWidget: Row(
+                                                          children: [
+                                                            SettingActionButton(
+                                                                "GET X",
+                                                                (serialBusy)
+                                                                    ? null
+                                                                    : () =>
+                                                                        getCurrentXCompass()),
+                                                            SettingActionRadioList(
+                                                                "SYNC NOW",
+                                                                const {
+                                                                  "1": 1,
+                                                                  "-1": 255,
+                                                                },
+                                                                (serialBusy)
+                                                                    ? null
+                                                                    : setXCompass,
+                                                                xCompass),
+                                                            SettingActionButton(
+                                                                "GET Y",
+                                                                (serialBusy)
+                                                                    ? null
+                                                                    : () =>
+                                                                        getCurrentYCompass()),
+                                                            SettingActionRadioList(
+                                                                "SYNC NOW",
+                                                                const {
+                                                                  "1": 1,
+                                                                  "-1": 255,
+                                                                },
+                                                                (serialBusy)
+                                                                    ? null
+                                                                    : setYCompass,
+                                                                yCompass),
+                                                            SettingActionButton(
+                                                                "GET Z",
+                                                                (serialBusy)
+                                                                    ? null
+                                                                    : () =>
+                                                                        getCurrentZCompass()),
+                                                            SettingActionRadioList(
+                                                                "SYNC NOW",
+                                                                const {
+                                                                  "1": 1,
+                                                                  "-1": 255,
+                                                                },
+                                                                (serialBusy)
+                                                                    ? null
+                                                                    : setZCompass,
+                                                                zCompass),
+                                                            SettingActionButton(
+                                                                "GET CAL. MODE",
+                                                                (serialBusy)
+                                                                    ? null
+                                                                    : () =>
+                                                                        getCurrentCalMode()),
+                                                            SettingActionRadioList(
+                                                                "SYNC NOW",
+                                                                const {
+                                                                  "SLOW": 0,
+                                                                  "FAST": 1,
+                                                                },
+                                                                (serialBusy)
+                                                                    ? null
+                                                                    : setCalMode,
+                                                                calMode),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                      IconButton(
+                                                          onPressed: () {
+                                                            setState(() {
+                                                              factorySettingsLock =
+                                                                  !factorySettingsLock;
+                                                            });
+                                                          },
+                                                          icon: factorySettingsLock
+                                                              ? const Icon(
+                                                                  Icons.lock)
+                                                              : const Icon(Icons
+                                                                  .lock_open)),
+                                                    ],
+                                                  ),
+                                                ],
                                               ),
                                             ),
                                           ),
-                                        ),
-                                      ],
-                                    ),
+                                        ],
+                                      ),
+                              //CLI ---------------------------------------------------
+                              if (!Platform.isAndroid)
+                                (!connected)
+                                    ? Column(
+                                        children: [
+                                          const Text(
+                                              "Connect the Mnemo to your computer and press the refresh button"),
+                                          IconButton(
+                                            onPressed: onRefreshMnemo,
+                                            icon: const Icon(Icons.refresh),
+                                            tooltip: "Search for Device",
+                                          ),
+                                        ],
+                                      )
+                                    : Column(
+                                        mainAxisSize: MainAxisSize.max,
+                                        children: [
+                                          AppBar(
+                                            title: Row(
+                                              mainAxisSize: MainAxisSize.max,
+                                              children: [
+                                                Expanded(
+                                                  child: Padding(
+                                                    padding:
+                                                        const EdgeInsetsDirectional
+                                                            .fromSTEB(
+                                                            20, 0, 0, 0),
+                                                    child: TextFormField(
+                                                      showCursor: true,
+                                                      onFieldSubmitted: (serialBusy)
+                                                          ? null
+                                                          : onExecuteCLICommand,
+                                                      autofocus: true,
+                                                      obscureText: false,
+                                                      decoration:
+                                                          const InputDecoration(
+                                                        labelText: "Command",
+                                                        hintText:
+                                                            '[Enter Command or type help]',
+                                                        enabledBorder:
+                                                            UnderlineInputBorder(
+                                                          borderSide:
+                                                              BorderSide(
+                                                            color: Color(
+                                                                0x00000000),
+                                                            width: 1,
+                                                          ),
+                                                          borderRadius:
+                                                              BorderRadius.only(
+                                                            topLeft:
+                                                                Radius.circular(
+                                                                    4.0),
+                                                            topRight:
+                                                                Radius.circular(
+                                                                    4.0),
+                                                          ),
+                                                        ),
+                                                        focusedBorder:
+                                                            UnderlineInputBorder(
+                                                          borderSide:
+                                                              BorderSide(
+                                                            color: Color(
+                                                                0x00000000),
+                                                            width: 1,
+                                                          ),
+                                                          borderRadius:
+                                                              BorderRadius.only(
+                                                            topLeft:
+                                                                Radius.circular(
+                                                                    4.0),
+                                                            topRight:
+                                                                Radius.circular(
+                                                                    4.0),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            backgroundColor: Colors.white30,
+                                          ),
+                                          Expanded(
+                                            child: Scaffold(
+                                              backgroundColor: Colors.black,
+                                              floatingActionButton:
+                                                  FloatingActionButton.small(
+                                                onPressed: _scrollDown,
+                                                child: const Icon(
+                                                    Icons.arrow_downward),
+                                              ),
+                                              body: Container(
+                                                decoration: const BoxDecoration(
+                                                    color: Colors.black),
+                                                child: ListView(
+                                                  controller:
+                                                      cliScrollController,
+                                                  padding:
+                                                      const EdgeInsets.all(20),
+                                                  shrinkWrap: true,
+                                                  scrollDirection:
+                                                      Axis.vertical,
+                                                  children: cliHistory
+                                                      .where(
+                                                          (e) => e.length >= 2)
+                                                      .map(
+                                                        (e) => RichText(
+                                                          text: TextSpan(
+                                                            text:
+                                                                e.substring(2),
+                                                            style: TextStyle(
+                                                                color: (e.substring(
+                                                                            0,
+                                                                            2) ==
+                                                                        "a:")
+                                                                    ? Colors
+                                                                        .white70
+                                                                    : (e.substring(0,
+                                                                                2) ==
+                                                                            "c:")
+                                                                        ? Colors
+                                                                            .yellow
+                                                                        : Colors
+                                                                            .red,
+                                                                fontSize: 18,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .normal),
+                                                          ),
+                                                        ),
+                                                      )
+                                                      .toList(),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                             ],
                           ),
                         ),
@@ -2139,6 +2214,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> onSaveDMP() async {
 // Lets the enter file name, only files with the corresponding extensions are displayed
+
     var result = await FilePicker.platform.saveFile(
         dialogTitle: "Save as DMP",
         type: FileType.custom,
@@ -2380,6 +2456,22 @@ class _MyHomePageState extends State<MyHomePage> {
       firmwareVersionRevision = int.parse(splitsplus[0]);
       firmwareVersionBuild = int.parse(splitsplus[1]);
     });
+  }
+
+  bool isIPFormat(String value) {
+    var splits = value.split(".");
+
+    if (splits.length != 4) return false;
+    if (int.tryParse(splits[0]) == null ||
+        int.tryParse(splits[1]) == null ||
+        int.tryParse(splits[2]) == null ||
+        int.tryParse(splits[3]) == null) return false;
+
+    for (int i = 0; i < 4; i++) {
+      var s = int.parse(splits[i]);
+      if (s < 0 || s > 255) return false;
+    }
+    return true;
   }
 }
 

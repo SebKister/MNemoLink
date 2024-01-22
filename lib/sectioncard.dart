@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mnemolink/section.dart';
@@ -20,8 +21,8 @@ class SectionCard extends StatelessWidget {
     rawSvg = buildSVG(map.buildDisplayMap(displayWidth, displayHeight));
     picture = SvgPicture.string(
       rawSvg,
-      width: 200,
-      height: 200,
+      width: (Platform.isAndroid) ? 50 : 200,
+      height: (Platform.isAndroid) ? 50 : 200,
     );
   }
 
