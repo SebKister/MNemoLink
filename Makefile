@@ -23,3 +23,12 @@ build_macos:
 
 build_windows:
 	flutter build windows --release
+
+build_androidFatAPK:
+	flutter build apk
+
+build_androidAPK:
+	flutter build apk --split-per-abi
+
+build_appBundle:
+	flutter build appbundle
