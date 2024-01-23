@@ -158,6 +158,8 @@ class _MyHomePageState extends State<MyHomePage> {
   var ipController = TextEditingController();
   final cliScrollController = ScrollController();
 
+  final NetworkInfo _networkInfo = NetworkInfo();
+
   PackageInfo _packageInfo = PackageInfo(
     appName: 'Unknown',
     packageName: 'Unknown',
@@ -217,8 +219,10 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<bool> scanIPforMNemo(String ipString) async {
     Dio dio = Dio();
+
     dio.options.receiveTimeout = const Duration(seconds: 2);
     dio.options.connectTimeout = const Duration(seconds: 2);
+
     final ping = Ping(ipString, count: 1, timeout: 1);
     try {
       //First ping ip
@@ -281,7 +285,11 @@ class _MyHomePageState extends State<MyHomePage> {
         await nonResponsiveWarning();
       }
     } else {
-      serialBusy = false;
+
+      setState(() {
+        serialBusy = false;
+      });
+
     }
   }
 
@@ -297,6 +305,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<void> onOpenDMP() async {
+
     FilePickerResult? result;
     if (Platform.isAndroid) {
       result = await FilePicker.platform.pickFiles(
@@ -308,6 +317,7 @@ class _MyHomePageState extends State<MyHomePage> {
           allowedExtensions: ["dmp"],
           allowMultiple: false);
     }
+
 
 // The result will be null, if the user aborted the dialog
     if (result != null) {
@@ -341,6 +351,7 @@ class _MyHomePageState extends State<MyHomePage> {
       scanningNetwork = true;
       ipController.text = "Scanning in progress";
     });
+
     var wifiIP = await NetworkInfo().getWifiIP();
     var lio = wifiIP?.lastIndexOf(".");
     var ipPart = wifiIP?.substring(0, lio);
@@ -354,6 +365,7 @@ class _MyHomePageState extends State<MyHomePage> {
           });
           return;
         }
+
         setState(() {
           networkScanProgress = "$ipPart.$j ...";
         });
