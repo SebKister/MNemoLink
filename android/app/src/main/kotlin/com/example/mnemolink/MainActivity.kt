@@ -1,4 +1,4 @@
-package com.example.mnemolink
+package com.arianesline.mnemolink
 
 import io.flutter.embedding.android.FlutterActivity
 

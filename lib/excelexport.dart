@@ -209,7 +209,8 @@ void exportAsExcel(SectionList sectionList, File file, UnitType unitType) {
       writeRowOnSheet(element, data, sheet, rownum++);
     });
   }
-  excel.delete("Sheet1");
+
+  //excel.delete("Sheet1");
 
   var onValue = excel.encode();
   if (onValue != null) {

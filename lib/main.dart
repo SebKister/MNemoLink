@@ -15,17 +15,19 @@ import 'package:mnemolink/survexporter.dart';
 import 'package:mnemolink/thexporter.dart';
 import 'package:network_info_plus/network_info_plus.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:external_path/external_path.dart';
 import 'package:mnemolink/excelexport.dart';
 import 'package:mnemolink/sectioncard.dart';
 import 'package:mnemolink/settingcard.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sprintf/sprintf.dart';
 import 'package:window_manager/window_manager.dart';
+import 'package:filesystem_picker/filesystem_picker.dart';
 import 'dart:convert' show json, utf8;
 import './section.dart';
 import './shot.dart';
 import './sectionlist.dart';
-
 
 void main() async {
   // Must add this line.
@@ -46,7 +48,6 @@ void main() async {
   }
 
   runApp(const MyApp());
-
 }
 
 class MyApp extends StatelessWidget {
@@ -279,6 +280,8 @@ class _MyHomePageState extends State<MyHomePage> {
         });
         await nonResponsiveWarning();
       }
+    } else {
+      serialBusy = false;
     }
   }
 
@@ -326,12 +329,13 @@ class _MyHomePageState extends State<MyHomePage> {
       analyzeTransferBuffer();
     }
   }
-  void onNetworkScanStop(){
+
+  void onNetworkScanStop() {
     setState(() {
       scanningNetwork = false;
     });
-
   }
+
   Future<void> onNetworkScan() async {
     setState(() {
       scanningNetwork = true;
@@ -341,9 +345,8 @@ class _MyHomePageState extends State<MyHomePage> {
     var lio = wifiIP?.lastIndexOf(".");
     var ipPart = wifiIP?.substring(0, lio);
     if (Platform.isAndroid) {
-
       for (int j = 0; j < 256; j++) {
-        if(!scanningNetwork){
+        if (!scanningNetwork) {
           //Scan has been stopped by user
           setState(() {
             ipController.text = "Scanning Stopped";
@@ -370,7 +373,7 @@ class _MyHomePageState extends State<MyHomePage> {
         listResult.add(scanIPforMNemo("$ipPart.$j"));
       }
       for (int j = 0; j < 256; j++) {
-        if(!scanningNetwork){
+        if (!scanningNetwork) {
           //Scan has been stopped by user
           setState(() {
             ipController.text = "Scanning Stopped";
@@ -1079,7 +1082,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       ),
                       const Text("Download from the network"),
                       IconButton(
-                        onPressed: ( scanningNetwork)
+                        onPressed: (scanningNetwork)
                             ? onNetworkScanStop
                             : onNetworkScan,
                         icon: const Icon(Icons.search),
@@ -2213,71 +2216,199 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<void> onSaveDMP() async {
-// Lets the enter file name, only files with the corresponding extensions are displayed
+    String result;
+    if (Platform.isAndroid) {
+      //Using document directory as default on Android
+      final Directory rootPath = Directory(
+          await ExternalPath.getExternalStoragePublicDirectory(
+              ExternalPath.DIRECTORY_DOCUMENTS));
 
-    var result = await FilePicker.platform.saveFile(
-        dialogTitle: "Save as DMP",
-        type: FileType.custom,
-        allowedExtensions: ["dmp"]);
+      String? path = await FilesystemPicker.open(
+          title: 'Save to folder',
+          context: context,
+          rootDirectory: rootPath,
+          fsType: FilesystemType.folder,
+          pickText: 'Save DMP file to this folder',
+          rootName: "Documents");
 
-// The result will be null, if the user aborted the dialog
-    if (result != null) {
-      if (!result.toLowerCase().endsWith('.dmp')) result += ".dmp";
-      File file = File(result);
-      var sink = file.openWrite();
-      for (var element in transferBuffer) {
-        (element >= 0 && element <= 127)
-            ? sink.write("$element;")
-            : sink.write("${-(256 - element)};");
+      if (path == null) return;
+      final stamp = DateTime.timestamp().toLocal();
+      var stampString = sprintf("%02d%02d%02d%02d%02d%02d", [
+        stamp.year,
+        stamp.month,
+        stamp.day,
+        stamp.hour,
+        stamp.minute,
+        stamp.second
+      ]);
+      result = "$path/exportDMP-$stampString.dmp";
+    } else {
+      // Lets the enter file name, only files with the corresponding extensions are displayed
+      var resultFilePicker = await FilePicker.platform.saveFile(
+          dialogTitle: "Save as DMP",
+          type: FileType.custom,
+          allowedExtensions: ["dmp"]);
+      // The result will be null, if the user aborted the dialog
+      if (resultFilePicker == null) {
+        return;
+      } else {
+        result = resultFilePicker;
       }
-
-      await sink.flush();
-      await sink.close();
     }
+
+    if (!result.toLowerCase().endsWith('.dmp')) result += ".dmp";
+    File file = File(result);
+    var sink = file.openWrite();
+    for (var element in transferBuffer) {
+      (element >= 0 && element <= 127)
+          ? sink.write("$element;")
+          : sink.write("${-(256 - element)};");
+    }
+
+    await sink.flush();
+    await sink.close();
   }
 
   Future<void> onExportSVX() async {
-    var result = await FilePicker.platform.saveFile(
-        dialogTitle: "Save as Survex",
-        type: FileType.custom,
-        allowedExtensions: ["svx"]);
+    String result;
+    if (Platform.isAndroid) {
+      //Using document directory as default on Android
+      final Directory rootPath = Directory(
+          await ExternalPath.getExternalStoragePublicDirectory(
+              ExternalPath.DIRECTORY_DOCUMENTS));
 
-    if (result != null) {
+      String? path = await FilesystemPicker.open(
+          title: 'Save to folder',
+          context: context,
+          rootDirectory: rootPath,
+          fsType: FilesystemType.folder,
+          pickText: 'Save Survex file to this folder',
+          rootName: "Documents");
+
+      if (path == null) return;
+      final stamp = DateTime.timestamp().toLocal();
+      var stampString = sprintf("%02d%02d%02d%02d%02d%02d", [
+        stamp.year,
+        stamp.month,
+        stamp.day,
+        stamp.hour,
+        stamp.minute,
+        stamp.second
+      ]);
+      result = "$path/exportSurvex-$stampString.svx";
+    } else {
+      // Lets the enter file name, only files with the corresponding extensions are displayed
+      var resultFilePicker = await FilePicker.platform.saveFile(
+          dialogTitle: "Save as Survex",
+          type: FileType.custom,
+          allowedExtensions: ["svx"]);
+      // The result will be null, if the user aborted the dialog
+      if (resultFilePicker == null) {
+        return;
+      } else {
+        result = resultFilePicker;
+      }
+    }
+
       if (!result.toLowerCase().endsWith('.svx')) result += ".svx";
 
       final exporter = SurvexExporter();
       await exporter.export(sections, result, unitType);
-    }
+
   }
 
   Future<void> onExportTH() async {
-    var result = await FilePicker.platform.saveFile(
-        dialogTitle: "Save as Therion (.th)",
-        type: FileType.custom,
-        allowedExtensions: ["th"]);
+    String result;
+    if (Platform.isAndroid) {
+      //Using document directory as default on Android
+      final Directory rootPath = Directory(
+          await ExternalPath.getExternalStoragePublicDirectory(
+              ExternalPath.DIRECTORY_DOCUMENTS));
 
-    if (result != null) {
-      if (!result.toLowerCase().endsWith('.th')) result += ".th";
+      String? path = await FilesystemPicker.open(
+          title: 'Save to folder',
+          context: context,
+          rootDirectory: rootPath,
+          fsType: FilesystemType.folder,
+          pickText: 'Save Therion file to this folder',
+          rootName: "Documents");
 
-      final exporter = THExporter();
-      await exporter.export(sections, result, unitType);
+      if (path == null) return;
+      final stamp = DateTime.timestamp().toLocal();
+      var stampString = sprintf("%02d%02d%02d%02d%02d%02d", [
+        stamp.year,
+        stamp.month,
+        stamp.day,
+        stamp.hour,
+        stamp.minute,
+        stamp.second
+      ]);
+      result = "$path/exportTherion-$stampString.th";
+    } else {
+      // Lets the enter file name, only files with the corresponding extensions are displayed
+      var resultFilePicker = await FilePicker.platform.saveFile(
+          dialogTitle: "Save as Therion (.th)",
+          type: FileType.custom,
+          allowedExtensions: ["th"]);
+      // The result will be null, if the user aborted the dialog
+      if (resultFilePicker == null) {
+        return;
+      } else {
+        result = resultFilePicker;
+      }
     }
+
+    if (!result.toLowerCase().endsWith('.th')) result += ".th";
+
+    final exporter = THExporter();
+    await exporter.export(sections, result, unitType);
   }
 
   Future<void> onExportXLS() async {
-    // Lets the user pick one file; files with any file extension can be selected
-    var result = await FilePicker.platform.saveFile(
-        dialogTitle: "Save as Excel",
-        type: FileType.custom,
-        allowedExtensions: ["xlsx"]);
+    String result;
+    if (Platform.isAndroid) {
+      //Using document directory as default on Android
+      final Directory rootPath = Directory(
+          await ExternalPath.getExternalStoragePublicDirectory(
+              ExternalPath.DIRECTORY_DOCUMENTS));
 
-// The result will be null, if the user aborted the dialog
-    if (result != null) {
-      if (!result.toLowerCase().endsWith('.xlsx')) result += ".xlsx";
+      String? path = await FilesystemPicker.open(
+          title: 'Save to folder',
+          context: context,
+          rootDirectory: rootPath,
+          fsType: FilesystemType.folder,
+          pickText: 'Save Excel file to this folder',
+          rootName: "Documents");
 
-      File file = File(result);
-      exportAsExcel(sections, file, unitType);
+      if (path == null) return;
+      final stamp = DateTime.timestamp().toLocal();
+      var stampString = sprintf("%02d%02d%02d%02d%02d%02d", [
+        stamp.year,
+        stamp.month,
+        stamp.day,
+        stamp.hour,
+        stamp.minute,
+        stamp.second
+      ]);
+      result = "$path/exportXLSX-$stampString.xlsx";
+    } else {
+      // Lets the enter file name, only files with the corresponding extensions are displayed
+      var resultFilePicker = await FilePicker.platform.saveFile(
+          dialogTitle: "Save as Excel",
+          type: FileType.custom,
+          allowedExtensions: ["xlsx"]);
+      // The result will be null, if the user aborted the dialog
+      if (resultFilePicker == null) {
+        return;
+      } else {
+        result = resultFilePicker;
+      }
     }
+
+    if (!result.toLowerCase().endsWith('.xlsx')) result += ".xlsx";
+
+    File file = File(result);
+    exportAsExcel(sections, file, unitType);
   }
 
   Future<void> getCurrentName() async {
