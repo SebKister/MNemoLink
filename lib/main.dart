@@ -1098,7 +1098,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         onPressed: (scanningNetwork)
                             ? onNetworkScanStop
                             : onNetworkScan,
-                        icon: const Icon(Icons.search),
+                        icon: (!scanningNetwork)? const Icon(Icons.search):const Icon(Icons.search_off),
                         tooltip:
                             "Scan local network for wifi connected devices",
                       ),
