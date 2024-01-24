@@ -197,7 +197,7 @@ class _MyHomePageState extends State<MyHomePage> {
       initMnemoPort();
     }
 
-    if (!Platform.isAndroid) {
+    if (!Platform.isAndroid && !Platform.isIOS) {
       initPeriodicTask();
       getLatestSoftwareAvailable();
     }
@@ -359,8 +359,8 @@ class _MyHomePageState extends State<MyHomePage> {
     //On mac os Sonoma there no access allowed to wifi info for the moment, so using latest working IP
     wifiIP ??= ipMNemo;
 
-    var lio = wifiIP?.lastIndexOf(".");
-    var ipPart = wifiIP?.substring(0, lio);
+    var lio = wifiIP.lastIndexOf(".");
+    var ipPart = wifiIP.substring(0, lio);
     if (Platform.isAndroid || Platform.isIOS) {
       for (int j = 0; j < 256; j++) {
         if (!scanningNetwork) {
