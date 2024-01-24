@@ -55,9 +55,9 @@ class THExporter with ShotExport {
 
     // Main topo data
     contents.write(newLine(
-        'data diving from to tape compass fromdepth todepth ignoreall'));
+        'data diving from to tape compass backcompass fromdepth todepth ignoreall'));
     contents.write(newLine(
-        '# From\tTo\tLength\tAzimuth\tDepIn\tDepOut\tAzIn\tAzOut\tAzDelta\tPitchIn\tPitchOut'));
+        '# From\tTo\tLength\tAzIn\t180-AzOut\tDepIn\tDepOut\tAzIn\tAzOut\tAzDelta\tPitchIn\tPitchOut'));
     contents.write('\n');
 
     increasePrefix();
@@ -75,7 +75,7 @@ class THExporter with ShotExport {
 
       // Formatting the measurement line
       contents.write(newLine(
-          '${exportShot.from}\t${exportShot.to}\t${exportShot.length.toStringAsFixed(2)}\t${exportShot.azimuthMean.toStringAsFixed(1)}\t${exportShot.depthIn.toStringAsFixed(2)}\t${exportShot.depthOut.toStringAsFixed(2)}\t${exportShot.azimuthIn.toStringAsFixed(1)}\t${exportShot.azimuthOut.toStringAsFixed(1)}\t${exportShot.azimuthDelta.toStringAsFixed(1)}\t${exportShot.pitchIn.toStringAsFixed(1)}\t${exportShot.pitchOut.toStringAsFixed(1)}'));
+          '${exportShot.from}\t${exportShot.to}\t${exportShot.length.toStringAsFixed(2)}\t${exportShot.azimuthIn.toStringAsFixed(1)}\t${((exportShot.azimuthOut + 180) % 360).toStringAsFixed(1)}\t${exportShot.depthIn.toStringAsFixed(2)}\t${exportShot.depthOut.toStringAsFixed(2)}\t${exportShot.azimuthIn.toStringAsFixed(1)}\t${exportShot.azimuthOut.toStringAsFixed(1)}\t${exportShot.azimuthDelta.toStringAsFixed(1)}\t${exportShot.pitchIn.toStringAsFixed(1)}\t${exportShot.pitchOut.toStringAsFixed(1)}'));
       firstLine = false;
     }
     contents.write('\n');
