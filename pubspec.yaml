@@ -49,6 +49,7 @@ dependencies:
   window_manager: ^0.3.7
   network_info_plus: ^4.1.0
   dart_ping: ^9.0.1
+  dart_ping_ios: ^4.0.2
   filesystem_picker: ^4.0.0
   external_path: ^1.0.3
   sprintf: ^7.0.0
