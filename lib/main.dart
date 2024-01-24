@@ -163,8 +163,6 @@ class _MyHomePageState extends State<MyHomePage> {
   var ipController = TextEditingController();
   final cliScrollController = ScrollController();
 
-  final NetworkInfo _networkInfo = NetworkInfo();
-
   PackageInfo _packageInfo = PackageInfo(
     appName: 'Unknown',
     packageName: 'Unknown',
@@ -198,8 +196,11 @@ class _MyHomePageState extends State<MyHomePage> {
     if (!Platform.isAndroid && !Platform.isIOS) {
       initMnemoPort();
     }
-    initPeriodicTask();
-    getLatestSoftwareAvailable();
+
+    if (!Platform.isAndroid) {
+      initPeriodicTask();
+      getLatestSoftwareAvailable();
+    }
   }
 
   String getMnemoAddress() {
