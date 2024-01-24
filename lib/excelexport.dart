@@ -209,7 +209,7 @@ void exportAsExcel(SectionList sectionList, File file, UnitType unitType) {
       writeRowOnSheet(element, data, sheet, rownum++);
     });
   }
-
+  //Commented out because of bug in version 4.0.2 of excel package that blocks deletion of sheets
   //excel.delete("Sheet1");
 
   var onValue = excel.encode();

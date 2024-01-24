@@ -158,8 +158,6 @@ class _MyHomePageState extends State<MyHomePage> {
   var ipController = TextEditingController();
   final cliScrollController = ScrollController();
 
-  final NetworkInfo _networkInfo = NetworkInfo();
-
   PackageInfo _packageInfo = PackageInfo(
     appName: 'Unknown',
     packageName: 'Unknown',
@@ -193,8 +191,11 @@ class _MyHomePageState extends State<MyHomePage> {
     if (!Platform.isAndroid) {
       initMnemoPort();
     }
-    initPeriodicTask();
-    getLatestSoftwareAvailable();
+
+    if (!Platform.isAndroid) {
+      initPeriodicTask();
+      getLatestSoftwareAvailable();
+    }
   }
 
   String getMnemoAddress() {
@@ -285,11 +286,9 @@ class _MyHomePageState extends State<MyHomePage> {
         await nonResponsiveWarning();
       }
     } else {
-
       setState(() {
         serialBusy = false;
       });
-
     }
   }
 
@@ -305,7 +304,6 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<void> onOpenDMP() async {
-
     FilePickerResult? result;
     if (Platform.isAndroid) {
       result = await FilePicker.platform.pickFiles(
@@ -317,7 +315,6 @@ class _MyHomePageState extends State<MyHomePage> {
           allowedExtensions: ["dmp"],
           allowMultiple: false);
     }
-
 
 // The result will be null, if the user aborted the dialog
     if (result != null) {
@@ -353,8 +350,12 @@ class _MyHomePageState extends State<MyHomePage> {
     });
 
     var wifiIP = await NetworkInfo().getWifiIP();
-    var lio = wifiIP?.lastIndexOf(".");
-    var ipPart = wifiIP?.substring(0, lio);
+
+    //On mac os Sonoma there no access allowed to wifi info for the moment, so using latest working IP
+    wifiIP ??= ipMNemo;
+
+    var lio = wifiIP.lastIndexOf(".");
+    var ipPart = wifiIP.substring(0, lio);
     if (Platform.isAndroid) {
       for (int j = 0; j < 256; j++) {
         if (!scanningNetwork) {
@@ -1097,7 +1098,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         onPressed: (scanningNetwork)
                             ? onNetworkScanStop
                             : onNetworkScan,
-                        icon: const Icon(Icons.search),
+                        icon: (!scanningNetwork)? const Icon(Icons.search):const Icon(Icons.search_off),
                         tooltip:
                             "Scan local network for wifi connected devices",
                       ),
@@ -2322,11 +2323,10 @@ class _MyHomePageState extends State<MyHomePage> {
       }
     }
 
-      if (!result.toLowerCase().endsWith('.svx')) result += ".svx";
+    if (!result.toLowerCase().endsWith('.svx')) result += ".svx";
 
-      final exporter = SurvexExporter();
-      await exporter.export(sections, result, unitType);
-
+    final exporter = SurvexExporter();
+    await exporter.export(sections, result, unitType);
   }
 
   Future<void> onExportTH() async {

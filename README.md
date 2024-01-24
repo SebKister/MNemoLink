@@ -24,7 +24,7 @@ On Windows, you can find precise indication on installation requirements [here](
 
 Following those steps and getting a `flutter doctor` result similar to the one shown is enough to build and run the MNemoLink project.
 
-To build the Android app you'll additionaly need to follow [this guide](https://docs.flutter.dev/get-started/install/windows/mobile?tab=vscode)
+To build the Android app you'll additionally need to follow [this guide](https://docs.flutter.dev/get-started/install/windows/mobile?tab=vscode)
 
 ### Linux or Windows 11 + WSL2
 On Linux and Windows 11 + WSL2, we offer a `VS CODE` devcontainer https://code.visualstudio.com/docs/devcontainers/containers to improve the speed and portability of the development environment.
@@ -53,8 +53,12 @@ On Mac, you can find precise indication on installation requirements [here](http
 
 Following those steps and getting a `flutter doctor` result similar to the one shown is enough to build and run the MNemoLink project.
 
-To build the Android app you'll additionaly need to follow [this guide](https://docs.flutter.dev/get-started/install/macos/mobile-android?tab=vscode)
+To build the Android app you'll additionally need to follow [this guide](https://docs.flutter.dev/get-started/install/macos/mobile-android?tab=vscode)
 ## DOCUMENTATION
 There's no separate documentation existing for MNemolink.
 
 Features requiring documentation should be added to the [MNemo V2 Documenation](https://github.com/SebKister/MNemoV2-Documentation) repository.
+
+### Building for Android - All Platform
+
+See https://github.com/SebKister/MNemoLink/issues/63#issuecomment-1901120588 to solve compilation issue of libserialport
