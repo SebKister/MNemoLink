@@ -50,3 +50,7 @@ make run      # run the application in debug mode
 On Mac, you can find precise indication on installation requirements [here](https://docs.flutter.dev/get-started/install/macos/desktop).
 
 Following those steps and getting a `flutter doctor` result similar to the one shown is enough to build and run the MNemoLink project.
+
+### Building for Android - All Platform
+
+See https://github.com/SebKister/MNemoLink/issues/63#issuecomment-1901120588 to solve compilation issue of libserialport

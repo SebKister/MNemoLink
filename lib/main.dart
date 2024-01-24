@@ -158,8 +158,6 @@ class _MyHomePageState extends State<MyHomePage> {
   var ipController = TextEditingController();
   final cliScrollController = ScrollController();
 
-  final NetworkInfo _networkInfo = NetworkInfo();
-
   PackageInfo _packageInfo = PackageInfo(
     appName: 'Unknown',
     packageName: 'Unknown',
@@ -193,8 +191,11 @@ class _MyHomePageState extends State<MyHomePage> {
     if (!Platform.isAndroid) {
       initMnemoPort();
     }
-    initPeriodicTask();
-    getLatestSoftwareAvailable();
+
+    if (!Platform.isAndroid) {
+      initPeriodicTask();
+      getLatestSoftwareAvailable();
+    }
   }
 
   String getMnemoAddress() {
@@ -285,11 +286,9 @@ class _MyHomePageState extends State<MyHomePage> {
         await nonResponsiveWarning();
       }
     } else {
-
       setState(() {
         serialBusy = false;
       });
-
     }
   }
 
@@ -305,7 +304,6 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<void> onOpenDMP() async {
-
     FilePickerResult? result;
     if (Platform.isAndroid) {
       result = await FilePicker.platform.pickFiles(
@@ -317,7 +315,6 @@ class _MyHomePageState extends State<MyHomePage> {
           allowedExtensions: ["dmp"],
           allowMultiple: false);
     }
-
 
 // The result will be null, if the user aborted the dialog
     if (result != null) {
@@ -2322,11 +2319,10 @@ class _MyHomePageState extends State<MyHomePage> {
       }
     }
 
-      if (!result.toLowerCase().endsWith('.svx')) result += ".svx";
+    if (!result.toLowerCase().endsWith('.svx')) result += ".svx";
 
-      final exporter = SurvexExporter();
-      await exporter.export(sections, result, unitType);
-
+    final exporter = SurvexExporter();
+    await exporter.export(sections, result, unitType);
   }
 
   Future<void> onExportTH() async {
