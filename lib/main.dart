@@ -350,8 +350,12 @@ class _MyHomePageState extends State<MyHomePage> {
     });
 
     var wifiIP = await NetworkInfo().getWifiIP();
-    var lio = wifiIP?.lastIndexOf(".");
-    var ipPart = wifiIP?.substring(0, lio);
+
+    //On mac os Sonoma there no access allowed to wifi info for the moment, so using latest working IP
+    wifiIP ??= ipMNemo;
+
+    var lio = wifiIP.lastIndexOf(".");
+    var ipPart = wifiIP.substring(0, lio);
     if (Platform.isAndroid) {
       for (int j = 0; j < 256; j++) {
         if (!scanningNetwork) {
