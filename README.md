@@ -54,11 +54,11 @@ On Mac, you can find precise indication on installation requirements [here](http
 Following those steps and getting a `flutter doctor` result similar to the one shown is enough to build and run the MNemoLink project.
 
 To build the Android app you'll additionally need to follow [this guide](https://docs.flutter.dev/get-started/install/macos/mobile-android?tab=vscode)
+### Building for Android - All Platform
+
+See https://github.com/SebKister/MNemoLink/issues/63#issuecomment-1901120588 to solve compilation issue of libserialport
 ## DOCUMENTATION
 There's no separate documentation existing for MNemolink.
 
 Features requiring documentation should be added to the [MNemo V2 Documenation](https://github.com/SebKister/MNemoV2-Documentation) repository.
 
-### Building for Android - All Platform
-
-See https://github.com/SebKister/MNemoLink/issues/63#issuecomment-1901120588 to solve compilation issue of libserialport
