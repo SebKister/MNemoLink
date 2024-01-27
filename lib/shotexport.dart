@@ -10,7 +10,10 @@ import 'package:slugify/slugify.dart';
 
 mixin ShotExport {
   final int _minSectionCountWidth = 3;
-  final double _maxDeltaAzimuth = 5;
+
+  // Same value used by Therion
+  final double _maxDeltaAzimuth = 3;
+
   String _prefix = '';
 
   String get extension;
