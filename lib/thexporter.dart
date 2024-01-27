@@ -9,10 +9,10 @@ class THExporter with ShotExport {
   @override
   Future<String> getContents(Section section, ExportShots exportShots,
       String surveyName, UnitType unitType) async {
-    StringBuffer contents = StringBuffer(await headerComments());
-
-    contents.write(newLine('encoding UTF-8'));
+    StringBuffer contents = StringBuffer(newLine('encoding UTF-8'));
     contents.write('\n');
+
+    contents.write(await headerComments());
 
     contents.write(newLine('survey $surveyName'));
 
