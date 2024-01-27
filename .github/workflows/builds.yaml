@@ -69,3 +69,25 @@ jobs:
         run: flutter config --enable-windows-desktop
       - name: Build (Windows)
         run: flutter build windows
+
+  build-android:
+    name: Build for Android
+    runs-on: windows-latest
+    steps:
+      - name: Checkout the repo
+        uses: actions/checkout@v4
+      - name: Setup Java 
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'zulu'
+          java-version: '11'
+      - name: Install flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+          architecture: x64
+      - name: Build (Android APK)
+        run: flutter build apk
+      - name: Build (Android Appbundle)
+        run: flutter built appbundle
