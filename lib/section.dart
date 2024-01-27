@@ -65,7 +65,7 @@ class Section {
   /// Set the value of dateSurvey
   ///
   /// @param dateSurvey new value of dateSurvey
-  void setDateSurvey(DateTime dateSurvey) {
-    dateSurvey = dateSurvey;
+  void setDateSurvey(DateTime newDateSurvey) {
+    dateSurvey = newDateSurvey;
   }
 }
