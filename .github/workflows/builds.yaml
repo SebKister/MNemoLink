@@ -88,6 +88,6 @@ jobs:
           cache: true
           architecture: x64
       - name: Build (Android APK)
-        run: flutter build apk
+        run: flutter build apk --release
       - name: Build (Android Appbundle)
-        run: flutter built appbundle
+        run: flutter built appbundle --release
