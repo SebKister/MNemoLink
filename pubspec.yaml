@@ -60,7 +60,7 @@ dev_dependencies:
 
 dependency_overrides:  
   flutter_libserialport:
-    git: git@github.com:speleobrad/flutter_libserialport.git
+    git: https://github.com/speleobrad/flutter_libserialport.git
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
