@@ -87,6 +87,10 @@ jobs:
           channel: 'stable'
           cache: true
           architecture: x64
+      - name: Clean Flutter 
+        run: flutter clean
+      - name: Get new dependencies 
+        run: flutter pub get 
       - name: Build (Android APK)
         run: flutter build apk
       - name: Build (Android Appbundle)
