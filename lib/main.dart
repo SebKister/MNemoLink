@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:csv/csv.dart';
+import 'package:dart_ping_ios/dart_ping_ios.dart';
 import 'package:dart_ping/dart_ping.dart';
 import 'package:dio/dio.dart';
 import 'package:disks_desktop/disks_desktop.dart';
@@ -31,7 +32,7 @@ import './sectionlist.dart';
 
 void main() async {
   // Must add this line.
-  if (!Platform.isAndroid) {
+  if (!Platform.isAndroid && !Platform.isIOS) {
     WidgetsFlutterBinding.ensureInitialized();
     await windowManager.ensureInitialized();
 
@@ -46,7 +47,11 @@ void main() async {
       await windowManager.focus();
     });
   }
-
+  if (Platform.isIOS) {
+    // Register dart_ping_ios with dart_ping
+    // You only need to call this once
+    DartPingIOS.register();
+  }
   runApp(const MyApp());
 }
 
@@ -188,11 +193,11 @@ class _MyHomePageState extends State<MyHomePage> {
 
     initPrefs();
     _initPackageInfo();
-    if (!Platform.isAndroid) {
+    if (!Platform.isAndroid && !Platform.isIOS) {
       initMnemoPort();
     }
 
-    if (!Platform.isAndroid) {
+    if (!Platform.isAndroid && !Platform.isIOS) {
       initPeriodicTask();
       getLatestSoftwareAvailable();
     }
@@ -305,7 +310,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> onOpenDMP() async {
     FilePickerResult? result;
-    if (Platform.isAndroid) {
+    if (Platform.isAndroid || Platform.isIOS) {
       result = await FilePicker.platform.pickFiles(
           dialogTitle: "Open DMP", type: FileType.any, allowMultiple: false);
     } else {
@@ -356,7 +361,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
     var lio = wifiIP.lastIndexOf(".");
     var ipPart = wifiIP.substring(0, lio);
-    if (Platform.isAndroid) {
+    if (Platform.isAndroid || Platform.isIOS) {
       for (int j = 0; j < 256; j++) {
         if (!scanningNetwork) {
           //Scan has been stopped by user
@@ -1002,7 +1007,7 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         ]),
         actions: [
-          if (!Platform.isAndroid)
+          if (!Platform.isAndroid && !Platform.isIOS)
             Container(
               padding: const EdgeInsets.all(5),
               child: Row(
@@ -1066,10 +1071,10 @@ class _MyHomePageState extends State<MyHomePage> {
                 Center(
                   child: Column(
                     children: [
-                      if (!Platform.isAndroid)
+                      if (!Platform.isAndroid && !Platform.isIOS)
                         const Text(
                             "Connect the Mnemo to your computer and press the refresh button"),
-                      if (!Platform.isAndroid)
+                      if (!Platform.isAndroid && !Platform.isIOS)
                         IconButton(
                           onPressed: onRefreshMnemo,
                           icon: const Icon(Icons.refresh),
@@ -1098,7 +1103,9 @@ class _MyHomePageState extends State<MyHomePage> {
                         onPressed: (scanningNetwork)
                             ? onNetworkScanStop
                             : onNetworkScan,
-                        icon: (!scanningNetwork)? const Icon(Icons.search):const Icon(Icons.search_off),
+                        icon: (!scanningNetwork)
+                            ? const Icon(Icons.search)
+                            : const Icon(Icons.search_off),
                         tooltip:
                             "Scan local network for wifi connected devices",
                       ),
@@ -1152,7 +1159,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 // Generated code for this TabBar Widget...
                 Expanded(
                   child: DefaultTabController(
-                    length: (!Platform.isAndroid) ? 3 : 1,
+                    length: (!Platform.isAndroid && !Platform.isIOS) ? 3 : 1,
                     initialIndex: 0,
                     child: Column(
                       children: [
@@ -1162,11 +1169,11 @@ class _MyHomePageState extends State<MyHomePage> {
                             const Tab(
                               text: 'Data',
                             ),
-                            if (!Platform.isAndroid)
+                            if (!Platform.isAndroid && !Platform.isIOS)
                               const Tab(
                                 text: 'Settings',
                               ),
-                            if (!Platform.isAndroid)
+                            if (!Platform.isAndroid && !Platform.isIOS)
                               const Tab(
                                 text: 'CLI',
                               ),
@@ -1298,7 +1305,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                 ),
                               ]),
                               //Settings----------------------------------------
-                              if (!Platform.isAndroid)
+                              if (!Platform.isAndroid && !Platform.isIOS)
                                 (!connected)
                                     ? Column(
                                         children: [
@@ -1881,7 +1888,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                         ],
                                       ),
                               //CLI ---------------------------------------------------
-                              if (!Platform.isAndroid)
+                              if (!Platform.isAndroid && !Platform.isIOS)
                                 (!connected)
                                     ? Column(
                                         children: [
@@ -2230,12 +2237,16 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> onSaveDMP() async {
     String result;
-    if (Platform.isAndroid) {
-      //Using document directory as default on Android
-      final Directory rootPath = Directory(
-          await ExternalPath.getExternalStoragePublicDirectory(
-              ExternalPath.DIRECTORY_DOCUMENTS));
-
+    if (Platform.isAndroid || Platform.isIOS) {
+      Directory? rootPath;
+      if (Platform.isAndroid) {
+        //Using document directory as default on Android
+        rootPath = Directory(
+            await ExternalPath.getExternalStoragePublicDirectory(
+                ExternalPath.DIRECTORY_DOCUMENTS));
+      } else {
+        rootPath = await getApplicationDocumentsDirectory();
+      }
       String? path = await FilesystemPicker.open(
           title: 'Save to folder',
           context: context,
@@ -2284,12 +2295,16 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> onExportSVX() async {
     String result;
-    if (Platform.isAndroid) {
-      //Using document directory as default on Android
-      final Directory rootPath = Directory(
-          await ExternalPath.getExternalStoragePublicDirectory(
-              ExternalPath.DIRECTORY_DOCUMENTS));
-
+    if (Platform.isAndroid || Platform.isIOS) {
+      Directory? rootPath;
+      if (Platform.isAndroid) {
+        //Using document directory as default on Android
+        rootPath = Directory(
+            await ExternalPath.getExternalStoragePublicDirectory(
+                ExternalPath.DIRECTORY_DOCUMENTS));
+      } else {
+        rootPath = await getApplicationDocumentsDirectory();
+      }
       String? path = await FilesystemPicker.open(
           title: 'Save to folder',
           context: context,
@@ -2331,12 +2346,16 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> onExportTH() async {
     String result;
-    if (Platform.isAndroid) {
-      //Using document directory as default on Android
-      final Directory rootPath = Directory(
-          await ExternalPath.getExternalStoragePublicDirectory(
-              ExternalPath.DIRECTORY_DOCUMENTS));
-
+    if (Platform.isAndroid || Platform.isIOS) {
+      Directory? rootPath;
+      if (Platform.isAndroid) {
+        //Using document directory as default on Android
+        rootPath = Directory(
+            await ExternalPath.getExternalStoragePublicDirectory(
+                ExternalPath.DIRECTORY_DOCUMENTS));
+      } else {
+        rootPath = await getApplicationDocumentsDirectory();
+      }
       String? path = await FilesystemPicker.open(
           title: 'Save to folder',
           context: context,
@@ -2378,11 +2397,16 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> onExportXLS() async {
     String result;
-    if (Platform.isAndroid) {
-      //Using document directory as default on Android
-      final Directory rootPath = Directory(
-          await ExternalPath.getExternalStoragePublicDirectory(
-              ExternalPath.DIRECTORY_DOCUMENTS));
+    if (Platform.isAndroid || Platform.isIOS) {
+      Directory? rootPath;
+      if (Platform.isAndroid) {
+        //Using document directory as default on Android
+        rootPath = Directory(
+            await ExternalPath.getExternalStoragePublicDirectory(
+                ExternalPath.DIRECTORY_DOCUMENTS));
+      } else {
+        rootPath = await getApplicationDocumentsDirectory();
+      }
 
       String? path = await FilesystemPicker.open(
           title: 'Save to folder',
