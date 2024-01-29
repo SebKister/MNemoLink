@@ -21,8 +21,8 @@ class SectionCard extends StatelessWidget {
     rawSvg = buildSVG(map.buildDisplayMap(displayWidth, displayHeight));
     picture = SvgPicture.string(
       rawSvg,
-      width: (Platform.isAndroid) ? 50 : 200,
-      height: (Platform.isAndroid) ? 50 : 200,
+      width: (Platform.isAndroid || Platform.isIOS) ? 50 : 200,
+      height: (Platform.isAndroid || Platform.isIOS) ? 50 : 200,
     );
   }
 
