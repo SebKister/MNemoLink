@@ -47,7 +47,7 @@ void main() async {
       await windowManager.focus();
     });
   }
-  if(Platform.isIOS){
+  if (Platform.isIOS) {
     // Register dart_ping_ios with dart_ping
     // You only need to call this once
     DartPingIOS.register();
@@ -1103,7 +1103,9 @@ class _MyHomePageState extends State<MyHomePage> {
                         onPressed: (scanningNetwork)
                             ? onNetworkScanStop
                             : onNetworkScan,
-                        icon: (!scanningNetwork)? const Icon(Icons.search):const Icon(Icons.search_off),
+                        icon: (!scanningNetwork)
+                            ? const Icon(Icons.search)
+                            : const Icon(Icons.search_off),
                         tooltip:
                             "Scan local network for wifi connected devices",
                       ),
@@ -2236,11 +2238,15 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<void> onSaveDMP() async {
     String result;
     if (Platform.isAndroid || Platform.isIOS) {
-      //Using document directory as default on Android
-      final Directory rootPath = Directory(
-          await ExternalPath.getExternalStoragePublicDirectory(
-              ExternalPath.DIRECTORY_DOCUMENTS));
-
+      Directory? rootPath;
+      if (Platform.isAndroid) {
+        //Using document directory as default on Android
+        rootPath = Directory(
+            await ExternalPath.getExternalStoragePublicDirectory(
+                ExternalPath.DIRECTORY_DOCUMENTS));
+      } else {
+        rootPath = await getApplicationDocumentsDirectory();
+      }
       String? path = await FilesystemPicker.open(
           title: 'Save to folder',
           context: context,
@@ -2290,11 +2296,15 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<void> onExportSVX() async {
     String result;
     if (Platform.isAndroid || Platform.isIOS) {
-      //Using document directory as default on Android
-      final Directory rootPath = Directory(
-          await ExternalPath.getExternalStoragePublicDirectory(
-              ExternalPath.DIRECTORY_DOCUMENTS));
-
+      Directory? rootPath;
+      if (Platform.isAndroid) {
+        //Using document directory as default on Android
+        rootPath = Directory(
+            await ExternalPath.getExternalStoragePublicDirectory(
+                ExternalPath.DIRECTORY_DOCUMENTS));
+      } else {
+        rootPath = await getApplicationDocumentsDirectory();
+      }
       String? path = await FilesystemPicker.open(
           title: 'Save to folder',
           context: context,
@@ -2337,11 +2347,15 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<void> onExportTH() async {
     String result;
     if (Platform.isAndroid || Platform.isIOS) {
-      //Using document directory as default on Android
-      final Directory rootPath = Directory(
-          await ExternalPath.getExternalStoragePublicDirectory(
-              ExternalPath.DIRECTORY_DOCUMENTS));
-
+      Directory? rootPath;
+      if (Platform.isAndroid) {
+        //Using document directory as default on Android
+        rootPath = Directory(
+            await ExternalPath.getExternalStoragePublicDirectory(
+                ExternalPath.DIRECTORY_DOCUMENTS));
+      } else {
+        rootPath = await getApplicationDocumentsDirectory();
+      }
       String? path = await FilesystemPicker.open(
           title: 'Save to folder',
           context: context,
@@ -2384,10 +2398,15 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<void> onExportXLS() async {
     String result;
     if (Platform.isAndroid || Platform.isIOS) {
-      //Using document directory as default on Android
-      final Directory rootPath = Directory(
-          await ExternalPath.getExternalStoragePublicDirectory(
-              ExternalPath.DIRECTORY_DOCUMENTS));
+      Directory? rootPath;
+      if (Platform.isAndroid) {
+        //Using document directory as default on Android
+        rootPath = Directory(
+            await ExternalPath.getExternalStoragePublicDirectory(
+                ExternalPath.DIRECTORY_DOCUMENTS));
+      } else {
+        rootPath = await getApplicationDocumentsDirectory();
+      }
 
       String? path = await FilesystemPicker.open(
           title: 'Save to folder',

@@ -105,7 +105,6 @@
 				CDAB11BD210D6E26FC479173 /* Pods-RunnerTests.release.xcconfig */,
 				141641AD744A0747B14E7D50 /* Pods-RunnerTests.profile.xcconfig */,
 			);
-			name = Pods;
 			path = Pods;
 			sourceTree = "<group>";
 		};
@@ -471,6 +470,7 @@
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -649,6 +649,7 @@
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -671,6 +672,7 @@
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
