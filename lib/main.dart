@@ -2247,6 +2247,10 @@ class _MyHomePageState extends State<MyHomePage> {
       } else {
         rootPath = await getApplicationDocumentsDirectory();
       }
+      if (!context.mounted) {
+        return;
+      }
+
       String? path = await FilesystemPicker.open(
           title: 'Save to folder',
           context: context,
@@ -2305,6 +2309,9 @@ class _MyHomePageState extends State<MyHomePage> {
       } else {
         rootPath = await getApplicationDocumentsDirectory();
       }
+      if (!context.mounted) {
+        return;
+      }
       String? path = await FilesystemPicker.open(
           title: 'Save to folder',
           context: context,
@@ -2355,6 +2362,9 @@ class _MyHomePageState extends State<MyHomePage> {
                 ExternalPath.DIRECTORY_DOCUMENTS));
       } else {
         rootPath = await getApplicationDocumentsDirectory();
+      }
+      if (!context.mounted) {
+        return;
       }
       String? path = await FilesystemPicker.open(
           title: 'Save to folder',
@@ -2407,7 +2417,9 @@ class _MyHomePageState extends State<MyHomePage> {
       } else {
         rootPath = await getApplicationDocumentsDirectory();
       }
-
+      if (!context.mounted) {
+        return;
+      }
       String? path = await FilesystemPicker.open(
           title: 'Save to folder',
           context: context,
