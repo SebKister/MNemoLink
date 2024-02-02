@@ -32,3 +32,6 @@ build_androidAPK:
 
 build_appBundle:
 	flutter build appbundle
+
+build_iosRelease:
+    flutter build ipa
