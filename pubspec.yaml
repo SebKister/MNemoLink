@@ -38,7 +38,7 @@ dependencies:
   excel: ^4.0.0
   file_picker: ^6.1.1
   flutter_colorpicker: null
-  flutter_libserialport: null
+  flutter_libserialport: ^0.4.0
   flutter_svg: null
   intl: null
   loading_animation_widget: null
@@ -62,9 +62,9 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 
-dependency_overrides:  
-  flutter_libserialport:
-    git: https://github.com/speleobrad/flutter_libserialport.git
+# dependency_overrides:  
+#  flutter_libserialport:
+#    git: https://github.com/speleobrad/flutter_libserialport.git
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
