@@ -2247,7 +2247,7 @@ class _MyHomePageState extends State<MyHomePage> {
       } else {
         rootPath = await getApplicationDocumentsDirectory();
       }
-      if (!context.mounted) {
+      if (!mounted) {
         return;
       }
 
