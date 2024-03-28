@@ -14,6 +14,7 @@ import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:mnemolink/fileicon.dart';
 import 'package:mnemolink/survexporter.dart';
 import 'package:mnemolink/thexporter.dart';
+import 'package:mnemolink/wallsexporter.dart';
 import 'package:network_info_plus/network_info_plus.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:external_path/external_path.dart';
@@ -1273,6 +1274,23 @@ class _MyHomePageState extends State<MyHomePage> {
                                           : onExportTH,
                                       extension: 'TH',
                                       tooltip: "Export as Therion",
+                                      size: 24,
+                                      color: (serialBusy ||
+                                              sections.sections.isEmpty)
+                                          ? Colors.black26
+                                          : Colors.black54,
+                                      extensionColor: (serialBusy ||
+                                              sections.sections.isEmpty)
+                                          ? Colors.black26
+                                          : Colors.black87,
+                                    ),
+                                    FileIcon(
+                                      onPressed: (serialBusy ||
+                                              sections.sections.isEmpty)
+                                          ? null
+                                          : onExportWalls,
+                                      extension: 'SRV',
+                                      tooltip: "Export as Walls Data",
                                       size: 24,
                                       color: (serialBusy ||
                                               sections.sections.isEmpty)
