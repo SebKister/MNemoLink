@@ -163,6 +163,13 @@ mixin ShotExport {
     return svxDate;
   }
 
+  String dateInWallsFormat(DateTime date) {
+    final String wallsDate =
+        "${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+
+    return svxDate;
+  }
+
   Future<String> getAppVersion() async {
     PackageInfo packageInfo = await PackageInfo.fromPlatform();
 
