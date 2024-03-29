@@ -14,6 +14,7 @@ import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:mnemolink/fileicon.dart';
 import 'package:mnemolink/survexporter.dart';
 import 'package:mnemolink/thexporter.dart';
+import 'package:mnemolink/wallsexporter.dart';
 import 'package:network_info_plus/network_info_plus.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:external_path/external_path.dart';
@@ -1283,6 +1284,23 @@ class _MyHomePageState extends State<MyHomePage> {
                                           ? Colors.black26
                                           : Colors.black87,
                                     ),
+                                    FileIcon(
+                                      onPressed: (serialBusy ||
+                                              sections.sections.isEmpty)
+                                          ? null
+                                          : onExportWalls,
+                                      extension: 'SRV',
+                                      tooltip: "Export as Walls Data",
+                                      size: 24,
+                                      color: (serialBusy ||
+                                              sections.sections.isEmpty)
+                                          ? Colors.black26
+                                          : Colors.black54,
+                                      extensionColor: (serialBusy ||
+                                              sections.sections.isEmpty)
+                                          ? Colors.black26
+                                          : Colors.black87,
+                                    ),
                                   ],
                                   backgroundColor: Colors.white30,
                                 ),
@@ -2348,6 +2366,57 @@ class _MyHomePageState extends State<MyHomePage> {
     if (!result.toLowerCase().endsWith('.svx')) result += ".svx";
 
     final exporter = SurvexExporter();
+    await exporter.export(sections, result, unitType);
+  }
+
+  Future<void> onExportWalls() async {
+    String result;
+    if (Platform.isAndroid || Platform.isIOS) {
+      Directory? rootPath;
+      if (Platform.isAndroid) {
+        //Using document directory as default on Android
+        rootPath = Directory(
+            await ExternalPath.getExternalStoragePublicDirectory(
+                ExternalPath.DIRECTORY_DOCUMENTS));
+      } else {
+        rootPath = await getApplicationDocumentsDirectory();
+      }
+      if (!mounted) {
+        return;
+      }
+      String? path = await FilesystemPicker.open(
+          title: 'Save to folder',
+          context: context,
+          rootDirectory: rootPath,
+          fsType: FilesystemType.folder,
+          pickText: 'Save Walls file to this folder',
+          rootName: "Documents");
+
+      if (path == null) return;
+      final stamp = DateTime.timestamp().toLocal();
+      var stampString = sprintf("%02d%02d", [
+        stamp.day,
+        stamp.hour,
+      ]);
+      // Walls files are limited to 8 characters before the suffix
+      result = "$path/NEMO$stampString.SRV";
+    } else {
+      // Lets the enter file name, only files with the corresponding extensions are displayed
+      var resultFilePicker = await FilePicker.platform.saveFile(
+          dialogTitle: "Save as Walls Data",
+          type: FileType.custom,
+          allowedExtensions: ["SRV", "srv"]);
+      // The result will be null, if the user aborted the dialog
+      if (resultFilePicker == null) {
+        return;
+      } else {
+        result = resultFilePicker;
+      }
+    }
+
+    if (!result.toLowerCase().endsWith('.SRV') || !result.toLowerCase().endsWith('.srv')) result += ".SRV";
+
+    final exporter = WallsExporter();
     await exporter.export(sections, result, unitType);
   }
 
