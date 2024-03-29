@@ -2369,6 +2369,57 @@ class _MyHomePageState extends State<MyHomePage> {
     await exporter.export(sections, result, unitType);
   }
 
+  Future<void> onExportWalls() async {
+    String result;
+    if (Platform.isAndroid || Platform.isIOS) {
+      Directory? rootPath;
+      if (Platform.isAndroid) {
+        //Using document directory as default on Android
+        rootPath = Directory(
+            await ExternalPath.getExternalStoragePublicDirectory(
+                ExternalPath.DIRECTORY_DOCUMENTS));
+      } else {
+        rootPath = await getApplicationDocumentsDirectory();
+      }
+      if (!mounted) {
+        return;
+      }
+      String? path = await FilesystemPicker.open(
+          title: 'Save to folder',
+          context: context,
+          rootDirectory: rootPath,
+          fsType: FilesystemType.folder,
+          pickText: 'Save Walls file to this folder',
+          rootName: "Documents");
+
+      if (path == null) return;
+      final stamp = DateTime.timestamp().toLocal();
+      var stampString = sprintf("%02d%02d", [
+        stamp.day,
+        stamp.hour,
+      ]);
+      // Walls files are limited to 8 characters before the suffix
+      result = "$path/NEMO$stampString.SRV";
+    } else {
+      // Lets the enter file name, only files with the corresponding extensions are displayed
+      var resultFilePicker = await FilePicker.platform.saveFile(
+          dialogTitle: "Save as Walls Data",
+          type: FileType.custom,
+          allowedExtensions: ["SRV", "srv"]);
+      // The result will be null, if the user aborted the dialog
+      if (resultFilePicker == null) {
+        return;
+      } else {
+        result = resultFilePicker;
+      }
+    }
+
+    if (!result.toLowerCase().endsWith('.SRV') || !result.toLowerCase().endsWith('.srv')) result += ".SRV";
+
+    final exporter = WallsExporter();
+    await exporter.export(sections, result, unitType);
+  }
+
   Future<void> onExportTH() async {
     String result;
     if (Platform.isAndroid || Platform.isIOS) {
