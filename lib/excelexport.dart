@@ -27,49 +27,49 @@ void writeHeaderOnSheet(Sheet sheet, int rowNumber) {
   int index = 0;
 
   var cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = const TextCellValue("TypeShot");
+  cell.value = TextCellValue("TypeShot");
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = const TextCellValue("Length");
+  cell.value = TextCellValue("Length");
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = const TextCellValue("Depth IN");
+  cell.value = TextCellValue("Depth IN");
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = const TextCellValue("Depth OUT");
+  cell.value = TextCellValue("Depth OUT");
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = const TextCellValue("Heading IN");
+  cell.value = TextCellValue("Heading IN");
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = const TextCellValue("Heading OUT");
+  cell.value = TextCellValue("Heading OUT");
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = const TextCellValue("Pitch IN");
+  cell.value = TextCellValue("Pitch IN");
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = const TextCellValue("Pitch OUT");
+  cell.value = TextCellValue("Pitch OUT");
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = const TextCellValue("Left");
+  cell.value = TextCellValue("Left");
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = const TextCellValue("Right");
+  cell.value = TextCellValue("Right");
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = const TextCellValue("Up");
+  cell.value = TextCellValue("Up");
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = const TextCellValue("Down");
+  cell.value = TextCellValue("Down");
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = const TextCellValue("Temperature");
+  cell.value = TextCellValue("Temperature");
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = const TextCellValue("Time");
+  cell.value = TextCellValue("Time");
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = const TextCellValue("Marker");
+  cell.value = TextCellValue("Marker");
 }
 
 void writeRowOnSheet(Section section, Shot data, Sheet sheet, int rowNumber) {
