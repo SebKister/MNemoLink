@@ -976,7 +976,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 section.getShots().add(shot);
                 cursor -= 3; 
                 break; 
-          };
+          }
         }
       } while (shot.getTypeShot() != TypeShot.eoc);
 
