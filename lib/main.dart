@@ -796,7 +796,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   int readByteFromEEProm(int address) {
-    return transferBuffer.elementAt(address);
+    return address < transferBuffer.length ? transferBuffer.elementAt(address) : 0;
   }
 
   int readIntFromEEProm(int address) {
@@ -899,7 +899,14 @@ class _MyHomePageState extends State<MyHomePage> {
           checkByteC = readByteFromEEProm(cursor++);
           if (checkByteA != shotStartValueA ||
               checkByteB != shotStartValueB ||
-              checkByteC != shotStartValueC) return;
+              checkByteC != shotStartValueC) { 
+            debugPrint("Bad a beginning of a shot, inserting EOC and closing");
+            shot = Shot.zero();
+            shot.setTypeShot(TypeShot.eoc); 
+            section.getShots().add(shot);
+            cursor -= 3; 
+            break; 
+          }
         }
         typeShot = readByteFromEEProm(cursor++);
 
@@ -954,15 +961,23 @@ class _MyHomePageState extends State<MyHomePage> {
         }
 
         shot.setMarkerIndex(readByteFromEEProm(cursor++));
+        section.getShots().add(shot);
         if (fileVersion >= 5) {
           checkByteA = readByteFromEEProm(cursor++);
           checkByteB = readByteFromEEProm(cursor++);
           checkByteC = readByteFromEEProm(cursor++);
           if (checkByteA != shotEndValueA ||
               checkByteB != shotEndValueB ||
-              checkByteC != shotEndValueC) return;
+              checkByteC != shotEndValueC) {
+                // this is where it gets weird - shot 
+                debugPrint ("Bad an end of a shot, inserting EOC and closing");
+                shot = Shot.zero();
+                shot.setTypeShot(TypeShot.eoc); 
+                section.getShots().add(shot);
+                cursor -= 3; 
+                break; 
+          };
         }
-        section.getShots().add(shot);
       } while (shot.getTypeShot() != TypeShot.eoc);
 
       setState(() {
