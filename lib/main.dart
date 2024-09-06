@@ -900,7 +900,6 @@ class _MyHomePageState extends State<MyHomePage> {
           if (checkByteA != shotStartValueA ||
               checkByteB != shotStartValueB ||
               checkByteC != shotStartValueC) { 
-            debugPrint("Bad a beginning of a shot, inserting EOC and closing");
             shot = Shot.zero();
             shot.setTypeShot(TypeShot.eoc); 
             section.getShots().add(shot);
@@ -970,7 +969,6 @@ class _MyHomePageState extends State<MyHomePage> {
               checkByteB != shotEndValueB ||
               checkByteC != shotEndValueC) {
                 // this is where it gets weird - shot 
-                debugPrint ("Bad an end of a shot, inserting EOC and closing");
                 shot = Shot.zero();
                 shot.setTypeShot(TypeShot.eoc); 
                 section.getShots().add(shot);
