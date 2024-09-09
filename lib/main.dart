@@ -8,6 +8,7 @@ import 'package:disks_desktop/disks_desktop.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_libserialport/flutter_libserialport.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
@@ -51,6 +52,8 @@ void main() async {
     // Register dart_ping_ios with dart_ping
     // You only need to call this once
     DartPingIOS.register();
+
+    if (kDebugMode) debugPrint("main(): Registered IOS"); 
   }
   runApp(const MyApp());
 }
@@ -824,6 +827,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
     while (cursor < currentMemory - 2) {
       Section section = Section();
+      if (kDebugMode) debugPrint("analyzeTransferBuffer(): Started new section"); 
 
       int fileVersion = 0;
       int checkByteA = 0;
@@ -838,13 +842,16 @@ class _MyHomePageState extends State<MyHomePage> {
         cursor++;
       }
 
-      if (fileVersion >= 5) {
+      if (fileVersion >= 5) { // will this ever be greater than 5?
         checkByteA = readByteFromEEProm(cursor++);
         checkByteB = readByteFromEEProm(cursor++);
         checkByteC = readByteFromEEProm(cursor++);
         if (checkByteA != fileVersionValueA ||
             checkByteB != fileVersionValueB ||
-            checkByteC != fileVersionValueC) return;
+            checkByteC != fileVersionValueC) { 
+              if (kDebugMode) debugPrint("analyzeTransferBuffer(): --- fileVersion= = 5, fileVersion check numbers ($checkByteA:$checkByteB:$checkByteC) don't meet expectations");
+              return;
+        }
       }
 
       int year = 0;
@@ -879,8 +886,11 @@ class _MyHomePageState extends State<MyHomePage> {
       if (directionIndex == 0 || directionIndex == 1) {
         section.setDirection(SurveyDirection.values[directionIndex]);
       } else {
+        if (kDebugMode) debugPrint("analyzeTransferBuffer(): --- problematic section direction ($directionIndex)");
         break;
       }
+
+      if (kDebugMode) debugPrint("analyzeTransferBuffer(): --- section name: ${section.getName().toString()}; date: $dateSection");
 
       double conversionFactor = 0.0;
       if (unitType == UnitType.metric) {
@@ -892,6 +902,8 @@ class _MyHomePageState extends State<MyHomePage> {
       Shot shot;
       do {
         shot = Shot.zero();
+        if (kDebugMode) debugPrint("analyzeTransferBuffer(): --> Started new shot");
+
         int typeShot = 0;
         if (fileVersion >= 5) {
           checkByteA = readByteFromEEProm(cursor++);
@@ -899,7 +911,9 @@ class _MyHomePageState extends State<MyHomePage> {
           checkByteC = readByteFromEEProm(cursor++);
           if (checkByteA != shotStartValueA ||
               checkByteB != shotStartValueB ||
-              checkByteC != shotStartValueC) { 
+              checkByteC != shotStartValueC) {
+
+            if (kDebugMode) debugPrint("analyzeTransferBuffer(): <----- Shot start magic bytes ($checkByteA:$checkByteB:$checkByteC) don't meet expectations");
             shot = Shot.zero();
             shot.setTypeShot(TypeShot.eoc); 
             section.getShots().add(shot);
@@ -910,6 +924,7 @@ class _MyHomePageState extends State<MyHomePage> {
         typeShot = readByteFromEEProm(cursor++);
 
         if (typeShot > 3 || typeShot < 0) {
+          if (kDebugMode) debugPrint("analyzeTransferBuffer(): <----- Shot type ($typeShot) not valid");
           break;
         }
 
@@ -936,6 +951,8 @@ class _MyHomePageState extends State<MyHomePage> {
         shot.setPitchOut(readIntFromEEProm(cursor));
         cursor += 2;
 
+        if (kDebugMode) debugPrint("analyzeTransferBuffer(): ------ Shot data: type=$typeShot; headingIn/Out=${shot.getHeadingIn().toString()}/${shot.getHeadingOut().toString()}; length=${shot.getLength().toString()}; depthIn/Out=${shot.getDepthIn().toString()}/${shot.getDepthOut().toString()}; pitchIn/Out=${shot.getPitchIn().toString()}/${shot.getPitchOut().toString()}"); 
+
         if (fileVersion >= 4) {
           shot.setLeft(readIntFromEEProm(cursor) * conversionFactor / 100.0);
           cursor += 2;
@@ -945,6 +962,7 @@ class _MyHomePageState extends State<MyHomePage> {
           cursor += 2;
           shot.setDown(readIntFromEEProm(cursor) * conversionFactor / 100.0);
           cursor += 2;
+          if (kDebugMode) debugPrint("analyzeTransferBuffer(): ------ Shot data: LRUD: ${shot.getLeft().toString()} ${shot.getRight().toString()} ${shot.getUp().toString()} ${shot.getDown().toString()}");
         }
         if (fileVersion >= 3) {
           shot.setTemperature(readIntFromEEProm(cursor));
@@ -952,6 +970,8 @@ class _MyHomePageState extends State<MyHomePage> {
           shot.setHr(readByteFromEEProm(cursor++));
           shot.setMin(readByteFromEEProm(cursor++));
           shot.setSec(readByteFromEEProm(cursor++));
+          if (kDebugMode) debugPrint("analyzeTransferBuffer(): ------ Shot data: Temperatue=${shot.getTemperature().toString()} Shot time=${shot.getHr().toString()}:${shot.getMin().toString()}:${shot.getSec().toString()}");
+
         } else {
           shot.setTemperature(0);
           shot.setHr(0);
@@ -961,6 +981,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
         shot.setMarkerIndex(readByteFromEEProm(cursor++));
         section.getShots().add(shot);
+        if (kDebugMode) debugPrint("analyzeTransferBuffer(): <----- Closing shot");
+
         if (fileVersion >= 5) {
           checkByteA = readByteFromEEProm(cursor++);
           checkByteB = readByteFromEEProm(cursor++);
@@ -968,7 +990,7 @@ class _MyHomePageState extends State<MyHomePage> {
           if (checkByteA != shotEndValueA ||
               checkByteB != shotEndValueB ||
               checkByteC != shotEndValueC) {
-                // this is where it gets weird - shot 
+                if (kDebugMode) debugPrint("analyzeTransferBuffer(): <----- Shot end magic bytes ($checkByteA:$checkByteB:$checkByteC) don't meet expectations");
                 shot = Shot.zero();
                 shot.setTypeShot(TypeShot.eoc); 
                 section.getShots().add(shot);
@@ -981,6 +1003,7 @@ class _MyHomePageState extends State<MyHomePage> {
       setState(() {
         // Adding section only if it contains data. Note : EOC shot should always be present at end of section.
         if (section.shots.length > 1) {
+          if (kDebugMode) debugPrint("analyzeTransferBuffer(): <-- Closing section");
           sections.getSections().add(section);
         }
       });

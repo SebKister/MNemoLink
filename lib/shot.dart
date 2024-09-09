@@ -204,16 +204,32 @@ class Shot {
     this.left = left;
   }
 
+  double getLeft () { 
+    return left; 
+  }
+
   void setRight(double right) {
     this.right = right;
+  }
+
+  double getRight() { 
+    return right;
   }
 
   void setUp(double up) {
     this.up = up;
   }
 
+  double getUp() { 
+    return up; 
+  }
+
   void setDown(double down) {
     this.down = down;
+  }
+
+  double getDown() { 
+    return down;
   }
 }
 
