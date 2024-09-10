@@ -838,6 +838,7 @@ class _MyHomePageState extends State<MyHomePage> {
   void analyzeTransferBuffer() async {
     int currentMemory = transferBuffer.length;
     int cursor = 0;
+    bool brokenSegmentFlag = false;
 
     var fileVersionValueA = 68;
     var fileVersionValueB = 89;
@@ -933,8 +934,7 @@ class _MyHomePageState extends State<MyHomePage> {
             shot.setTypeShot(TypeShot.eoc); 
             section.getShots().add(shot);
             cursor -= 3; 
-            section.setBrokenFlag(true); 
-            await brokenSegmentWarning();
+            section.setBrokenFlag(true); brokenSegmentFlag = true;
             break; 
           }
         }
@@ -1004,8 +1004,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 shot.setTypeShot(TypeShot.eoc); 
                 section.getShots().add(shot);
                 cursor -= 3; 
-                section.setBrokenFlag(true); 
-                await brokenSegmentWarning();
+                section.setBrokenFlag(true); brokenSegmentFlag = true;
                 break; 
           }
         }
@@ -1017,6 +1016,9 @@ class _MyHomePageState extends State<MyHomePage> {
           sections.getSections().add(section);
         }
       });
+    }
+    if (brokenSegmentFlag) {
+      await brokenSegmentWarning(); 
     }
   }
 
