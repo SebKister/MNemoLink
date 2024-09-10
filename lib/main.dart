@@ -933,6 +933,7 @@ class _MyHomePageState extends State<MyHomePage> {
             shot.setTypeShot(TypeShot.eoc); 
             section.getShots().add(shot);
             cursor -= 3; 
+            section.setBrokenFlag(true); 
             await brokenSegmentWarning();
             break; 
           }
@@ -1003,6 +1004,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 shot.setTypeShot(TypeShot.eoc); 
                 section.getShots().add(shot);
                 cursor -= 3; 
+                section.setBrokenFlag(true); 
                 await brokenSegmentWarning();
                 break; 
           }
