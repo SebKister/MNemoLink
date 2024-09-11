@@ -1,9 +1,12 @@
 import 'dart:io';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mnemolink/section.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:mnemolink/shot.dart';
+import 'package:widget_zoom/widget_zoom.dart';
+
 
 import 'mapsurvey.dart';
 
@@ -23,7 +26,6 @@ class SectionCardState extends State<SectionCard> {
   static const double displayWidth = 512;
   static const double displayHeight = 512;
   static const double margin = 4;
-  OverlayEntry? _overlayEntry;
 
   @override
   void initState() {
@@ -37,29 +39,13 @@ class SectionCardState extends State<SectionCard> {
     );
   }
 
-  void _showOverlay(BuildContext context) {
-    final overlay = Overlay.of(context);
-    _overlayEntry = OverlayEntry(
-      builder: (context) => Positioned(
-        left: 250, // Adjust based on the position you want the zoomed image to appear
-        top: 150, // Adjust to position correctly near the ListTile
-        child: Material(
-          color: Colors.transparent,
-          child: SvgPicture.string(
-            rawSvg, // Reuse the SVG data
-            width: displayWidth, // Larger size for the hover effect
-            height: displayHeight,
-          ),
-        ),
-      ),
-    );
-    overlay.insert(_overlayEntry!);
-  }
-
-  void _removeOverlay() {
-    _overlayEntry?.remove();
-    _overlayEntry = null;
-  }
+String generateRandomString(int length) {
+  const characters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  final random = Random();
+  
+  return List.generate(length, (index) => characters[random.nextInt(characters.length)])
+      .join();
+}
 
   @override
   Widget build(BuildContext context) {
@@ -92,10 +78,11 @@ class SectionCardState extends State<SectionCard> {
               Text(DateFormat('yyyy-MM-dd').format(widget.section.dateSurvey)),
             ],            
           ),
-        leading: MouseRegion(
-          onEnter: (_) => _showOverlay(context),
-          onExit: (_) => _removeOverlay(),
-          child: picture, // Initial smaller picture
+        leading: WidgetZoom(
+            heroAnimationTag: generateRandomString(10),
+            zoomWidget: Container( 
+                child: picture,
+            ),
         ),
       ),
     );
