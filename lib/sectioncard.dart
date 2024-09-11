@@ -34,7 +34,21 @@ class SectionCard extends StatelessWidget {
         title: Text(section.name),
         subtitle: Text(
             "${(section.direction == SurveyDirection.surveyIn) ? "IN" : "OUT"}-#${section.shots.length - 1}"),
-        trailing: Text(DateFormat('yyyy-MM-dd').format(section.dateSurvey)),
+        trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget> [
+              if (section.getBrokenFlag()) 
+                const Tooltip(
+                  message: 'Recovered section', // Hover note
+                  child: Icon(
+                    Icons.fmd_bad, 
+                    color: Colors.orange,
+                  ),
+                ),
+              const SizedBox(width: 6), 
+              Text(DateFormat('yyyy-MM-dd').format(section.dateSurvey)),
+            ],            
+          ),
         leading: picture,
       ),
     );

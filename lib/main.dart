@@ -590,6 +590,35 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
+    Future<void> brokenSegmentWarning() async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false, // user must tap button!
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Broken segment'),
+          content: const SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                Text('Broken segment detected and partially recovered'),
+                Text(
+                    'This usually happens when device hard resets or when segments is not finished and device is turned off'),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Ok'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<bool?> showFirmwareUpdateDialog() async {
     return showDialog<bool>(
       context: context,
@@ -796,7 +825,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   int readByteFromEEProm(int address) {
-    return transferBuffer.elementAt(address);
+    return address < transferBuffer.length ? transferBuffer.elementAt(address) : 0;
   }
 
   int readIntFromEEProm(int address) {
@@ -806,9 +835,10 @@ class _MyHomePageState extends State<MyHomePage> {
     return byteData.getInt16(0);
   }
 
-  void analyzeTransferBuffer() {
+  void analyzeTransferBuffer() async {
     int currentMemory = transferBuffer.length;
     int cursor = 0;
+    bool brokenSegmentFlag = false;
 
     var fileVersionValueA = 68;
     var fileVersionValueB = 89;
@@ -899,7 +929,14 @@ class _MyHomePageState extends State<MyHomePage> {
           checkByteC = readByteFromEEProm(cursor++);
           if (checkByteA != shotStartValueA ||
               checkByteB != shotStartValueB ||
-              checkByteC != shotStartValueC) return;
+              checkByteC != shotStartValueC) { 
+            shot = Shot.zero();
+            shot.setTypeShot(TypeShot.eoc); 
+            section.getShots().add(shot);
+            cursor -= 3; 
+            section.setBrokenFlag(true); brokenSegmentFlag = true;
+            break; 
+          }
         }
         typeShot = readByteFromEEProm(cursor++);
 
@@ -954,15 +991,23 @@ class _MyHomePageState extends State<MyHomePage> {
         }
 
         shot.setMarkerIndex(readByteFromEEProm(cursor++));
+        section.getShots().add(shot);
         if (fileVersion >= 5) {
           checkByteA = readByteFromEEProm(cursor++);
           checkByteB = readByteFromEEProm(cursor++);
           checkByteC = readByteFromEEProm(cursor++);
           if (checkByteA != shotEndValueA ||
               checkByteB != shotEndValueB ||
-              checkByteC != shotEndValueC) return;
+              checkByteC != shotEndValueC) {
+                // this is where it gets weird - shot 
+                shot = Shot.zero();
+                shot.setTypeShot(TypeShot.eoc); 
+                section.getShots().add(shot);
+                cursor -= 3; 
+                section.setBrokenFlag(true); brokenSegmentFlag = true;
+                break; 
+          }
         }
-        section.getShots().add(shot);
       } while (shot.getTypeShot() != TypeShot.eoc);
 
       setState(() {
@@ -971,6 +1016,9 @@ class _MyHomePageState extends State<MyHomePage> {
           sections.getSections().add(section);
         }
       });
+    }
+    if (brokenSegmentFlag) {
+      await brokenSegmentWarning(); 
     }
   }
 

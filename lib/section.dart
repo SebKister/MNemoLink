@@ -68,4 +68,14 @@ class Section {
   void setDateSurvey(DateTime newDateSurvey) {
     dateSurvey = newDateSurvey;
   }
+
+  bool brokenFlag = false; 
+
+  void setBrokenFlag  (bool flag) { 
+    brokenFlag = flag;
+  }
+
+  bool getBrokenFlag () { 
+    return brokenFlag;
+  }
 }
