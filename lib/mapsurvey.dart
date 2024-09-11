@@ -2,26 +2,36 @@ import 'dart:math';
 
 import 'package:mnemolink/section.dart';
 
+class Point3d extends Point<double> { 
+  final double z; 
+
+  Point3d (super.x, super.y, this.z);
+
+  @override
+  String toString() => 'Point3d($x, $y, $z)';
+}
+
 class MapSurvey {
   int id = 0;
-  List<Point<double>> points = [];
+  List<Point3d> points = [];
 
   MapSurvey();
 
   void buildMap(Section section) {
 
 
-    Point<double> start = const Point<double>(0, 0);
+    Point3d start = Point3d(0, 0, section.shots.first.depthIn);
     points.add(start);
 
     for (int i = 0; i < section.shots.length; i++) {
       double factecr = sqrt(pow(section.shots[i].length, 2) -
           pow((section.shots[i].depthOut - section.shots[i].depthIn), 2));
-      points.add(Point(
+      points.add(Point3d(
           points[i].x +
               factecr * sin(-section.shots[i].headingOut / 3600.0 * 2.0 * pi),
           points[i].y +
-              factecr * cos(section.shots[i].headingOut / 3600.0 * 2.0 * pi)));
+              factecr * cos(section.shots[i].headingOut / 3600.0 * 2.0 * pi), 
+          max(section.shots[i].depthOut, i < section.shots.length-1 ? section.shots[i+1].depthIn : section.shots[i].depthOut)));
     }
   }
 
@@ -29,7 +39,7 @@ class MapSurvey {
     buildMap(s);
   }
 
-  Point<double> getMinPoint() {
+  Point3d getMinPoint() {
     double pointx = 1000000.0;
     double pointy = 1000000.0;
 
@@ -39,10 +49,10 @@ class MapSurvey {
       if (points[i].y < pointy) pointy = points[i].y;
     }
 
-    return Point<double>(pointx, pointy);
+    return Point3d(pointx, pointy, 0);
   }
 
-  Point<double> getMaxPoint() {
+  Point3d getMaxPoint() {
     double pointx = -1000000.0;
     double pointy = -1000000.0;
 
@@ -52,41 +62,32 @@ class MapSurvey {
       if (points[i].y > pointy) pointy = points[i].y;
     }
 
-    return Point<double>(pointx, pointy);
+    return Point3d(pointx, pointy, 0);
   }
 
   MapSurvey buildDisplayMap(double displayWidth, double displayHeight) {
-    Point<double> minPoint = getMinPoint();
-    Point<double> maxPoint = getMaxPoint();
+    Point3d minPoint = getMinPoint();
+    Point3d maxPoint = getMaxPoint();
 
     double xSize, ySize, maxSize;
 
     xSize = maxPoint.x - minPoint.x;
     ySize = maxPoint.y - minPoint.y;
 
-    if (xSize > ySize) {
-      maxSize = xSize;
-    } else {
-      maxSize = ySize;
-    }
+    maxSize = max (xSize, ySize); 
 
     MapSurvey dMap = MapSurvey();
-    double mapDisplaySize = displayWidth,
-        mapDisplaySizeX = 3,
-        mapDisplaySizeY = 3;
 
     for (int i = 0; i < points.length; i++) {
-      dMap.points.add(Point(
+      dMap.points.add(Point3d(
           (points[i].x - minPoint.x - (maxPoint.x - minPoint.x) / 2.0) *
-                  mapDisplaySize /
-                  maxSize +
-              mapDisplaySizeX +
-              mapDisplaySize / 2,
+                  displayWidth / maxSize +
+                  displayWidth / 2,
           (points[i].y - minPoint.y - (maxPoint.y - minPoint.y) / 2.0) *
-                  mapDisplaySize /
-                  maxSize +
-              mapDisplaySizeY +
-              mapDisplaySize / 2));
+                  displayHeight / maxSize +
+                  displayHeight / 2, 
+            points[i].z
+            ));
     }
 
     return dMap;

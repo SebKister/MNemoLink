@@ -1,4 +1,5 @@
 import './shot.dart';
+import 'dart:math';
 
 class Section {
   Section() {
@@ -69,6 +70,7 @@ class Section {
     dateSurvey = newDateSurvey;
   }
 
+  /// Was this segment broken and had to be forcefuly recovered? 
   bool brokenFlag = false; 
 
   void setBrokenFlag  (bool flag) { 
@@ -77,5 +79,52 @@ class Section {
 
   bool getBrokenFlag () { 
     return brokenFlag;
+  }
+
+  /// Total expanded lenght of the segment 
+  double getLength() { 
+    double segmentLenght = 0; 
+
+    if  (shots.isNotEmpty) {
+      for (int i = 0; i < shots.length; i++) { 
+        segmentLenght += shots[i].getLength();
+      }
+    }
+    return segmentLenght; 
+  }
+
+  /// Depths (start, min, max, end)
+  double getDepthStart() {
+    return shots.isNotEmpty ? shots.first.getDepthIn() : 0; 
+  }
+
+  double getDepthEnd() { 
+    return shots.length >= 2 ? shots[shots.length -2].getDepthOut() : 0;
+  }
+
+  double getDepthMin() { 
+    double minDepth = 9999; 
+
+    if (shots.isNotEmpty) {
+      for (int i = 0; i < shots.length-1; i++) { // last shot is .eoc, with all 0s
+        minDepth = min (minDepth, shots[i].getDepthIn()); 
+        minDepth = min (minDepth, shots[i].getDepthOut());
+      }
+    }
+
+    return minDepth; 
+  }
+
+  double getDepthMax() { 
+    double maxDepth = -1; 
+
+    if (shots.isNotEmpty) { 
+      for (int i = 0; i < shots.length-1; i++) { // last shot is .eoc, with all 0s
+        maxDepth = max (maxDepth, shots[i].getDepthIn()); 
+        maxDepth = max (maxDepth, shots[i].getDepthOut());
+      }
+    }
+
+    return maxDepth; 
   }
 }
