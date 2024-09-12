@@ -827,7 +827,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
     while (cursor < currentMemory - 2) {
       Section section = Section();
-      if (kDebugMode) debugPrint("analyzeTransferBuffer(): Started new section"); 
+      if (kDebugMode) debugPrint("analyzeTransferBuffer(): + Started new section"); 
 
       int fileVersion = 0;
       int checkByteA = 0;
@@ -849,7 +849,7 @@ class _MyHomePageState extends State<MyHomePage> {
         if (checkByteA != fileVersionValueA ||
             checkByteB != fileVersionValueB ||
             checkByteC != fileVersionValueC) { 
-              if (kDebugMode) debugPrint("analyzeTransferBuffer(): --- fileVersion= = 5, fileVersion check numbers ($checkByteA:$checkByteB:$checkByteC) don't meet expectations");
+              if (kDebugMode) debugPrint("analyzeTransferBuffer(): -- fileVersion= = 5, fileVersion check numbers ($checkByteA:$checkByteB:$checkByteC) don't meet expectations");
               return;
         }
       }
@@ -874,6 +874,9 @@ class _MyHomePageState extends State<MyHomePage> {
       DateTime dateSection = DateTime(year, month, day, hour, minute);
       //  LocalDateTime dateSection = LocalDateTime.now();
       section.setDateSurvey(dateSection);
+
+      if (kDebugMode) debugPrint("analyzeTransferBuffer(): -- section date: $dateSection");
+
       // Read section type and name
       StringBuffer stbuilder = StringBuffer();
       stbuilder.write(utf8.decode([readByteFromEEProm(cursor++)]));
@@ -882,15 +885,17 @@ class _MyHomePageState extends State<MyHomePage> {
       section.setName(stbuilder.toString());
       // Read Direction  0 for In 1 for Out
 
+      if (kDebugMode) debugPrint("analyzeTransferBuffer(): -- section name: ${section.getName().toString()}");
+
+
       int directionIndex = readByteFromEEProm(cursor++);
       if (directionIndex == 0 || directionIndex == 1) {
         section.setDirection(SurveyDirection.values[directionIndex]);
       } else {
-        if (kDebugMode) debugPrint("analyzeTransferBuffer(): --- problematic section direction ($directionIndex)");
+        if (kDebugMode) debugPrint("analyzeTransferBuffer(): -! problematic section direction ($directionIndex)");
         break;
       }
-
-      if (kDebugMode) debugPrint("analyzeTransferBuffer(): --- section name: ${section.getName().toString()}; date: $dateSection");
+      if (kDebugMode) debugPrint("analyzeTransferBuffer(): -- section direction: ${section.getDirection()}");
 
       double conversionFactor = 0.0;
       if (unitType == UnitType.metric) {
@@ -902,7 +907,7 @@ class _MyHomePageState extends State<MyHomePage> {
       Shot shot;
       do {
         shot = Shot.zero();
-        if (kDebugMode) debugPrint("analyzeTransferBuffer(): --> Started new shot");
+        if (kDebugMode) debugPrint("analyzeTransferBuffer(): -> Started new shot");
 
         int typeShot = 0;
         if (fileVersion >= 5) {
@@ -913,7 +918,7 @@ class _MyHomePageState extends State<MyHomePage> {
               checkByteB != shotStartValueB ||
               checkByteC != shotStartValueC) {
 
-            if (kDebugMode) debugPrint("analyzeTransferBuffer(): <----- Shot start magic bytes ($checkByteA:$checkByteB:$checkByteC) don't meet expectations");
+            if (kDebugMode) debugPrint("analyzeTransferBuffer(): <--! Shot start magic bytes ($checkByteA:$checkByteB:$checkByteC) don't meet expectations");
             shot = Shot.zero();
             shot.setTypeShot(TypeShot.eoc); 
             section.getShots().add(shot);
@@ -924,7 +929,7 @@ class _MyHomePageState extends State<MyHomePage> {
         typeShot = readByteFromEEProm(cursor++);
 
         if (typeShot > 3 || typeShot < 0) {
-          if (kDebugMode) debugPrint("analyzeTransferBuffer(): <----- Shot type ($typeShot) not valid");
+          if (kDebugMode) debugPrint("analyzeTransferBuffer(): <--! Shot type ($typeShot) not valid");
           break;
         }
 
@@ -951,7 +956,13 @@ class _MyHomePageState extends State<MyHomePage> {
         shot.setPitchOut(readIntFromEEProm(cursor));
         cursor += 2;
 
-        if (kDebugMode) debugPrint("analyzeTransferBuffer(): ------ Shot data: type=$typeShot; headingIn/Out=${shot.getHeadingIn().toString()}/${shot.getHeadingOut().toString()}; length=${shot.getLength().toString()}; depthIn/Out=${shot.getDepthIn().toString()}/${shot.getDepthOut().toString()}; pitchIn/Out=${shot.getPitchIn().toString()}/${shot.getPitchOut().toString()}"); 
+        if (kDebugMode) {  
+          debugPrint("analyzeTransferBuffer(): ---- Shot data: type=$typeShot; "
+          "headingIn/Out=${shot.getHeadingIn().toString()}/${shot.getHeadingOut().toString()}; "
+          "length=${shot.getLength().toString()}; "
+          "depthIn/Out=${shot.getDepthIn().toString()}/${shot.getDepthOut().toString()}; "
+          "pitchIn/Out=${shot.getPitchIn().toString()}/${shot.getPitchOut().toString()}"); 
+        }
 
         if (fileVersion >= 4) {
           shot.setLeft(readIntFromEEProm(cursor) * conversionFactor / 100.0);
@@ -962,7 +973,7 @@ class _MyHomePageState extends State<MyHomePage> {
           cursor += 2;
           shot.setDown(readIntFromEEProm(cursor) * conversionFactor / 100.0);
           cursor += 2;
-          if (kDebugMode) debugPrint("analyzeTransferBuffer(): ------ Shot data: LRUD: ${shot.getLeft().toString()} ${shot.getRight().toString()} ${shot.getUp().toString()} ${shot.getDown().toString()}");
+          if (kDebugMode) debugPrint("analyzeTransferBuffer(): ---- Shot data: LRUD: ${shot.getLeft().toString()} ${shot.getRight().toString()} ${shot.getUp().toString()} ${shot.getDown().toString()}");
         }
         if (fileVersion >= 3) {
           shot.setTemperature(readIntFromEEProm(cursor));
@@ -970,7 +981,7 @@ class _MyHomePageState extends State<MyHomePage> {
           shot.setHr(readByteFromEEProm(cursor++));
           shot.setMin(readByteFromEEProm(cursor++));
           shot.setSec(readByteFromEEProm(cursor++));
-          if (kDebugMode) debugPrint("analyzeTransferBuffer(): ------ Shot data: Temperatue=${shot.getTemperature().toString()} Shot time=${shot.getHr().toString()}:${shot.getMin().toString()}:${shot.getSec().toString()}");
+          if (kDebugMode) debugPrint("analyzeTransferBuffer(): ---- Shot data: Temperatue=${shot.getTemperature().toString()} Shot time=${shot.getHr().toString()}:${shot.getMin().toString()}:${shot.getSec().toString()}");
 
         } else {
           shot.setTemperature(0);
@@ -981,7 +992,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
         shot.setMarkerIndex(readByteFromEEProm(cursor++));
         section.getShots().add(shot);
-        if (kDebugMode) debugPrint("analyzeTransferBuffer(): <----- Closing shot");
+        if (kDebugMode) debugPrint("analyzeTransferBuffer(): <--- Closing shot");
 
         if (fileVersion >= 5) {
           checkByteA = readByteFromEEProm(cursor++);
@@ -990,7 +1001,7 @@ class _MyHomePageState extends State<MyHomePage> {
           if (checkByteA != shotEndValueA ||
               checkByteB != shotEndValueB ||
               checkByteC != shotEndValueC) {
-                if (kDebugMode) debugPrint("analyzeTransferBuffer(): <----- Shot end magic bytes ($checkByteA:$checkByteB:$checkByteC) don't meet expectations");
+                if (kDebugMode) debugPrint("analyzeTransferBuffer(): <--! Shot end magic bytes ($checkByteA:$checkByteB:$checkByteC) don't meet expectations");
                 shot = Shot.zero();
                 shot.setTypeShot(TypeShot.eoc); 
                 section.getShots().add(shot);
