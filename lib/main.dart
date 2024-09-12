@@ -877,13 +877,7 @@ class _MyHomePageState extends State<MyHomePage> {
             checkByteC != fileVersionValueC) return;
       }
 
-      int year = 0;
-
-      while ((year < 16) || (year > (DateTime.now().year - 2000))) {
-        year = readByteFromEEProm(cursor);
-        cursor++;
-      }
-
+      int year = readByteFromEEProm(cursor++);
       year += 2000;
 
       int month = readByteFromEEProm(cursor);
