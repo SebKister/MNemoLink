@@ -57,11 +57,11 @@ String generateRandomString(int length) {
           "dir: ${(widget.section.direction == SurveyDirection.surveyIn) ? "in" : "out"} - "
           "shots: ${widget.section.shots.length - 1}"),
         subtitle: Text(
-            "Length: ${widget.section.getLength().toStringAsFixed(2)}m"
-            "Depth (start/min/max/end): "
-              "${widget.section.getDepthStart().toStringAsFixed(2)}/"
-              "${widget.section.getDepthMin().toStringAsFixed(2)}/"
-              "${widget.section.getDepthMax().toStringAsFixed(2)}/"
+            "Length: ${widget.section.getLength().toStringAsFixed(2)}m - "
+            "Depth (start-(min/max)-end): "
+              "${widget.section.getDepthStart().toStringAsFixed(2)}-"
+              "(${widget.section.getDepthMin().toStringAsFixed(2)}/"
+              "${widget.section.getDepthMax().toStringAsFixed(2)})-"
               "${widget.section.getDepthEnd().toStringAsFixed(2)}m"),
         trailing: Row(
             mainAxisSize: MainAxisSize.min,
@@ -109,13 +109,13 @@ String generateRandomString(int length) {
 
     for (int i = 0; i < map.points.length-1; i++) {
       int adjX = map.points[i].x < displayWidth * 3/4 ? 5 : -40;   // move text starting point to the left if we're in the right band of SVG
-      int adjY = map.points[i].y < displayHeight * 1/5 ? 10 : 0; // lower the textpath if we're in the upper part of the SVG
+      int adjY = map.points[i].y < displayHeight * 1/5 ? 13 : -3;   // lower the textpath if we're in the upper part of the SVG
       
       result.write(
           "<circle cx=\"${map.points[i].x}\" cy=\"${map.points[i].y}\" "
           "r=\"4\" style = \"fill:none;stroke:${(i == 0) ? "yellow" : "red"};"
           "stroke-width:${(i == 0) ? 3 : 0.5}\" />"  
-          "<text x=\"${map.points[i].x + adjX}\" y=\"${map.points[i].y + adjY}\">${map.points[i].z.toStringAsFixed(2)}</text>");
+          "<text x=\"${map.points[i].x + adjX}\" y=\"${map.points[i].y + adjY}\">${map.points[i].z.toStringAsFixed(1)}</text>");
     }
 
     result.write("</svg>");
