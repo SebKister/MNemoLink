@@ -23,6 +23,7 @@ class SurvexExporter with ShotExport {
   Future<String> getContents(Section section, ExportShots exportShots,
       String surveyName, UnitType unitType) async {
     StringBuffer contents = StringBuffer(await headerComments());
+    StringBuffer lurdContents = StringBuffer();
 
     contents.write(newLine('*begin $surveyName'));
 
@@ -74,9 +75,9 @@ class SurvexExporter with ShotExport {
 
     // Main topo data
     contents.write(newLine(
-        '*data diving from to tape compass fromdepth todepth ignoreall'));
+        '*data diving from to tape compass backcompass fromdepth todepth ignoreall'));
     contents.write(newLine(
-        '; From\tTo\tLength\tAzimuth\tDepIn\tDepOut\tAzIn\tAzOut\tAzDelta\tPitchIn\tPitchOut'));
+        '; From\tTo\tLength\tAzIn\t180-AzOut\tDepIn\tDepOut\tAzIn\tAzOut\tAzDelta\tPitchIn\tPitchOut'));
     contents.write('\n');
 
     bool firstLine = true;
@@ -93,10 +94,29 @@ class SurvexExporter with ShotExport {
 
       // Formatting the measurement line
       contents.write(newLine(
-          '${exportShot.from}\t${exportShot.to}\t${exportShot.length.toStringAsFixed(2)}\t${exportShot.azimuthMean.toStringAsFixed(1)}\t${exportShot.depthIn.toStringAsFixed(2)}\t${exportShot.depthOut.toStringAsFixed(2)}\t${exportShot.azimuthIn.toStringAsFixed(1)}\t${exportShot.azimuthOut.toStringAsFixed(1)}\t${exportShot.azimuthDelta.toStringAsFixed(1)}\t${exportShot.pitchIn.toStringAsFixed(1)}\t${exportShot.pitchOut.toStringAsFixed(1)}'));
+          '${exportShot.from}\t${exportShot.to}\t${exportShot.length.toStringAsFixed(2)}\t${exportShot.azimuthIn.toStringAsFixed(1)}\t${exportShot.azimuthOut180.toStringAsFixed(1)}\t${exportShot.depthIn.toStringAsFixed(2)}\t${exportShot.depthOut.toStringAsFixed(2)}\t${exportShot.azimuthMean.toStringAsFixed(1)}\t${exportShot.azimuthOut.toStringAsFixed(1)}\t${exportShot.azimuthDelta.toStringAsFixed(1)}\t${exportShot.pitchIn.toStringAsFixed(1)}\t${exportShot.pitchOut.toStringAsFixed(1)}'));
+
+      if (exportShot.lurdShots.isNotEmpty) {
+        lurdContents.write(newLine('; LURD for station ${exportShot.to}'));
+        for (LURDShot lurdShot in exportShot.lurdShots) {
+          lurdContents.write(newLine(
+              '; ${enumToStringWithoutClassName(lurdShot.direction.toString())}'));
+          lurdContents.write(newLine(
+              '${exportShot.to}\t-\t${lurdShot.length.toStringAsFixed(2)}\t${lurdShot.azimuth.toStringAsFixed(1)}\t${lurdShot.clino.toStringAsFixed(1)}'));
+        }
+        lurdContents.write('\n');
+      }
+
       firstLine = false;
     }
     contents.write('\n');
+
+    if (lurdContents.isNotEmpty) {
+      contents.write(newLine('; LURD measurements'));
+      contents.write(newLine('*data normal from to tape compass clino'));
+      contents.write('\n');
+      contents.write(lurdContents.toString());
+    }
 
     // Finalizing the survey contents
     decreasePrefix();
