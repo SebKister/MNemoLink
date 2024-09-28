@@ -907,11 +907,10 @@ class _MyHomePageState extends State<MyHomePage> {
       stbuilder.write(utf8.decode([readByteFromEEProm(cursor++)]));
       stbuilder.write(utf8.decode([readByteFromEEProm(cursor++)]));
       section.setName(stbuilder.toString());
-      // Read Direction  0 for In 1 for Out
 
       if (kDebugMode) debugPrint("analyzeTransferBuffer(): -- section name: ${section.getName().toString()}");
 
-
+      // Read Direction 0 for In 1 for Out
       int directionIndex = readByteFromEEProm(cursor++);
       if (directionIndex == 0 || directionIndex == 1) {
         section.setDirection(SurveyDirection.values[directionIndex]);

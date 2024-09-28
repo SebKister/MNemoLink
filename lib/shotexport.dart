@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:dart_numerics/dart_numerics.dart';
 import 'package:mnemolink/section.dart';
 import 'package:mnemolink/sectionlist.dart';
 import 'package:mnemolink/shot.dart';
@@ -140,6 +141,10 @@ mixin ShotExport {
           depthOut: depthOut,
           azimuthMean: azimuthMean,
           azimuthDelta: azimuthDelta,
+          lurdLeft: shot.getLeft(),
+          lurdRight: shot.getRight(),
+          lurdUp: shot.getUp(),
+          lurdDown: shot.getDown(),
           azimuthComments: azimuthComments);
 
       svxShots.add(svxShot);
@@ -178,27 +183,89 @@ class ExportShot {
   double length;
   double azimuthIn;
   double azimuthOut;
+  late double azimuthOut180;
   double pitchIn;
   double pitchOut;
   double depthIn;
   double depthOut;
   double azimuthMean;
   double azimuthDelta;
+  late List<LURDShot> lurdShots;
   List<String> azimuthComments;
 
-  ExportShot(
-      {required this.from,
-      required this.to,
-      required this.length,
-      required this.azimuthIn,
-      required this.azimuthOut,
-      required this.pitchIn,
-      required this.pitchOut,
-      required this.depthIn,
-      required this.depthOut,
-      required this.azimuthMean,
-      required this.azimuthDelta,
-      required this.azimuthComments});
+  ExportShot({
+    required this.from,
+    required this.to,
+    required this.length,
+    required this.azimuthIn,
+    required this.azimuthOut,
+    required this.pitchIn,
+    required this.pitchOut,
+    required this.depthIn,
+    required this.depthOut,
+    required this.azimuthMean,
+    required this.azimuthDelta,
+    required double lurdLeft,
+    required double lurdRight,
+    required double lurdUp,
+    required double lurdDown,
+    required this.azimuthComments,
+  }) {
+    azimuthOut180 = (azimuthOut + 180) % 360;
+    lurdShots = [];
+    if (!almostEqual(0.0, lurdLeft)) {
+      lurdShots.add(
+        LURDShot(
+          direction: LURDDirection.left,
+          length: lurdLeft,
+          azimuth: _addAngles(azimuthMean, -90.0),
+          clino: 0.0,
+        ),
+      );
+    }
+    if (!almostEqual(0.0, lurdRight)) {
+      lurdShots.add(
+        LURDShot(
+          direction: LURDDirection.right,
+          length: lurdRight,
+          azimuth: _addAngles(azimuthMean, 90.0),
+          clino: 0.0,
+        ),
+      );
+    }
+    if (!almostEqual(0.0, lurdUp)) {
+      lurdShots.add(
+        LURDShot(
+          direction: LURDDirection.up,
+          length: lurdUp,
+          azimuth: 0.0,
+          clino: 90.0,
+        ),
+      );
+    }
+    if (!almostEqual(0.0, lurdDown)) {
+      lurdShots.add(
+        LURDShot(
+          direction: LURDDirection.down,
+          length: lurdDown,
+          azimuth: 0.0,
+          clino: -90.0,
+        ),
+      );
+    }
+  }
+
+  double _addAngles(double angle, double delta) {
+    double newAngle = angle + delta;
+
+    if (newAngle >= 360) {
+      newAngle -= 360;
+    } else if (newAngle < 0) {
+      newAngle += 360;
+    }
+
+    return newAngle;
+  }
 }
 
 class ExportShots {
@@ -206,3 +273,23 @@ class ExportShots {
 
   ExportShots({required this.shots});
 }
+
+String enumToStringWithoutClassName(dynamic enumValue) {
+  return enumValue.toString().split('.').last;
+}
+
+class LURDShot {
+  LURDDirection direction;
+  double length;
+  double azimuth;
+  double clino;
+
+  LURDShot({
+    required this.direction,
+    required this.length,
+    required this.azimuth,
+    required this.clino,
+  });
+}
+
+enum LURDDirection { left, right, up, down }
