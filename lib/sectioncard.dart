@@ -75,7 +75,7 @@ String generateRandomString(int length) {
                   ),
                 ),
               const SizedBox(width: 6), 
-              Text(DateFormat('yyyy-MM-dd').format(widget.section.dateSurvey)),
+              Text(DateFormat('yyyy-MM-dd HH:mm').format(widget.section.dateSurvey)),
             ],            
           ),
         leading: WidgetZoom(
