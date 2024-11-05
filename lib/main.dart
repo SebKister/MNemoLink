@@ -859,8 +859,9 @@ class _MyHomePageState extends State<MyHomePage> {
 
     while (cursor < currentMemory - 2) {
       Section section = Section();
-      if (kDebugMode)
+      if (kDebugMode) {
         debugPrint("analyzeTransferBuffer(): + Started new section");
+      }
 
       int fileVersion = 0;
       int checkByteA = 0;
@@ -883,9 +884,10 @@ class _MyHomePageState extends State<MyHomePage> {
         if (checkByteA != fileVersionValueA ||
             checkByteB != fileVersionValueB ||
             checkByteC != fileVersionValueC) {
-          if (kDebugMode)
+          if (kDebugMode) {
             debugPrint(
                 "analyzeTransferBuffer(): -- fileVersion= = 5, fileVersion check numbers ($checkByteA:$checkByteB:$checkByteC) don't meet expectations");
+          }
           return;
         }
       }
@@ -905,8 +907,9 @@ class _MyHomePageState extends State<MyHomePage> {
       //  LocalDateTime dateSection = LocalDateTime.now();
       section.setDateSurvey(dateSection);
 
-      if (kDebugMode)
+      if (kDebugMode) {
         debugPrint("analyzeTransferBuffer(): -- section date: $dateSection");
+      }
 
       // Read section type and name
       StringBuffer stbuilder = StringBuffer();
@@ -915,23 +918,26 @@ class _MyHomePageState extends State<MyHomePage> {
       stbuilder.write(utf8.decode([readByteFromEEProm(cursor++)]));
       section.setName(stbuilder.toString());
 
-      if (kDebugMode)
+      if (kDebugMode) {
         debugPrint(
             "analyzeTransferBuffer(): -- section name: ${section.getName().toString()}");
+      }
 
       // Read Direction 0 for In 1 for Out
       int directionIndex = readByteFromEEProm(cursor++);
       if (directionIndex == 0 || directionIndex == 1) {
         section.setDirection(SurveyDirection.values[directionIndex]);
       } else {
-        if (kDebugMode)
+        if (kDebugMode) {
           debugPrint(
               "analyzeTransferBuffer(): -! problematic section direction ($directionIndex)");
+        }
         break;
       }
-      if (kDebugMode)
+      if (kDebugMode) {
         debugPrint(
             "analyzeTransferBuffer(): -- section direction: ${section.getDirection()}");
+      }
 
       double conversionFactor = 0.0;
       if (unitType == UnitType.metric) {
@@ -943,8 +949,9 @@ class _MyHomePageState extends State<MyHomePage> {
       Shot shot;
       do {
         shot = Shot.zero();
-        if (kDebugMode)
+        if (kDebugMode) {
           debugPrint("analyzeTransferBuffer(): -> Started new shot");
+        }
 
         int typeShot = 0;
         if (fileVersion >= 5) {
@@ -954,9 +961,10 @@ class _MyHomePageState extends State<MyHomePage> {
           if (checkByteA != shotStartValueA ||
               checkByteB != shotStartValueB ||
               checkByteC != shotStartValueC) {
-            if (kDebugMode)
+            if (kDebugMode) {
               debugPrint(
                   "analyzeTransferBuffer(): <--! Shot start magic bytes ($checkByteA:$checkByteB:$checkByteC) don't meet expectations");
+            }
             shot = Shot.zero();
             shot.setTypeShot(TypeShot.eoc);
             section.getShots().add(shot);
@@ -969,9 +977,10 @@ class _MyHomePageState extends State<MyHomePage> {
         typeShot = readByteFromEEProm(cursor++);
 
         if (typeShot > 3 || typeShot < 0) {
-          if (kDebugMode)
+          if (kDebugMode) {
             debugPrint(
                 "analyzeTransferBuffer(): <--! Shot type ($typeShot) not valid");
+          }
           break;
         }
 
@@ -1015,9 +1024,10 @@ class _MyHomePageState extends State<MyHomePage> {
           cursor += 2;
           shot.setDown(readIntFromEEProm(cursor) * conversionFactor / 100.0);
           cursor += 2;
-          if (kDebugMode)
+          if (kDebugMode) {
             debugPrint(
                 "analyzeTransferBuffer(): ---- Shot data: LRUD: ${shot.getLeft().toString()} ${shot.getRight().toString()} ${shot.getUp().toString()} ${shot.getDown().toString()}");
+          }
         }
         if (fileVersion >= 3) {
           shot.setTemperature(readIntFromEEProm(cursor));
@@ -1025,9 +1035,10 @@ class _MyHomePageState extends State<MyHomePage> {
           shot.setHr(readByteFromEEProm(cursor++));
           shot.setMin(readByteFromEEProm(cursor++));
           shot.setSec(readByteFromEEProm(cursor++));
-          if (kDebugMode)
+          if (kDebugMode) {
             debugPrint(
                 "analyzeTransferBuffer(): ---- Shot data: Temperatue=${shot.getTemperature().toString()} Shot time=${shot.getHr().toString()}:${shot.getMin().toString()}:${shot.getSec().toString()}");
+          }
         } else {
           shot.setTemperature(0);
           shot.setHr(0);
@@ -1037,8 +1048,9 @@ class _MyHomePageState extends State<MyHomePage> {
 
         shot.setMarkerIndex(readByteFromEEProm(cursor++));
         section.getShots().add(shot);
-        if (kDebugMode)
+        if (kDebugMode) {
           debugPrint("analyzeTransferBuffer(): <--- Closing shot");
+        }
 
         if (fileVersion >= 5) {
           checkByteA = readByteFromEEProm(cursor++);
@@ -1047,9 +1059,10 @@ class _MyHomePageState extends State<MyHomePage> {
           if (checkByteA != shotEndValueA ||
               checkByteB != shotEndValueB ||
               checkByteC != shotEndValueC) {
-            if (kDebugMode)
+            if (kDebugMode) {
               debugPrint(
                   "analyzeTransferBuffer(): <--! Shot end magic bytes ($checkByteA:$checkByteB:$checkByteC) don't meet expectations");
+            }
             shot = Shot.zero();
             shot.setTypeShot(TypeShot.eoc);
             section.getShots().add(shot);
@@ -1064,8 +1077,9 @@ class _MyHomePageState extends State<MyHomePage> {
       setState(() {
         // Adding section only if it contains data. Note : EOC shot should always be present at end of section.
         if (section.shots.length > 1) {
-          if (kDebugMode)
+          if (kDebugMode) {
             debugPrint("analyzeTransferBuffer(): <-- Closing section");
+          }
           sections.getSections().add(section);
         }
       });
