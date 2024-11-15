@@ -18,7 +18,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.5.0+4
 
 environment:
-  sdk: '^3.1.3'
+  sdk: '^3.5.4'
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -42,11 +42,15 @@ dependencies:
   flutter:
     sdk: flutter
   flutter_colorpicker: null
-  flutter_libserialport: ^0.4.0
+  flutter_libserialport: #^0.5.0
+    # remove this git part when 0.5.0 is published
+    git:
+      url: https://github.com/snabble/flutter_libserialport.git
+      ref: 0.5.0
   flutter_svg: null
   intl: null
   loading_animation_widget: null
-  network_info_plus: ^6.0.1
+  network_info_plus: ^6.1.0
   package_info_plus: null
   path_provider: null
   shared_preferences: ^2.2.2
