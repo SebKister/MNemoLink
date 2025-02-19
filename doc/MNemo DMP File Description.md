@@ -31,7 +31,7 @@
     
     Direction ; ( 0=IN,1=OUT)
 
-**[Per Shot]** _(36 Bytes)_
+**[Per Shot]** _(35 Bytes)_
 
     57;
     
@@ -103,6 +103,6 @@
     
     35;
 
-**[Section Termination]** _(36 Bytes)_
+**[Section Termination]** _(35 Bytes)_
 
     57;67;77;3; [28 times 0;]95;25;35;

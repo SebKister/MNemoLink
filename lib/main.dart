@@ -238,7 +238,9 @@ class _MyHomePageState extends State<MyHomePage> {
       var pingResult = await ping.stream.first;
       if (pingResult.error?.error == ErrorType.requestTimedOut ||
           pingResult.error?.error == ErrorType.unknown ||
-          pingResult.response == null) return false;
+          pingResult.response == null) {
+        return false;
+      }
 
       //Than GET IsMNemoHere to see if ip is a MNemo
       debugPrint(ipString);
@@ -2701,27 +2703,27 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> setCurrentColorSchemeReadingA() async {
     setState(() => readingAColor = pickerColor);
-    await executeCLIAsync("setcolor readinga ${pickerColor.value.toString()}");
+    await executeCLIAsync("setcolor readinga ${((pickerColor.b*255).floor()+(pickerColor.g*255).floor()*256+(pickerColor.r*255).floor()*65536+(pickerColor.a*255).floor()*16777216).toString()}");
   }
 
   Future<void> setCurrentColorSchemeReadingB() async {
     setState(() => readingBColor = pickerColor);
-    await executeCLIAsync("setcolor readingb ${pickerColor.value.toString()}");
+    await executeCLIAsync("setcolor readingb ${((pickerColor.b*255).floor()+(pickerColor.g*255).floor()*256+(pickerColor.r*255).floor()*65536+(pickerColor.a*255).floor()*16777216).toString()}");
   }
 
   Future<void> setCurrentColorSchemeReady() async {
     setState(() => readyColor = pickerColor);
-    await executeCLIAsync("setcolor ready ${pickerColor.value.toString()}");
+    await executeCLIAsync("setcolor ready ${((pickerColor.b*255).floor()+(pickerColor.g*255).floor()*256+(pickerColor.r*255).floor()*65536+(pickerColor.a*255).floor()*16777216).toString()}");
   }
 
   Future<void> setCurrentColorSchemeStabilize() async {
     setState(() => stabilizeColor = pickerColor);
-    await executeCLIAsync("setcolor stabilize ${pickerColor.value.toString()}");
+    await executeCLIAsync("setcolor stabilize ${((pickerColor.b*255).floor()+(pickerColor.g*255).floor()*256+(pickerColor.r*255).floor()*65536+(pickerColor.a*255).floor()*16777216).toString()}");
   }
 
   Future<void> setCurrentColorSchemeStandBy() async {
     setState(() => standbyColor = pickerColor);
-    await executeCLIAsync("setcolor standby ${pickerColor.value.toString()}");
+    await executeCLIAsync("setcolor standby ${((pickerColor.b*255).floor()+(pickerColor.g*255).floor()*256+(pickerColor.r*255).floor()*65536+(pickerColor.a*255).floor()*16777216).toString()}");
   }
 
   Future<void> resetColorScheme() async {
@@ -2759,7 +2761,9 @@ class _MyHomePageState extends State<MyHomePage> {
     if (int.tryParse(splits[0]) == null ||
         int.tryParse(splits[1]) == null ||
         int.tryParse(splits[2]) == null ||
-        int.tryParse(splits[3]) == null) return false;
+        int.tryParse(splits[3]) == null) {
+      return false;
+    }
 
     for (int i = 0; i < 4; i++) {
       var s = int.parse(splits[i]);
