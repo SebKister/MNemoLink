@@ -1,10 +1,8 @@
 import 'dart:io';
 
 import 'package:intl/intl.dart';
-import 'package:mnemolink/sectionlist.dart';
 import 'package:excel/excel.dart';
-import './section.dart';
-import './shot.dart';
+import 'models/models.dart';
 
 void writeHeaderOnSheet(Sheet sheet, int rowNumber) {
   var ls = [
