@@ -162,10 +162,14 @@ class SettingActionRadioList extends StatelessWidget {
       children: actionMap.keys
           .map((String k) => Row(
                 children: [
+                  // TODO: Update to RadioGroup when migrating to newer Flutter patterns
+                  // ignore: deprecated_member_use
                   Radio<int>(
                     key: null,
-                    groupValue: selectedValue,
                     value: actionMap[k]!.toInt(),
+                    // ignore: deprecated_member_use
+                    groupValue: selectedValue,
+                    // ignore: deprecated_member_use
                     onChanged: callback,
                   ),
                   Text(k),
