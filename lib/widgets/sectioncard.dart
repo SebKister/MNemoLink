@@ -2,13 +2,12 @@ import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:mnemolink/section.dart';
+import '../models/models.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:mnemolink/shot.dart';
 import 'package:widget_zoom/widget_zoom.dart';
 
 
-import 'mapsurvey.dart';
+import '../mapsurvey.dart';
 
 class SectionCard extends StatefulWidget {
   final Section section;

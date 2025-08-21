@@ -1,6 +1,5 @@
-import 'package:mnemolink/section.dart';
-import 'package:mnemolink/shot.dart';
-import 'package:mnemolink/shotexport.dart';
+import 'models/models.dart';
+import 'shotexport.dart';
 
 class THExporter with ShotExport {
   @override

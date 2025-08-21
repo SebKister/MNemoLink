@@ -3,9 +3,7 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:dart_numerics/dart_numerics.dart';
-import 'package:mnemolink/section.dart';
-import 'package:mnemolink/sectionlist.dart';
-import 'package:mnemolink/shot.dart';
+import 'models/models.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:slugify/slugify.dart';
 

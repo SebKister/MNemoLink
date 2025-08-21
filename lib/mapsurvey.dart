@@ -1,6 +1,6 @@
 import 'dart:math';
 
-import 'package:mnemolink/section.dart';
+import 'models/models.dart';
 
 class Point3d extends Point<double> { 
   final double z; 
