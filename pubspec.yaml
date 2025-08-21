@@ -42,11 +42,7 @@ dependencies:
   flutter:
     sdk: flutter
   flutter_colorpicker: null
-  flutter_libserialport: #^0.5.0
-    # remove this git part when 0.5.0 is published
-    git:
-      url: https://github.com/snabble/flutter_libserialport.git
-      ref: 0.5.0
+  flutter_libserialport: ^0.6.0
   flutter_svg: null
   intl: null
   loading_animation_widget: null
