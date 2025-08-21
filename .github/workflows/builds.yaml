@@ -74,24 +74,7 @@ jobs:
       - name: Build (MacOS)
         run: flutter build macos
 
-  build-ios:
-    name: Build for iOS
-    runs-on: macos-latest
-    needs: [linter, build-macos]
-    steps:
-      - name: Checkout the repo
-        uses: actions/checkout@v4
-      - name: Install flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          cache: true
-          architecture: x64
-      - name: MacOS dependencies
-        run: brew install automake libtool
-      - name: Build (iOS)
-        run: flutter build ios --release --no-codesign
-        
+
   build-windows:
     name: Build for Windows
     runs-on: windows-latest
@@ -110,25 +93,3 @@ jobs:
       - name: Build (Windows)
         run: flutter build windows
 
-  build-android:
-    name: Build for Android
-    runs-on: ubuntu-latest
-    needs: [linter, build-linux]
-    steps:
-      - name: Checkout the repo
-        uses: actions/checkout@v4
-      - name: Setup Java 
-        uses: actions/setup-java@v2
-        with:
-          distribution: 'zulu'
-          java-version: '17'
-      - name: Install flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          cache: true
-          architecture: x64
-      - name: Build (Android APK)
-        run: flutter build apk --debug
-      - name: Build (Android Appbundle)
-        run: flutter build appbundle --debug
