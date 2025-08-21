@@ -100,6 +100,10 @@ jobs:
     steps:
       - name: Checkout the repo
         uses: actions/checkout@v4
+      - name: Setup Xcode version
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '15.4'
       - name: Install flutter
         uses: subosito/flutter-action@v2
         with:
@@ -108,6 +112,11 @@ jobs:
           architecture: x64
       - name: MacOS dependencies
         run: brew install automake libtool
+      - name: Show Xcode and iOS SDK info
+        run: |
+          xcodebuild -version
+          xcrun --show-sdk-path --sdk iphoneos
+          xcrun --show-sdk-version --sdk iphoneos
       - name: Build (iOS)
         run: flutter build ios --release --no-codesign
         
