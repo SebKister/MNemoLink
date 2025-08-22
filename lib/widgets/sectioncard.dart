@@ -29,8 +29,49 @@ class SectionCardState extends State<SectionCard> {
   @override
   void initState() {
     super.initState();
+    _rebuildSVG();
+  }
+
+  @override
+  void didUpdateWidget(SectionCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Rebuild SVG if section data has changed or adjustments were made
+    if (oldWidget.section != widget.section || 
+        _hasAdjustmentChanges(oldWidget.section, widget.section)) {
+      setState(() {
+        _rebuildSVG();
+      });
+    }
+  }
+
+  bool _hasAdjustmentChanges(Section oldSection, Section newSection) {
+    // Check if line tension adjustments have changed
+    if (oldSection.hasAdjustedShots() != newSection.hasAdjustedShots()) {
+      return true;
+    }
+    
+    if (oldSection.getAdjustedShotsCount() != newSection.getAdjustedShotsCount()) {
+      return true;
+    }
+    
+    // Check if any shot lengths have changed (indicating adjustments)
+    if (oldSection.shots.length != newSection.shots.length) {
+      return true;
+    }
+    
+    for (int i = 0; i < oldSection.shots.length && i < newSection.shots.length; i++) {
+      if (oldSection.shots[i].length != newSection.shots[i].length ||
+          oldSection.shots[i].isLineTensionInvalid != newSection.shots[i].isLineTensionInvalid) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
+  void _rebuildSVG() {
     map = MapSurvey.build(widget.section);
-    rawSvg = buildSVG(map.buildDisplayMap(displayWidth, displayHeight));
+    rawSvg = buildSVG(map.buildDisplayMap(displayWidth, displayHeight, padding: 20));
     picture = SvgPicture.string(
       rawSvg,
       width: (Platform.isAndroid || Platform.isIOS) ? 50 : 200,
@@ -65,6 +106,15 @@ String generateRandomString(int length) {
         trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: <Widget> [
+              if (widget.section.hasAdjustedShots()) 
+                Tooltip(
+                  message: 'Section contains ${widget.section.getAdjustedShotsCount()} shot(s) with adjusted length due to insufficient line tension',
+                  child: const Icon(
+                    Icons.straighten, 
+                    color: Colors.blue,
+                  ),
+                ),
+              if (widget.section.hasAdjustedShots()) const SizedBox(width: 6),
               if (widget.section.getBrokenFlag()) 
                 const Tooltip(
                   message: 'Recovered section', // Hover note
@@ -73,7 +123,7 @@ String generateRandomString(int length) {
                     color: Colors.orange,
                   ),
                 ),
-              const SizedBox(width: 6), 
+              if (widget.section.getBrokenFlag()) const SizedBox(width: 6), 
               Text(DateFormat('yyyy-MM-dd HH:mm').format(widget.section.dateSurvey)),
             ],            
           ),
@@ -96,15 +146,25 @@ String generateRandomString(int length) {
         "width=\"${displayWidth + margin - 1}\" height=\"${displayHeight + margin -1 }\" "
         "style=\"fill:lightgrey;fill-opacity:0.6;stroke:blue;stroke-width:0.5;stroke-opacity:1\" />");
 
-    result.write("<polyline points=\"");
-
-    for (int i = 0; i < map.points.length-1; i++) {
-      if (i != 0) result.write(" ");
-      result.write(map.points[i].x);
-      result.write(",");
-      result.write(map.points[i].y);
+    // Draw individual line segments so we can style adjusted shots differently
+    for (int i = 0; i < map.points.length - 1; i++) {
+      // Check if this shot is line tension invalid (adjusted)
+      bool isAdjusted = false;
+      if (i < map.shots.length && map.shots[i].typeShot == TypeShot.std) {
+        isAdjusted = map.shots[i].isLineTensionInvalid;
+      }
+      
+      // Choose stroke style based on whether shot was adjusted
+      // Adjusted shots (line tension invalid) are shown as dark gray dashed lines
+      String strokeStyle = isAdjusted 
+          ? "fill:none;stroke:darkgray;stroke-width:2;stroke-dasharray:5,3"
+          : "fill:none;stroke:black;stroke-width:2";
+      
+      result.write(
+          "<line x1=\"${map.points[i].x}\" y1=\"${map.points[i].y}\" "
+          "x2=\"${map.points[i + 1].x}\" y2=\"${map.points[i + 1].y}\" "
+          "style=\"$strokeStyle\" />");
     }
-    result.write("\" style = \"fill:none;stroke:black;stroke-width:2\" />");
 
     for (int i = 0; i < map.points.length-1; i++) {
       int adjX = map.points[i].x < displayWidth * 3/4 ? 5 : -40;   // move text starting point to the left if we're in the right band of SVG

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import '../models/models.dart';
 
@@ -16,12 +17,22 @@ class DataProcessingService {
   static const int _shotEndValueA = 95;
   static const int _shotEndValueB = 25;
   static const int _shotEndValueC = 35;
+  
+  // Angle calculation constants
+  static const double _pi = 3.14159265359;
+  static const double _degreesToRadians = _pi / 180.0;
+  static const double _minAngleRadians = 0.0175; // 1 degree in radians
+  static const double _rawToDegreesConversion = 10.0; // Raw compass values to degrees
 
   /// Process raw binary transfer buffer into survey sections
   Future<DataProcessingResult> processTransferBuffer(
     List<int> transferBuffer, 
-    UnitType unitType
-  ) async {
+    UnitType unitType, {
+    bool enableLineTensionValidation = false,
+    double lineTensionThresholdRatio = 0.5,
+    LineTensionAdjustmentMethod adjustmentMethod = LineTensionAdjustmentMethod.useDepthChange,
+    double azimuthCorrectionStrength = 0.4,
+  }) async {
     try {
       final sections = <Section>[];
       int cursor = 0;
@@ -49,6 +60,16 @@ class DataProcessingService {
         if (sectionResult.shouldStop) {
           break;
         }
+      }
+
+      // Apply line tension validation and adjustment if enabled
+      if (enableLineTensionValidation) {
+        _processLineTensionValidation(
+          sections,
+          lineTensionThresholdRatio,
+          adjustmentMethod,
+          azimuthCorrectionStrength,
+        );
       }
 
       return DataProcessingResult.success(
@@ -356,6 +377,259 @@ class DataProcessingService {
     final bytes = Uint8List.fromList([buffer[address], buffer[address + 1]]);
     final byteData = ByteData.sublistView(bytes);
     return byteData.getInt16(0);
+  }
+
+  /// Process line tension validation and adjustment for all sections
+  void _processLineTensionValidation(
+    List<Section> sections,
+    double thresholdRatio,
+    LineTensionAdjustmentMethod adjustmentMethod,
+    double azimuthCorrectionStrength,
+  ) {
+    for (final section in sections) {
+      _validateAndAdjustSectionShots(section, thresholdRatio, adjustmentMethod, azimuthCorrectionStrength);
+    }
+  }
+
+  /// Validate and adjust shots in a single section for line tension issues
+  void _validateAndAdjustSectionShots(
+    Section section,
+    double thresholdRatio,
+    LineTensionAdjustmentMethod adjustmentMethod,
+    double azimuthCorrectionStrength,
+  ) {
+    final shots = section.shots;
+    
+    for (int i = 0; i < shots.length; i++) {
+      final shot = shots[i];
+      
+      // Skip non-standard shots (CSA, CSB, EOC)
+      if (shot.typeShot != TypeShot.std) continue;
+      
+      final depthChange = shot.getDepthChange();
+      
+      // Check if shot is invalid:
+      // 1. Distance shorter than depth change is always invalid (physically impossible)
+      // 2. Distance only slightly longer than depth change may also be invalid (controlled by threshold)
+      final isPhysicallyImpossible = shot.length < depthChange;
+      final isSuspiciouslyShort = depthChange > 0 && 
+          shot.length < (depthChange * (1.0 + thresholdRatio));
+      
+      if (isPhysicallyImpossible || isSuspiciouslyShort) {
+        // Mark as invalid and store original length
+        shot.setIsLineTensionInvalid(true);
+        shot.setOriginalLength(shot.length);
+        
+        // Adjust the distance based on selected method
+        switch (adjustmentMethod) {
+          case LineTensionAdjustmentMethod.useDepthChange:
+            shot.setLength(depthChange);
+            break;
+          case LineTensionAdjustmentMethod.useAverageAngle:
+            final adjustedDistance = _calculateDistanceFromAverageAngle(shots, i, azimuthCorrectionStrength);
+            if (adjustedDistance > 0) {
+              shot.setLength(adjustedDistance);
+            } else {
+              // Fallback to depth change if angle calculation fails
+              shot.setLength(depthChange);
+            }
+            break;
+        }
+        
+        if (kDebugMode) {
+          final reason = isPhysicallyImpossible ? "physically impossible" : "suspiciously short";
+          debugPrint("Line tension adjustment: Shot $i in section ${section.name} "
+              "($reason) adjusted from ${shot.originalLength.toStringAsFixed(2)} to "
+              "${shot.length.toStringAsFixed(2)} (depth change: ${depthChange.toStringAsFixed(2)})");
+        }
+      }
+    }
+  }
+
+  /// Calculate distance using average angle from adjacent shots
+  double _calculateDistanceFromAverageAngle(List<Shot> shots, int currentIndex, double azimuthCorrectionStrength) {
+    final currentShot = shots[currentIndex];
+    final depthChange = currentShot.getDepthChange();
+    
+    if (kDebugMode) {
+      debugPrint("Line tension adjustment [Shot $currentIndex]: orig=${currentShot.length.toStringAsFixed(2)}, depth_change=${depthChange.toStringAsFixed(2)}");
+    }
+    
+    // Find valid adjacent shots for angle calculation
+    Shot? prevShot;
+    Shot? nextShot;
+    
+    // Look for previous valid shot
+    for (int i = currentIndex - 1; i >= 0; i--) {
+      if (shots[i].typeShot == TypeShot.std && !shots[i].isLineTensionInvalid) {
+        prevShot = shots[i];
+        break;
+      }
+    }
+    
+    // Look for next valid shot
+    for (int i = currentIndex + 1; i < shots.length; i++) {
+      if (shots[i].typeShot == TypeShot.std && !shots[i].isLineTensionInvalid) {
+        nextShot = shots[i];
+        break;
+      }
+    }
+    
+    // Need at least one adjacent shot for angle calculation
+    if (prevShot == null && nextShot == null) {
+      if (kDebugMode) {
+        debugPrint("  No adjacent shots found, using fallback");
+      }
+      return 0.0; // Cannot calculate, fallback will be used
+    }
+    
+    // Calculate average depth angle from adjacent shots' geometry
+    double totalPitch = 0.0;
+    int shotCount = 0;
+    
+    if (prevShot != null) {
+      // Calculate depth angle from the shot's geometry
+      final prevDepthChange = prevShot.getDepthChange();
+      final prevLength = prevShot.length;
+      
+      // Calculate depth angle: arcsin(depth_change / length)
+      double depthAngleDegrees = 0.0;
+      if (prevLength > 0 && prevDepthChange > 0) {
+        final sinDepthAngle = prevDepthChange / prevLength;
+        if (sinDepthAngle <= 1.0) { // Ensure valid sine value
+          depthAngleDegrees = math.asin(sinDepthAngle) / _degreesToRadians;
+        }
+      }
+      
+      totalPitch += depthAngleDegrees;
+      shotCount++;
+      
+      if (kDebugMode) {
+        debugPrint("  Prev: ${depthAngleDegrees.toStringAsFixed(1)}° (${prevDepthChange.toStringAsFixed(2)}/${prevLength.toStringAsFixed(2)})");
+      }
+    }
+    
+    if (nextShot != null) {
+      // Calculate depth angle from the shot's geometry
+      final nextDepthChange = nextShot.getDepthChange();
+      final nextLength = nextShot.length;
+      
+      // Calculate depth angle: arcsin(depth_change / length)
+      double depthAngleDegrees = 0.0;
+      if (nextLength > 0 && nextDepthChange > 0) {
+        final sinDepthAngle = nextDepthChange / nextLength;
+        if (sinDepthAngle <= 1.0) { // Ensure valid sine value
+          depthAngleDegrees = math.asin(sinDepthAngle) / _degreesToRadians;
+        }
+      }
+      
+      totalPitch += depthAngleDegrees;
+      shotCount++;
+      
+      if (kDebugMode) {
+        debugPrint("  Next: ${depthAngleDegrees.toStringAsFixed(1)}° (${nextDepthChange.toStringAsFixed(2)}/${nextLength.toStringAsFixed(2)})");
+      }
+    }
+    
+    final averageDepthAngle = totalPitch / shotCount;
+    
+    // Convert depth angle to radians and calculate distance
+    // Using the formula: distance = depth_change / sin(depth_angle)
+    final depthAngleRadians = averageDepthAngle * _degreesToRadians;
+    
+    // Calculate distance using: depth_change = distance * sin(depth_angle)
+    // Therefore: distance = depth_change / sin(depth_angle)
+    if (depthAngleRadians.abs() < _minAngleRadians) { // Less than 1 degree, treat as horizontal
+      if (kDebugMode) {
+        debugPrint("  Avg angle: ${averageDepthAngle.toStringAsFixed(1)}° → horizontal, result: ${depthChange.toStringAsFixed(2)}");
+      }
+      return depthChange; // If nearly horizontal, use depth change as distance
+    }
+    
+    final sinDepthAngle = math.sin(depthAngleRadians.abs());
+    final baseDistance = depthChange / sinDepthAngle;
+    
+    // Factor in azimuth (direction) changes to account for lateral tape deviation
+    final azimuthCorrection = _calculateAzimuthCorrection(shots, currentIndex, prevShot, nextShot, azimuthCorrectionStrength);
+    final calculatedDistance = baseDistance * azimuthCorrection;
+    
+    if (kDebugMode) {
+      debugPrint("  Avg angle: ${averageDepthAngle.toStringAsFixed(1)}° → base: ${baseDistance.toStringAsFixed(2)}, azimuth factor: ${azimuthCorrection.toStringAsFixed(3)} → final: ${calculatedDistance.toStringAsFixed(2)}");
+    }
+    
+    // Sanity check: ensure calculated distance is reasonable
+    if (calculatedDistance > 0 && calculatedDistance < depthChange * 10) {
+      return calculatedDistance;
+    }
+    
+    if (kDebugMode) {
+      debugPrint("  Sanity check failed (${calculatedDistance.toStringAsFixed(2)}), using fallback");
+    }
+    
+    return 0.0; // Invalid calculation, fallback will be used
+  }
+
+  /// Calculate azimuth correction factor based on direction changes
+  double _calculateAzimuthCorrection(List<Shot> shots, int currentIndex, Shot? prevShot, Shot? nextShot, double correctionStrength) {
+    final currentShot = shots[currentIndex];
+    
+    // Use heading out for consistency (direction at the end of the shot)
+    final currentHeading = currentShot.headingOut / _rawToDegreesConversion; // Convert from raw to degrees
+    
+    double totalHeadingDiff = 0.0;
+    int comparisonCount = 0;
+    
+    if (prevShot != null) {
+      final prevHeading = prevShot.headingOut / _rawToDegreesConversion;
+      final headingDiff = _calculateHeadingDifference(currentHeading, prevHeading);
+      totalHeadingDiff += headingDiff;
+      comparisonCount++;
+      
+      if (kDebugMode) {
+        debugPrint("  Azimuth vs prev: ${currentHeading.toStringAsFixed(0)}° vs ${prevHeading.toStringAsFixed(0)}° = ${headingDiff.toStringAsFixed(1)}° diff");
+      }
+    }
+    
+    if (nextShot != null) {
+      final nextHeading = nextShot.headingOut / _rawToDegreesConversion;
+      final headingDiff = _calculateHeadingDifference(currentHeading, nextHeading);
+      totalHeadingDiff += headingDiff;
+      comparisonCount++;
+      
+      if (kDebugMode) {
+        debugPrint("  Azimuth vs next: ${currentHeading.toStringAsFixed(0)}° vs ${nextHeading.toStringAsFixed(0)}° = ${headingDiff.toStringAsFixed(1)}° diff");
+      }
+    }
+    
+    if (comparisonCount == 0) {
+      return 1.0; // No correction if no adjacent shots
+    }
+    
+    final avgHeadingDiff = totalHeadingDiff / comparisonCount;
+    
+    // Calculate correction factor based on average heading difference
+    // correctionStrength ranges from -0.99 to +0.99:
+    // - Positive values: larger heading differences → longer distance (lengthening)
+    // - Negative values: larger heading differences → shorter distance (shortening)
+    // - Zero: no azimuth correction applied
+    
+    final normalizedDiff = avgHeadingDiff / 180.0; // 0.0 to 1.0
+    final deviationFactor = 1.0 + (normalizedDiff * correctionStrength);
+    
+    if (kDebugMode) {
+      debugPrint("  Avg heading diff: ${avgHeadingDiff.toStringAsFixed(1)}° → correction factor: ${deviationFactor.toStringAsFixed(3)} (strength: ${correctionStrength.toStringAsFixed(2)})");
+    }
+    
+    return deviationFactor;
+  }
+
+  /// Calculate the smallest angle difference between two headings (accounting for 360° wrap)
+  double _calculateHeadingDifference(double heading1, double heading2) {
+    double diff = (heading1 - heading2).abs();
+    if (diff > 180.0) {
+      diff = 360.0 - diff;
+    }
+    return diff;
   }
 }
 
