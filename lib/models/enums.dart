@@ -19,3 +19,9 @@ enum UnitType {
   metric, 
   imperial 
 }
+
+/// Method for adjusting invalid shots with insufficient line tension
+enum LineTensionAdjustmentMethod {
+  useDepthChange,      // Set distance equal to depth change
+  useAverageAngle      // Calculate distance using average angle from adjacent shots
+}

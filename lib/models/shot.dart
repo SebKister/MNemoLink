@@ -26,6 +26,10 @@ class Shot {
   int min; // Minute  
   int sec; // Second
   int markerIndex;
+  
+  // Line tension validation
+  bool isLineTensionInvalid;    // Flag for shots with insufficient line tension
+  double originalLength;        // Original measured length before adjustment
 
   /// Default constructor
   Shot({
@@ -46,6 +50,8 @@ class Shot {
     this.min = 0,
     this.sec = 0,
     this.markerIndex = 0,
+    this.isLineTensionInvalid = false,
+    this.originalLength = 0.0,
   });
 
   /// Creates a zero-valued shot
@@ -102,4 +108,13 @@ class Shot {
   
   int getMarkerIndex() => markerIndex;
   void setMarkerIndex(int newMarkerIndex) => markerIndex = newMarkerIndex;
+  
+  bool getIsLineTensionInvalid() => isLineTensionInvalid;
+  void setIsLineTensionInvalid(bool invalid) => isLineTensionInvalid = invalid;
+  
+  double getOriginalLength() => originalLength;
+  void setOriginalLength(double length) => originalLength = length;
+  
+  /// Calculate depth change (absolute difference between in and out depths)
+  double getDepthChange() => (depthOut - depthIn).abs();
 }

@@ -14,11 +14,13 @@ class Point3d extends Point<double> {
 class MapSurvey {
   int id = 0;
   List<Point3d> points = [];
+  List<Shot> shots = []; // Store reference to original shots
 
   MapSurvey();
 
   void buildMap(Section section) {
-
+    // Store reference to shots
+    shots = section.shots;
 
     Point3d start = Point3d(0, 0, section.shots.first.depthIn);
     points.add(start);
@@ -65,7 +67,7 @@ class MapSurvey {
     return Point3d(pointx, pointy, 0);
   }
 
-  MapSurvey buildDisplayMap(double displayWidth, double displayHeight) {
+  MapSurvey buildDisplayMap(double displayWidth, double displayHeight, {double padding = 0}) {
     Point3d minPoint = getMinPoint();
     Point3d maxPoint = getMaxPoint();
 
@@ -77,14 +79,21 @@ class MapSurvey {
     maxSize = max (xSize, ySize); 
 
     MapSurvey dMap = MapSurvey();
+    
+    // Preserve shot references in the display map
+    dMap.shots = shots;
+
+    // Calculate effective display area accounting for padding
+    double effectiveWidth = displayWidth - (padding * 2);
+    double effectiveHeight = displayHeight - (padding * 2);
 
     for (int i = 0; i < points.length; i++) {
       dMap.points.add(Point3d(
           (points[i].x - minPoint.x - (maxPoint.x - minPoint.x) / 2.0) *
-                  displayWidth / maxSize +
+                  effectiveWidth / maxSize +
                   displayWidth / 2,
           (points[i].y - minPoint.y - (maxPoint.y - minPoint.y) / 2.0) *
-                  displayHeight / maxSize +
+                  effectiveHeight / maxSize +
                   displayHeight / 2, 
             points[i].z
             ));

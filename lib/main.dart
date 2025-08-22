@@ -62,6 +62,20 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  // Line tension constants
+  static const double _defaultLineTensionThreshold = 0.3;
+  static const double _defaultAzimuthCorrectionStrength = 0.2;
+  static const LineTensionAdjustmentMethod _defaultAdjustmentMethod = LineTensionAdjustmentMethod.useAverageAngle;
+  static const bool _defaultEnableValidation = true;
+  
+  // UI constants
+  static const double _azimuthSliderMin = -0.95;
+  static const double _azimuthSliderMax = 0.95;
+  static const int _azimuthSliderDivisions = 38; // 39 positions: -95% to +95% in 5% increments
+  static const double _thresholdSliderMin = 0.1;
+  static const double _thresholdSliderMax = 1.0;
+  static const int _thresholdSliderDivisions = 18;
+  
   // Services
   late final DeviceCommunicationService _deviceService;
   late final NetworkService _networkService;
@@ -74,6 +88,12 @@ class _MyHomePageState extends State<MyHomePage> {
   List<int> transferBuffer = [];
   bool dmpLoaded = false;
   UnitType unitType = UnitType.metric;
+  
+  // Line tension handling settings
+  bool enableLineTensionValidation = _defaultEnableValidation;
+  double lineTensionThresholdRatio = _defaultLineTensionThreshold;
+  LineTensionAdjustmentMethod lineTensionAdjustmentMethod = _defaultAdjustmentMethod;
+  double azimuthCorrectionStrength = _defaultAzimuthCorrectionStrength;
   
   // Device state
   bool connected = false;
@@ -205,7 +225,55 @@ class _MyHomePageState extends State<MyHomePage> {
     final prefs = await SharedPreferences.getInstance();
     ipMNemo = prefs.getString('ipMNemo') ?? "192.168.4.1";
     ipController.text = ipMNemo;
+    
+    // Load line tension settings
+    enableLineTensionValidation = prefs.getBool('enableLineTensionValidation') ?? _defaultEnableValidation;
+    lineTensionThresholdRatio = prefs.getDouble('lineTensionThresholdRatio') ?? _defaultLineTensionThreshold;
+    final adjustmentMethodIndex = prefs.getInt('lineTensionAdjustmentMethod') ?? _defaultAdjustmentMethod.index;
+    lineTensionAdjustmentMethod = LineTensionAdjustmentMethod.values[adjustmentMethodIndex];
+    azimuthCorrectionStrength = prefs.getDouble('azimuthCorrectionStrength') ?? _defaultAzimuthCorrectionStrength;
+    
     await _syncNetworkDeviceFound();
+  }
+
+  Future<void> _saveLineTensionSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('enableLineTensionValidation', enableLineTensionValidation);
+    await prefs.setDouble('lineTensionThresholdRatio', lineTensionThresholdRatio);
+    await prefs.setInt('lineTensionAdjustmentMethod', lineTensionAdjustmentMethod.index);
+    await prefs.setDouble('azimuthCorrectionStrength', azimuthCorrectionStrength);
+  }
+
+  /// Helper method to save settings and reprocess data if needed
+  Future<void> _updateSettingsAndReprocess() async {
+    await _saveLineTensionSettings();
+    if (dmpLoaded) {
+      await _analyzeTransferBuffer();
+    }
+  }
+
+  /// Helper method to format azimuth correction percentage
+  String _formatAzimuthPercentage(double value) {
+    if (value == 0.0) {
+      return "0% (disabled)";
+    }
+    return "${value >= 0 ? '+' : ''}${(value * 100).toStringAsFixed(0)}%";
+  }
+
+  /// Helper method to format threshold percentage  
+  String _formatThresholdPercentage(double value) {
+    return "+${(value * 100).toStringAsFixed(0)}%";
+  }
+
+  Future<void> _resetLineTensionSettingsToDefaults() async {
+    setState(() {
+      enableLineTensionValidation = _defaultEnableValidation;
+      lineTensionThresholdRatio = _defaultLineTensionThreshold;
+      lineTensionAdjustmentMethod = _defaultAdjustmentMethod;
+      azimuthCorrectionStrength = _defaultAzimuthCorrectionStrength;
+    });
+    
+    await _updateSettingsAndReprocess();
   }
 
   Future<void> _syncNetworkDeviceFound() async {
@@ -294,16 +362,19 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<void> _analyzeTransferBuffer() async {
-    final result = await _dataService.processTransferBuffer(transferBuffer, unitType);
+    final result = await _dataService.processTransferBuffer(
+      transferBuffer, 
+      unitType,
+      enableLineTensionValidation: enableLineTensionValidation,
+      lineTensionThresholdRatio: lineTensionThresholdRatio,
+      adjustmentMethod: lineTensionAdjustmentMethod,
+      azimuthCorrectionStrength: azimuthCorrectionStrength,
+    );
     
     if (result.success) {
       setState(() {
         sections.sections = result.sections;
       });
-      
-      if (result.brokenSegmentDetected) {
-        await _showBrokenSegmentWarning();
-      }
     }
   }
 
@@ -693,31 +764,6 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  Future<void> _showBrokenSegmentWarning() async {
-    return showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Broken segment'),
-          content: const SingleChildScrollView(
-            child: ListBody(
-              children: <Widget>[
-                Text('Broken segment detected and partially recovered'),
-                Text('This usually happens when device hard resets or when segments is not finished and device is turned off'),
-              ],
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('Ok'),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-          ],
-        );
-      },
-    );
-  }
 
   // Color picker functionality (for future settings implementation)
   // void _changeColor(Color color) {
@@ -769,21 +815,7 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
         ],
       ),
-      body: (!connected && !dmpLoaded)
-          ? WelcomeScreen(
-              scanningNetwork: scanningNetwork,
-              networkDeviceFound: networkDeviceFound,
-              networkScanProgress: networkScanProgress,
-              ipController: ipController,
-              ipMNemo: ipMNemo,
-              onRefreshMnemo: _onRefreshMnemo,
-              onOpenDMP: _onOpenDMP,
-              onNetworkScan: _onNetworkScan,
-              onNetworkScanStop: _onNetworkScanStop,
-              onNetworkDMP: _onNetworkDMP,
-              onIPChanged: _onIPChanged,
-            )
-          : _buildMainInterface(),
+      body: _buildMainInterface(),
     );
   }
 
@@ -797,8 +829,7 @@ class _MyHomePageState extends State<MyHomePage> {
             labelColor: Colors.blueGrey,
             tabs: [
               const Tab(text: 'Data'),
-              if (!Platform.isAndroid && !Platform.isIOS)
-                const Tab(text: 'Settings'),
+              const Tab(text: 'Settings'),
               if (!Platform.isAndroid && !Platform.isIOS)
                 const Tab(text: 'CLI'),
             ],
@@ -807,8 +838,7 @@ class _MyHomePageState extends State<MyHomePage> {
             child: TabBarView(
               children: [
                 _buildDataTab(),
-                if (!Platform.isAndroid && !Platform.isIOS)
-                  _buildSettingsTab(),
+                _buildSettingsTab(),
                 if (!Platform.isAndroid && !Platform.isIOS)
                   _buildCLITab(),
               ],
@@ -820,6 +850,24 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Widget _buildDataTab() {
+    // Show welcome screen when no connection and no data loaded
+    if (!connected && !dmpLoaded) {
+      return WelcomeScreen(
+        scanningNetwork: scanningNetwork,
+        networkDeviceFound: networkDeviceFound,
+        networkScanProgress: networkScanProgress,
+        ipController: ipController,
+        ipMNemo: ipMNemo,
+        onRefreshMnemo: _onRefreshMnemo,
+        onOpenDMP: _onOpenDMP,
+        onNetworkScan: _onNetworkScan,
+        onNetworkScanStop: _onNetworkScanStop,
+        onNetworkDMP: _onNetworkDMP,
+        onIPChanged: _onIPChanged,
+      );
+    }
+    
+    // Show normal data interface when connected or data loaded
     return Column(
       children: [
         DataToolbar(
@@ -843,7 +891,7 @@ class _MyHomePageState extends State<MyHomePage> {
               shrinkWrap: true,
               scrollDirection: Axis.vertical,
               children: sections.sections
-                  .map((e) => SectionCard(e))
+                  .map((e) => SectionCard(e, key: ValueKey("${e.name}_${e.shots.length}_${e.hasAdjustedShots()}_${e.getAdjustedShotsCount()}")))
                   .toList(),
             ),
           ),
@@ -853,23 +901,171 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Widget _buildSettingsTab() {
-    if (!connected) {
-      return Column(
-        children: [
-          const Text("Connect the Mnemo to your computer and press the refresh button"),
-          IconButton(
-            onPressed: _onRefreshMnemo,
-            icon: const Icon(Icons.refresh),
-            tooltip: "Search for Device",
+    return Column(
+      children: [
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              // Line Tension Settings Section
+              const Text(
+                "Line Tension Handling",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              if (!dmpLoaded)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8.0),
+                  child: Text(
+                    "These settings will be applied when data is loaded",
+                    style: TextStyle(color: Colors.orange, fontSize: 12),
+                  ),
+                ),
+              const SizedBox(height: 10),
+              
+              // Enable/Disable Line Tension Validation
+              SettingCard(
+                icon: Icons.check_circle,
+                name: "Enable Line Tension Validation",
+                subtitle: "Automatically detect and adjust shots where distance < depth change or suspiciously short",
+                actionWidget: Switch(
+                  value: enableLineTensionValidation,
+                  onChanged: (value) {
+                    setState(() {
+                      enableLineTensionValidation = value;
+                    });
+                    _updateSettingsAndReprocess();
+                  },
+                ),
+              ),
+              
+              if (enableLineTensionValidation) ...[
+                // Threshold Ratio Setting
+                SettingCard(
+                  icon: Icons.tune,
+                  name: "Additional Detection Threshold",
+                  subtitle: "Extra margin for detecting suspicious shots beyond depth change. Current: ${_formatThresholdPercentage(lineTensionThresholdRatio)}",
+                  actionWidget: Column(
+                    children: [
+                      Slider(
+                        value: lineTensionThresholdRatio,
+                        min: _thresholdSliderMin,
+                        max: _thresholdSliderMax,
+                        divisions: _thresholdSliderDivisions,
+                        label: lineTensionThresholdRatio.toStringAsFixed(2),
+                        onChanged: (value) {
+                          setState(() {
+                            lineTensionThresholdRatio = value;
+                          });
+                        },
+                        onChangeEnd: (value) {
+                          _updateSettingsAndReprocess();
+                        },
+                      ),
+                      Text(
+                        "Shots shorter than depth × (1 + ${lineTensionThresholdRatio.toStringAsFixed(2)}) are flagged",
+                        style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                // Adjustment Method Setting
+                SettingCard(
+                  icon: Icons.straighten,
+                  name: "Distance Adjustment Method",
+                  subtitle: "How to calculate corrected distance for invalid shots",
+                  actionWidget: SettingActionRadioList(
+                    "Adjustment Method",
+                    {
+                      "Use Depth Change": LineTensionAdjustmentMethod.useDepthChange.index,
+                      "Use Average Angle": LineTensionAdjustmentMethod.useAverageAngle.index,
+                    },
+                    (value) {
+                      if (value != null) {
+                        setState(() {
+                          lineTensionAdjustmentMethod = LineTensionAdjustmentMethod.values[value];
+                        });
+                        _updateSettingsAndReprocess();
+                      }
+                    },
+                    lineTensionAdjustmentMethod.index,
+                  ),
+                ),
+                
+                // Azimuth Correction Strength Setting - only show when using average angle
+                if (lineTensionAdjustmentMethod == LineTensionAdjustmentMethod.useAverageAngle) ...[
+                  SettingCard(
+                    icon: Icons.explore,
+                    name: "Azimuth Correction Strength",
+                    subtitle: "Adjust distance based on direction changes. Current: ${_formatAzimuthPercentage(azimuthCorrectionStrength)}",
+                    actionWidget: Column(
+                      children: [
+                        Slider(
+                          value: azimuthCorrectionStrength,
+                          min: _azimuthSliderMin,
+                          max: _azimuthSliderMax,
+                          divisions: _azimuthSliderDivisions,
+                          label: _formatAzimuthPercentage(azimuthCorrectionStrength),
+                          onChanged: (value) {
+                            setState(() {
+                              azimuthCorrectionStrength = value;
+                            });
+                          },
+                          onChangeEnd: (value) {
+                            _updateSettingsAndReprocess();
+                          },
+                        ),
+                        Text(
+                          "Range: -95% to +95% in 5% increments. Positive: lengthen, Negative: shorten, Zero: disabled",
+                          style: const TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+              
+              const SizedBox(height: 20),
+              
+              // Reset to Defaults Button
+              SettingCard(
+                icon: Icons.restore,
+                name: "Reset Tension Adjustments to Defaults",
+                subtitle: "Restore: Validation ON, Threshold 30%, Method: Average Angle, Azimuth +20%",
+                actionWidget: ElevatedButton(
+                  onPressed: _resetLineTensionSettingsToDefaults,
+                  child: const Text("Reset to Defaults"),
+                ),
+              ),
+              
+              const SizedBox(height: 20),
+              
+              // Device Settings Section (only show when connected)
+              if (connected) ...[
+                const Text(
+                  "Device Settings",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 10),
+                const Center(
+                  child: Text("Device settings interface would be implemented here"),
+                ),
+              ] else ...[
+                Container(
+                  height: 100,
+                  padding: const EdgeInsets.all(20),
+                  child: const Center(
+                    child: Text(
+                      "Connect to MNemo device for device settings access",
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ),
+                ),
+              ],
+            ],
           ),
-        ],
-      );
-    }
-    
-    // Settings implementation would go here
-    // For now, return placeholder
-    return const Center(
-      child: Text("Settings interface would be implemented here"),
+        ),
+      ],
     );
   }
 

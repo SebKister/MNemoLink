@@ -92,4 +92,14 @@ class Section {
   double getDepthEnd() => depthEnd;
   double getDepthMin() => depthMin;
   double getDepthMax() => depthMax;
+  
+  /// Check if this section has any shots with adjusted line tension
+  bool hasAdjustedShots() {
+    return shots.any((shot) => shot.isLineTensionInvalid);
+  }
+  
+  /// Get count of adjusted shots in this section
+  int getAdjustedShotsCount() {
+    return shots.where((shot) => shot.isLineTensionInvalid).length;
+  }
 }
