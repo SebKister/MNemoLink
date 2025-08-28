@@ -24,7 +24,7 @@ class SectionCardState extends State<SectionCard> {
   late  MapSurvey map;
   static const double displayWidth = 512;
   static const double displayHeight = 512;
-  static const double margin = 4;
+  static const double margin = 20;
 
   @override
   void initState() {
@@ -90,10 +90,10 @@ String generateRandomString(int length) {
   String buildSVG(MapSurvey map) {
     StringBuffer result = StringBuffer("");
     result.writeln(
-        "<svg version=\"1.1\" height=\"800\" viewBox=\"-$margin -$margin ${displayWidth + margin} ${displayHeight + margin}\" xmlns=\"http://www.w3.org/2000/svg\">");
+        "<svg version=\"1.1\" height=\"800\" viewBox=\"-$margin -$margin ${displayWidth + 2 * margin} ${displayHeight + 2 * margin}\" xmlns=\"http://www.w3.org/2000/svg\">");
     result.writeln(
         "<rect x=\"-${margin - 1}\" y=\"-${margin - 1}\" "
-        "width=\"${displayWidth + margin - 1}\" height=\"${displayHeight + margin -1 }\" "
+        "width=\"${displayWidth + 2 * margin - 1}\" height=\"${displayHeight + 2 * margin - 1}\" "
         "style=\"fill:lightgrey;fill-opacity:0.6;stroke:blue;stroke-width:0.5;stroke-opacity:1\" />");
 
     result.write("<polyline points=\"");
