@@ -14,24 +14,43 @@ class Point3d extends Point<double> {
 class MapSurvey {
   int id = 0;
   List<Point3d> points = [];
+  List<bool> isProblematicShot = []; // Track which shots are problematic
 
   MapSurvey();
 
   void buildMap(Section section) {
-
-
     Point3d start = Point3d(0, 0, section.shots.first.depthIn);
     points.add(start);
+    
+    // Initialize the problematic shot tracking (starts with false for starting point)
+    isProblematicShot.add(false);
 
     for (int i = 0; i < section.shots.length; i++) {
-      double factecr = sqrt(pow(section.shots[i].length, 2) -
-          pow((section.shots[i].depthOut - section.shots[i].depthIn), 2));
+      final shot = section.shots[i];
+      
+      // Use calculated length if shot is problematic, otherwise use original length
+      final lengthToUse = shot.hasProblematicLength() ? shot.getCalculatedLength() : shot.length;
+      
+      // Track if this shot is problematic
+      isProblematicShot.add(shot.hasProblematicLength());
+      
+      // Calculate horizontal distance using corrected length
+      final depthChange = (shot.depthOut - shot.depthIn).abs();
+      double factecr;
+      
+      if (lengthToUse <= depthChange) {
+        // For vertical or near-vertical shots, use minimal horizontal distance
+        factecr = 0.1;
+      } else {
+        factecr = sqrt(pow(lengthToUse, 2) - pow(depthChange, 2));
+      }
+      
       points.add(Point3d(
           points[i].x +
-              factecr * sin(-section.shots[i].headingOut / 3600.0 * 2.0 * pi),
+              factecr * sin(-shot.headingOut / 3600.0 * 2.0 * pi),
           points[i].y +
-              factecr * cos(section.shots[i].headingOut / 3600.0 * 2.0 * pi), 
-          max(section.shots[i].depthOut, i < section.shots.length-1 ? section.shots[i+1].depthIn : section.shots[i].depthOut)));
+              factecr * cos(shot.headingOut / 3600.0 * 2.0 * pi), 
+          max(shot.depthOut, i < section.shots.length-1 ? section.shots[i+1].depthIn : shot.depthOut)));
     }
   }
 
@@ -88,6 +107,11 @@ class MapSurvey {
                   displayHeight / 2, 
             points[i].z
             ));
+      
+      // Copy problematic shot tracking to display map
+      if (i < isProblematicShot.length) {
+        dMap.isProblematicShot.add(isProblematicShot[i]);
+      }
     }
 
     return dMap;

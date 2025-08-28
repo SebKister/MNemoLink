@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'enums.dart';
 
 /// Represents a single shot measurement in a cave survey
@@ -102,4 +103,34 @@ class Shot {
   
   int getMarkerIndex() => markerIndex;
   void setMarkerIndex(int newMarkerIndex) => markerIndex = newMarkerIndex;
+  
+  /// Get the depth change for this shot
+  double getDepthChange() => (depthOut - depthIn).abs();
+  
+  /// Check if this shot has problematic length (length < depth change)
+  bool hasProblematicLength() {
+    final depthChange = getDepthChange();
+    return length > 0 && length < depthChange;
+  }
+  
+  /// Calculate corrected length based on inclination and depth change
+  double getCalculatedLength() {
+    if (!hasProblematicLength()) return length;
+    
+    final depthChange = getDepthChange();
+    // Use average inclination from pitchIn and pitchOut (in degrees/10)
+    final avgPitch = (pitchIn + pitchOut) / 2.0 / 10.0; // Convert to degrees
+    final radians = avgPitch * pi / 180.0; // Convert to radians
+    
+    // If inclination is near 90 degrees (vertical), use depth change as length
+    if (cos(radians).abs() < 0.1) {
+      return depthChange;
+    }
+    
+    // Calculate length using trigonometry: length = depth_change / sin(inclination)
+    return depthChange / sin(radians).abs();
+  }
+  
+  /// Check if this shot uses calculated length (for display purposes)
+  bool usesCalculatedLength() => hasProblematicLength();
 }
