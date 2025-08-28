@@ -3,9 +3,10 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/models.dart';
+import '../services/survey_quality_service.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:widget_zoom/widget_zoom.dart';
-
+import 'star_rating_widget.dart';
 
 import '../mapsurvey.dart';
 
@@ -22,6 +23,7 @@ class SectionCardState extends State<SectionCard> {
   late  SvgPicture? picture;
   late  String rawSvg;
   late  MapSurvey map;
+  late  SurveyQualityService qualityService;
   static const double displayWidth = 512;
   static const double displayHeight = 512;
   static const double margin = 20;
@@ -29,6 +31,7 @@ class SectionCardState extends State<SectionCard> {
   @override
   void initState() {
     super.initState();
+    qualityService = SurveyQualityService();
     map = MapSurvey.build(widget.section);
     rawSvg = buildSVG(map.buildDisplayMap(displayWidth, displayHeight));
     picture = SvgPicture.string(
@@ -84,7 +87,18 @@ String generateRandomString(int length) {
                 ),
               ],
               const SizedBox(width: 6), 
-              Text(DateFormat('yyyy-MM-dd HH:mm').format(widget.section.dateSurvey)),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(DateFormat('yyyy-MM-dd HH:mm').format(widget.section.dateSurvey)),
+                  const SizedBox(height: 2),
+                  StarRatingWidget(
+                    quality: qualityService.scoreSurveySection(widget.section),
+                    size: 14.0,
+                  ),
+                ],
+              ),
             ],            
           ),
         leading: WidgetZoom(
