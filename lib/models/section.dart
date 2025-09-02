@@ -92,4 +92,27 @@ class Section {
   double getDepthEnd() => depthEnd;
   double getDepthMin() => depthMin;
   double getDepthMax() => depthMax;
+  
+  /// Check if this section has any shots with problematic lengths
+  bool hasProblematicShots() {
+    // Exclude the last shot (EOC) which typically has all zeros
+    for (int i = 0; i < shots.length - 1; i++) {
+      if (shots[i].hasProblematicLength()) {
+        return true;
+      }
+    }
+    return false;
+  }
+  
+  /// Get list of shots with problematic lengths
+  List<Shot> getProblematicShots() {
+    List<Shot> problematicShots = [];
+    // Exclude the last shot (EOC) which typically has all zeros
+    for (int i = 0; i < shots.length - 1; i++) {
+      if (shots[i].hasProblematicLength()) {
+        problematicShots.add(shots[i]);
+      }
+    }
+    return problematicShots;
+  }
 }

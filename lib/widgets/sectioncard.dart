@@ -67,12 +67,22 @@ String generateRandomString(int length) {
             children: <Widget> [
               if (widget.section.getBrokenFlag()) 
                 const Tooltip(
-                  message: 'Recovered section', // Hover note
+                  message: 'Recovered section', 
                   child: Icon(
                     Icons.fmd_bad, 
                     color: Colors.orange,
                   ),
                 ),
+              if (widget.section.hasProblematicShots()) ...[
+                const SizedBox(width: 6),
+                const Tooltip(
+                  message: 'Contains shots with calculated lengths',
+                  child: Icon(
+                    Icons.straighten,
+                    color: Colors.red,
+                  ),
+                ),
+              ],
               const SizedBox(width: 6), 
               Text(DateFormat('yyyy-MM-dd HH:mm').format(widget.section.dateSurvey)),
             ],            
@@ -96,15 +106,17 @@ String generateRandomString(int length) {
         "width=\"${displayWidth + margin - 1}\" height=\"${displayHeight + margin -1 }\" "
         "style=\"fill:lightgrey;fill-opacity:0.6;stroke:blue;stroke-width:0.5;stroke-opacity:1\" />");
 
-    result.write("<polyline points=\"");
-
-    for (int i = 0; i < map.points.length-1; i++) {
-      if (i != 0) result.write(" ");
-      result.write(map.points[i].x);
-      result.write(",");
-      result.write(map.points[i].y);
+    // Render survey lines - use individual line segments to handle dashing
+    for (int i = 0; i < map.points.length-2; i++) {
+      final isProblematic = i + 1 < map.isProblematicShot.length && map.isProblematicShot[i + 1];
+      final strokeDashArray = isProblematic ? "stroke-dasharray:5,5;" : "";
+      
+      result.write(
+        "<line x1=\"${map.points[i].x}\" y1=\"${map.points[i].y}\" "
+        "x2=\"${map.points[i+1].x}\" y2=\"${map.points[i+1].y}\" "
+        "style=\"fill:none;stroke:black;stroke-width:2;$strokeDashArray\" />"
+      );
     }
-    result.write("\" style = \"fill:none;stroke:black;stroke-width:2\" />");
 
     for (int i = 0; i < map.points.length-1; i++) {
       int adjX = map.points[i].x < displayWidth * 3/4 ? 5 : -40;   // move text starting point to the left if we're in the right band of SVG
