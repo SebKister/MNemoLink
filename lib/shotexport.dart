@@ -115,7 +115,7 @@ mixin ShotExport {
         continue;
       }
 
-      final double length = shot.getLength();
+      final double length = shot.getCalculatedLength();
       final double azimuthIn = (shot.getHeadingIn().toDouble()) / 10.0;
       final double azimuthOut = (shot.getHeadingOut().toDouble()) / 10.0;
       final double azimuthMean = getAzimuthMean(azimuthIn, azimuthOut);
@@ -143,7 +143,8 @@ mixin ShotExport {
           lurdRight: shot.getRight(),
           lurdUp: shot.getUp(),
           lurdDown: shot.getDown(),
-          azimuthComments: azimuthComments);
+          azimuthComments: azimuthComments,
+          isCalculatedLength: shot.usesCalculatedLength());
 
       svxShots.add(svxShot);
 
@@ -190,6 +191,7 @@ class ExportShot {
   double azimuthDelta;
   late List<LURDShot> lurdShots;
   List<String> azimuthComments;
+  bool isCalculatedLength;
 
   ExportShot({
     required this.from,
@@ -208,6 +210,7 @@ class ExportShot {
     required double lurdUp,
     required double lurdDown,
     required this.azimuthComments,
+    required this.isCalculatedLength,
   }) {
     azimuthOut180 = (azimuthOut + 180) % 360;
     lurdShots = [];

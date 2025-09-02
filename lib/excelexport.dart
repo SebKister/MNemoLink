@@ -20,7 +20,8 @@ void writeHeaderOnSheet(Sheet sheet, int rowNumber) {
     "L",
     "M",
     "N",
-    "O"
+    "O",
+    "P"
   ];
   int index = 0;
 
@@ -68,6 +69,9 @@ void writeHeaderOnSheet(Sheet sheet, int rowNumber) {
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
   cell.value = TextCellValue("Marker");
+
+  cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
+  cell.value = TextCellValue("Comments");
 }
 
 void writeRowOnSheet(Section section, Shot data, Sheet sheet, int rowNumber) {
@@ -86,7 +90,8 @@ void writeRowOnSheet(Section section, Shot data, Sheet sheet, int rowNumber) {
     "L",
     "M",
     "N",
-    "O"
+    "O",
+    "P"
   ];
   int index = 0;
 
@@ -98,7 +103,7 @@ void writeRowOnSheet(Section section, Shot data, Sheet sheet, int rowNumber) {
   cell.value = TextCellValue(data.typeShot.name);
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = DoubleCellValue(data.length);
+  cell.value = DoubleCellValue(data.getCalculatedLength());
   cell.cellStyle = cellStyleWithNumberFormatForNumber;
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
@@ -158,6 +163,11 @@ void writeRowOnSheet(Section section, Shot data, Sheet sheet, int rowNumber) {
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
   cell.value = IntCellValue(data.markerIndex);
   cell.cellStyle = cellStyleWithNumberFormatForNumber;
+
+  cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
+  cell.value = TextCellValue(data.usesCalculatedLength() 
+      ? "Length calculated from depth change and inclination (original measurement was insufficient)" 
+      : "");
 }
 
 void writeTitleOnSheet(Sheet sheet, Section s, UnitType unitType) {

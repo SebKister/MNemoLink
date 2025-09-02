@@ -64,13 +64,17 @@ class THExporter with ShotExport {
     increasePrefix();
     bool firstLine = true;
     for (ExportShot exportShot in exportShots.shots) {
-      if (exportShot.azimuthComments.isNotEmpty) {
+      if (exportShot.azimuthComments.isNotEmpty || exportShot.isCalculatedLength) {
         if (!firstLine) {
           contents.write('\n');
         }
 
         for (var comment in exportShot.azimuthComments) {
           contents.write(newLine('# $comment'));
+        }
+        
+        if (exportShot.isCalculatedLength) {
+          contents.write(newLine('# Length calculated from depth change and inclination (original measurement was insufficient)'));
         }
       }
 
