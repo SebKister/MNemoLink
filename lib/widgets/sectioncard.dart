@@ -76,7 +76,7 @@ String generateRandomString(int length) {
               if (widget.section.hasProblematicShots()) ...[
                 const SizedBox(width: 6),
                 const Tooltip(
-                  message: 'Contains shots with calculated lengths due to insufficient line tension',
+                  message: 'Contains shots with calculated lengths',
                   child: Icon(
                     Icons.straighten,
                     color: Colors.red,
