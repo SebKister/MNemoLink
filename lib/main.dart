@@ -437,24 +437,40 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
+  // Selection handlers
+  void _onSectionSelectionChanged(Section section, bool selected) {
+    setState(() {
+      section.isSelected = selected;
+    });
+  }
+
+  void _onToggleSelectAll() {
+    setState(() {
+      sections.toggleSelectAll();
+    });
+  }
+
   // Export handlers
   Future<void> _onSaveDMP() async {
-    await _fileService.saveDMPFile(transferBuffer);
+    await _fileService.saveDMPFileFromSections(sections, unitType);
     // TODO: Handle result (show snackbar, etc.)
   }
 
   Future<void> _onExportXLS() async {
-    await _fileService.saveExcelFile(sections, unitType);
+    final selectedSectionsList = SectionList(sections: sections.selectedSections);
+    await _fileService.saveExcelFile(selectedSectionsList, unitType);
     // TODO: Handle result
   }
 
   Future<void> _onExportSVX() async {
-    await _fileService.saveSurvexFile(sections, unitType);
+    final selectedSectionsList = SectionList(sections: sections.selectedSections);
+    await _fileService.saveSurvexFile(selectedSectionsList, unitType);
     // TODO: Handle result
   }
 
   Future<void> _onExportTH() async {
-    await _fileService.saveTherionFile(sections, unitType);
+    final selectedSectionsList = SectionList(sections: sections.selectedSections);
+    await _fileService.saveTherionFile(selectedSectionsList, unitType);
     // TODO: Handle result
   }
 
@@ -827,6 +843,8 @@ class _MyHomePageState extends State<MyHomePage> {
           connected: connected,
           hasData: transferBuffer.isNotEmpty,
           hasSections: sections.isNotEmpty,
+          hasSelectedSections: sections.selectedSections.isNotEmpty,
+          allSectionsSelected: sections.allSelected,
           onReset: _onReset,
           onReadData: _onReadData,
           onOpenDMP: _onOpenDMP,
@@ -834,6 +852,7 @@ class _MyHomePageState extends State<MyHomePage> {
           onExportXLS: _onExportXLS,
           onExportSVX: _onExportSVX,
           onExportTH: _onExportTH,
+          onToggleSelectAll: _onToggleSelectAll,
         ),
         Expanded(
           child: Container(
@@ -843,7 +862,7 @@ class _MyHomePageState extends State<MyHomePage> {
               shrinkWrap: true,
               scrollDirection: Axis.vertical,
               children: sections.sections
-                  .map((e) => SectionCard(e))
+                  .map((e) => SectionCard(e, onSelectionChanged: _onSectionSelectionChanged))
                   .toList(),
             ),
           ),

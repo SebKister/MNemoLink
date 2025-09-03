@@ -40,6 +40,41 @@ class SectionList {
     return total;
   }
 
+  /// Get only selected sections
+  List<Section> get selectedSections => sections.where((section) => section.isSelected).toList();
+  
+  /// Check if all sections are selected
+  bool get allSelected => sections.isNotEmpty && sections.every((section) => section.isSelected);
+  
+  /// Check if no sections are selected
+  bool get noneSelected => sections.every((section) => !section.isSelected);
+  
+  /// Check if some sections are selected (for partial selection state)
+  bool get someSelected => sections.any((section) => section.isSelected) && !allSelected;
+  
+  /// Select all sections
+  void selectAll() {
+    for (final section in sections) {
+      section.isSelected = true;
+    }
+  }
+  
+  /// Deselect all sections
+  void deselectAll() {
+    for (final section in sections) {
+      section.isSelected = false;
+    }
+  }
+  
+  /// Toggle selection for all sections
+  void toggleSelectAll() {
+    if (allSelected) {
+      deselectAll();
+    } else {
+      selectAll();
+    }
+  }
+
   /// Legacy getters/setters for compatibility with existing code
   List<Section> getSections() => sections;
   void setSections(List<Section> newSections) => sections = newSections;

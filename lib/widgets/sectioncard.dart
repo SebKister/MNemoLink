@@ -11,8 +11,9 @@ import '../mapsurvey.dart';
 
 class SectionCard extends StatefulWidget {
   final Section section;
+  final Function(Section, bool)? onSelectionChanged;
 
-  const SectionCard(this.section, {super.key});
+  const SectionCard(this.section, {super.key, this.onSelectionChanged});
 
   @override
   SectionCardState createState() => SectionCardState();
@@ -87,11 +88,25 @@ String generateRandomString(int length) {
               Text(DateFormat('yyyy-MM-dd HH:mm').format(widget.section.dateSurvey)),
             ],            
           ),
-        leading: WidgetZoom(
-            heroAnimationTag: generateRandomString(10),
-            zoomWidget: Container( 
-                child: picture,
+        leading: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Checkbox(
+              value: widget.section.isSelected,
+              onChanged: (bool? value) {
+                if (value != null && widget.onSelectionChanged != null) {
+                  widget.onSelectionChanged!(widget.section, value);
+                }
+              },
+              activeColor: Colors.blue,
             ),
+            WidgetZoom(
+              heroAnimationTag: generateRandomString(10),
+              zoomWidget: Container( 
+                  child: picture,
+              ),
+            ),
+          ],
         ),
       ),
     );
