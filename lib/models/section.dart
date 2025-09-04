@@ -9,6 +9,7 @@ class Section {
   String name;
   DateTime dateSurvey;
   bool brokenFlag;
+  bool isSelected;
 
   /// Default constructor
   Section({
@@ -17,6 +18,7 @@ class Section {
     this.name = "",
     DateTime? dateSurvey,
     this.brokenFlag = false,
+    this.isSelected = true,
   }) : shots = shots ?? <Shot>[],
        dateSurvey = dateSurvey ?? DateTime.now();
 
@@ -86,6 +88,9 @@ class Section {
   
   bool getBrokenFlag() => brokenFlag;
   void setBrokenFlag(bool flag) => brokenFlag = flag;
+  
+  bool getIsSelected() => isSelected;
+  void setIsSelected(bool selected) => isSelected = selected;
   
   double getLength() => length;
   double getDepthStart() => depthStart;

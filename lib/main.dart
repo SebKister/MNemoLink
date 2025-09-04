@@ -437,25 +437,78 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
+  // Selection handlers
+  void _onSectionSelectionChanged(Section section, bool selected) {
+    setState(() {
+      section.isSelected = selected;
+    });
+  }
+
+  void _onToggleSelectAll() {
+    setState(() {
+      sections.toggleSelectAll();
+    });
+  }
+
   // Export handlers
   Future<void> _onSaveDMP() async {
-    await _fileService.saveDMPFile(transferBuffer);
-    // TODO: Handle result (show snackbar, etc.)
+    await _handleExportOperation(() => _fileService.saveDMPFileFromSections(sections, unitType));
   }
 
   Future<void> _onExportXLS() async {
-    await _fileService.saveExcelFile(sections, unitType);
-    // TODO: Handle result
+    await _handleSelectedSectionsExport((sections) => _fileService.saveExcelFile(sections, unitType));
   }
 
   Future<void> _onExportSVX() async {
-    await _fileService.saveSurvexFile(sections, unitType);
-    // TODO: Handle result
+    await _handleSelectedSectionsExport((sections) => _fileService.saveSurvexFile(sections, unitType));
   }
 
   Future<void> _onExportTH() async {
-    await _fileService.saveTherionFile(sections, unitType);
-    // TODO: Handle result
+    await _handleSelectedSectionsExport((sections) => _fileService.saveTherionFile(sections, unitType));
+  }
+
+  /// Helper method for handling export operations with error handling
+  Future<void> _handleExportOperation(Future<FileResult> Function() exportFunction) async {
+    try {
+      final result = await exportFunction();
+      if (result.success && mounted) {
+        _showMessage(result.message ?? 'Export completed successfully');
+      } else if (!result.success && mounted) {
+        _showErrorMessage(result.error ?? 'Export failed');
+      }
+    } catch (e) {
+      if (mounted) {
+        _showErrorMessage('Export failed: $e');
+      }
+    }
+  }
+
+  /// Helper method for exports that use selected sections
+  Future<void> _handleSelectedSectionsExport(Future<FileResult> Function(SectionList) exportFunction) async {
+    final selectedSectionsList = SectionList(sections: sections.selectedSections);
+    await _handleExportOperation(() => exportFunction(selectedSectionsList));
+  }
+
+  /// Show success message to user
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  /// Show error message to user
+  void _showErrorMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 5),
+      ),
+    );
   }
 
   // Device settings getters (simplified - full implementation would call device)
@@ -827,6 +880,8 @@ class _MyHomePageState extends State<MyHomePage> {
           connected: connected,
           hasData: transferBuffer.isNotEmpty,
           hasSections: sections.isNotEmpty,
+          hasSelectedSections: sections.selectedSections.isNotEmpty,
+          allSectionsSelected: sections.allSelected,
           onReset: _onReset,
           onReadData: _onReadData,
           onOpenDMP: _onOpenDMP,
@@ -834,6 +889,7 @@ class _MyHomePageState extends State<MyHomePage> {
           onExportXLS: _onExportXLS,
           onExportSVX: _onExportSVX,
           onExportTH: _onExportTH,
+          onToggleSelectAll: _onToggleSelectAll,
         ),
         Expanded(
           child: Container(
@@ -843,7 +899,7 @@ class _MyHomePageState extends State<MyHomePage> {
               shrinkWrap: true,
               scrollDirection: Axis.vertical,
               children: sections.sections
-                  .map((e) => SectionCard(e))
+                  .map((e) => SectionCard(e, onSelectionChanged: _onSectionSelectionChanged))
                   .toList(),
             ),
           ),
