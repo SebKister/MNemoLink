@@ -452,26 +452,63 @@ class _MyHomePageState extends State<MyHomePage> {
 
   // Export handlers
   Future<void> _onSaveDMP() async {
-    await _fileService.saveDMPFileFromSections(sections, unitType);
-    // TODO: Handle result (show snackbar, etc.)
+    await _handleExportOperation(() => _fileService.saveDMPFileFromSections(sections, unitType));
   }
 
   Future<void> _onExportXLS() async {
-    final selectedSectionsList = SectionList(sections: sections.selectedSections);
-    await _fileService.saveExcelFile(selectedSectionsList, unitType);
-    // TODO: Handle result
+    await _handleSelectedSectionsExport((sections) => _fileService.saveExcelFile(sections, unitType));
   }
 
   Future<void> _onExportSVX() async {
-    final selectedSectionsList = SectionList(sections: sections.selectedSections);
-    await _fileService.saveSurvexFile(selectedSectionsList, unitType);
-    // TODO: Handle result
+    await _handleSelectedSectionsExport((sections) => _fileService.saveSurvexFile(sections, unitType));
   }
 
   Future<void> _onExportTH() async {
+    await _handleSelectedSectionsExport((sections) => _fileService.saveTherionFile(sections, unitType));
+  }
+
+  /// Helper method for handling export operations with error handling
+  Future<void> _handleExportOperation(Future<FileResult> Function() exportFunction) async {
+    try {
+      final result = await exportFunction();
+      if (result.success && mounted) {
+        _showMessage(result.message ?? 'Export completed successfully');
+      } else if (!result.success && mounted) {
+        _showErrorMessage(result.error ?? 'Export failed');
+      }
+    } catch (e) {
+      if (mounted) {
+        _showErrorMessage('Export failed: $e');
+      }
+    }
+  }
+
+  /// Helper method for exports that use selected sections
+  Future<void> _handleSelectedSectionsExport(Future<FileResult> Function(SectionList) exportFunction) async {
     final selectedSectionsList = SectionList(sections: sections.selectedSections);
-    await _fileService.saveTherionFile(selectedSectionsList, unitType);
-    // TODO: Handle result
+    await _handleExportOperation(() => exportFunction(selectedSectionsList));
+  }
+
+  /// Show success message to user
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  /// Show error message to user
+  void _showErrorMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 5),
+      ),
+    );
   }
 
   // Device settings getters (simplified - full implementation would call device)
