@@ -92,6 +92,9 @@ class Section {
   bool getIsSelected() => isSelected;
   void setIsSelected(bool selected) => isSelected = selected;
   
+  /// Toggle selection state
+  void toggleSelection() => isSelected = !isSelected;
+  
   double getLength() => length;
   double getDepthStart() => depthStart;
   double getDepthEnd() => depthEnd;
