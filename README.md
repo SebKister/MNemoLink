@@ -1,64 +1,167 @@
-# mnemolink
+# MNemoLink
 
-Computer interface software for MNemo v2
+MNemoLink is a Flutter desktop application that interfaces with MNemo v2 cave surveying devices. It handles device communication, data transfer, processing, and export to various cave surveying formats.
+
+## Features
+
+- **Device Communication**: Connect to MNemo devices via USB serial or WiFi network
+- **Data Processing**: Parse and validate DMP (Data Memory Package) files from MNemo devices
+- **Multiple Export Formats**: Export survey data to Excel (.xlsx), Survex (.svx), and Therion (.th) formats
+- **Real-time CLI Interface**: Direct command-line interface for device control and data retrieval
+- **Cross-platform Support**: Full functionality on Windows, Linux, and macOS; limited functionality on Android and iOS
+- **Firmware Updates**: Manage MNemo device firmware updates directly from the application
+
+## Architecture Overview
+
+The application follows a service-oriented architecture with clear separation between UI, business logic, and device communication:
+
+### Core Components
+
+- **models/** - Data models (Shot, Section, SectionList, SurveyQuality, Enums)
+- **services/** - Business logic services for device communication, networking, data processing, file operations, and firmware updates
+- **widgets/** - UI components including CLI interface, connection status, network panels, and data visualization
+
+### Key Services
+
+1. **DeviceCommunicationService** - Handles serial communication with MNemo devices
+2. **NetworkService** - Manages network-based device discovery and data transfer
+3. **DataProcessingService** - Processes raw survey data into structured sections
+4. **FileService** - Handles DMP file operations and exports to Excel/Survex/Therion formats
+5. **FirmwareUpdateService** - Manages firmware and software update operations
+
+### Data Flow
+
+1. Device connection via serial or network
+2. Raw data transfer from MNemo device (DMP format)
+3. Data processing into survey sections with shots
+4. Export to various cave surveying formats
 
 ## Getting Started
 
-This project is a Flutter application.
+### Prerequisites
 
-A few resources to get you started if this is your first Flutter project:
+- **Flutter SDK 3.5.4+**: [Installation Guide](https://docs.flutter.dev/get-started/install)
+- **Platform-specific tools**: See platform sections below for detailed requirements
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+### Quick Start
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/SebKister/MNemoLink.git
+   cd MNemoLink
+   ```
+
+2. **Install dependencies**:
+   ```bash
+   make install  # Or flutter pub get
+   ```
+
+3. **Run the application**:
+   ```bash
+   make run      # Or flutter run
+   ```
 
 
-## BUILD AND DEBUG
+## Platform-Specific Setup
 
 ### Windows
 
-On Windows, you can find precise indication on installation requirements [here](https://docs.flutter.dev/get-started/install/windows/desktop).
+Follow the [Flutter Windows installation guide](https://docs.flutter.dev/get-started/install/windows/desktop) for desktop development.
 
-Following those steps and getting a `flutter doctor` result similar to the one shown is enough to build and run the MNemoLink project.
+For Android development, follow [this guide](https://docs.flutter.dev/get-started/install/windows/mobile?tab=vscode).
 
-To build the Android app you'll additionally need to follow [this guide](https://docs.flutter.dev/get-started/install/windows/mobile?tab=vscode)
-
-### Linux or Windows 11 + WSL2
-On Linux and Windows 11 + WSL2, we offer a `VS CODE` devcontainer https://code.visualstudio.com/docs/devcontainers/containers to improve the speed and portability of the development environment.
-
-It requires `VS Code`, Docker and Devcontainer Extension (`ms-vscode-remote.remote-containers`) installed.
-
-Then follow the instructions:
-
+**Build Commands:**
 ```bash
-`git clone https://github.com/SebKister/MNemoLink.git`
-cd MnemoLink
-code -n $(pwd)  # Open current directory in VSCode
+make build_windows       # Build Windows release
+make build_androidFatAPK # Build Android fat APK
+make build_androidAPK    # Build Android split APKs
+make build_appBundle     # Build Android app bundle
 ```
 
-Then `CTRL + P` and select `Dev Containers: Rebuild and Reopen in Container`
+### Linux / Windows 11 + WSL2
 
-This operation will take some time to build and launch a new environment. Once the environment is started, open a new terminal and type:
+We provide a VS Code devcontainer for consistent development environments. Requirements:
+- VS Code
+- Docker
+- Devcontainer Extension (`ms-vscode-remote.remote-containers`)
 
+**Setup:**
 ```bash
-make install  # install all dependencies
-make run      # run the application in debug mode
+git clone https://github.com/SebKister/MNemoLink.git
+cd MNemoLink
+code -n $(pwd)  # Open in VSCode
 ```
 
-### MAC OS
-On Mac, you can find precise indication on installation requirements [here](https://docs.flutter.dev/get-started/install/macos/desktop).
+Then `Ctrl+P` → "Dev Containers: Rebuild and Reopen in Container"
 
-Following those steps and getting a `flutter doctor` result similar to the one shown is enough to build and run the MNemoLink project.
+**Build Commands:**
+```bash
+make build_linux    # Build Linux release
+```
 
-To build the Android app you'll additionally need to follow [this guide](https://docs.flutter.dev/get-started/install/macos/mobile-android?tab=vscode)
+### macOS
 
-To build the iOS app you'll additionally need to follow [this guide](https://docs.flutter.dev/get-started/install/macos/mobile-ios)
+Follow the [Flutter macOS installation guide](https://docs.flutter.dev/get-started/install/macos/desktop) for desktop development.
 
-## DOCUMENTATION
-There's no separate documentation existing for MNemolink.
+For mobile development:
+- [Android guide](https://docs.flutter.dev/get-started/install/macos/mobile-android?tab=vscode)
+- [iOS guide](https://docs.flutter.dev/get-started/install/macos/mobile-ios)
 
-Features requiring documentation should be added to the [MNemo V2 Documenation](https://github.com/SebKister/MNemoV2-Documentation) repository.
+**Build Commands:**
+```bash
+make build_macos     # Build macOS release
+make build_iosRelease # Build iOS release
+```
+
+## Development Commands
+
+### Setup and Dependencies
+```bash
+make install         # Install Flutter dependencies and perform cleanup
+make clean          # Remove build artifacts and Flutter cache
+```
+
+### Code Quality
+```bash
+flutter analyze     # Run static analysis (uses flutter_lints)
+flutter test        # Run tests
+```
+
+## Testing
+
+Tests are located in the `test/` directory.
+
+Run tests with:
+```bash
+flutter test
+```
+
+## Device Communication
+
+The application communicates with MNemo devices through:
+- **Serial communication** (USB connection)
+- **Network communication** (WiFi connection via IP address)
+- **CLI command interface** for device control and data retrieval
+
+## Export Formats
+
+The application supports multiple cave surveying export formats:
+- **DMP** - Native MNemo format
+- **Excel (.xlsx)** - Spreadsheet format for data analysis
+- **Survex (.svx)** - Open source cave surveying software format
+- **Therion (.th)** - Cave mapping and 3D modeling software format
+
+## Contributing
+
+Please read [CONTRIBUTE.md](CONTRIBUTE.md) for detailed guidelines on:
+- Code organization and architecture
+- Development workflow and standards
+- Pull request process
+- GitHub Actions CI/CD pipeline
+
+## Documentation
+
+- **Project Documentation**: See [CONTRIBUTE.md](CONTRIBUTE.md) for comprehensive development guidelines
+- **DMP File Format**: See `doc/MNemo DMP File Format - Complete Documentation.md` for technical specification
+- **MNemo v2 Hardware**: [MNemo V2 Documentation](https://github.com/SebKister/MNemoV2-Documentation)
 
