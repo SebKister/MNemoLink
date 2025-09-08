@@ -50,16 +50,28 @@ class WelcomeScreen extends StatelessWidget {
           ],
           
           // File operations section
-          const Text("Open a DMP file"),
+          const Text("Open DMP file(s)"),
           FileIcon(
             icon: Icons.file_open,
             onPressed: onOpenDMP,
             extension: 'DMP',
-            tooltip: "Open a DMP",
+            tooltip: "Open DMP file(s)\nHold Ctrl/Cmd or Shift to select multiple",
             size: 24,
             color: Colors.black54,
             extensionColor: Colors.black87,
           ),
+          if (!Platform.isAndroid && !Platform.isIOS)
+            const Padding(
+              padding: EdgeInsets.only(top: 8.0),
+              child: Text(
+                "Or drag and drop DMP files here",
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
           const SizedBox(width: 10, height: 60),
           
           // Network connection section
