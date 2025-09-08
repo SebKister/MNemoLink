@@ -1,5 +1,7 @@
 import 'dart:io';
 import 'dart:convert';
+import 'dart:collection';
+import 'dart:math' as math;
 import 'package:csv/csv.dart';
 import 'package:file_picker/file_picker.dart';
 import '../models/models.dart';
@@ -7,8 +9,31 @@ import '../excelexport.dart';
 import '../survexporter.dart';
 import '../thexporter.dart';
 
+/// Memory pool for efficient buffer reuse
+class _BufferPool {
+  final Queue<List<int>> _pool = Queue();
+  static const int _maxPoolSize = 5;
+  static const int _maxBufferSize = 50000; // Don't pool huge buffers
+  
+  List<int> acquire() {
+    if (_pool.isNotEmpty) {
+      final buffer = _pool.removeFirst();
+      buffer.clear();
+      return buffer;
+    }
+    return <int>[];
+  }
+  
+  void release(List<int> buffer) {
+    if (_pool.length < _maxPoolSize && buffer.length < _maxBufferSize) {
+      _pool.add(buffer);
+    }
+  }
+}
+
 /// Service for handling file operations (import/export)
 class FileService {
+  static final _BufferPool _bufferPool = _BufferPool();
   
   /// Open and parse DMP file(s) - supports both single and multiple selection
   Future<MultiFileResult> openDMPFiles() async {
@@ -46,33 +71,22 @@ class FileService {
         try {
           final file = File(platformFile.path!);
           
-          // Check if file exists and has minimum size
-          if (!await file.exists()) {
+          // Early validation pipeline
+          final validationResult = await _validateDMPFile(file);
+          if (!validationResult.isValid) {
             fileResults.add(FileProcessingResult.error(
               fileName: platformFile.name,
-              error: "File does not exist",
+              error: validationResult.error!,
             ));
             continue;
           }
           
-          final fileSize = await file.length();
-          if (fileSize == 0) {
-            fileResults.add(FileProcessingResult.error(
-              fileName: platformFile.name,
-              error: "File is empty (0 bytes)",
-            ));
-            continue;
-          }
-          
-          if (fileSize < 48) {
-            fileResults.add(FileProcessingResult.error(
-              fileName: platformFile.name,
-              error: "File too small (${fileSize} bytes) - minimum 48 bytes required for valid DMP format",
-            ));
-            continue;
-          }
-          
-          final transferBuffer = await parseDMPFile(file);
+          final transferBuffer = await parseDMPFileOptimized(
+            file,
+            onProgress: (progress) {
+              // Progress reporting could be exposed here if needed
+            },
+          );
           
           fileResults.add(FileProcessingResult.success(
             fileName: platformFile.name,
@@ -93,54 +107,130 @@ class FileService {
     }
   }
 
-  /// Parse a single DMP file into transfer buffer
-  Future<List<int>> parseDMPFile(File file) async {
+  /// Early validation pipeline for DMP files
+  Future<_ValidationResult> _validateDMPFile(File file) async {
     try {
-      final input = file.openRead();
+      if (!await file.exists()) {
+        return _ValidationResult.invalid("File does not exist");
+      }
       
-      final fields = await input
-          .transform(utf8.decoder)
-          .transform(const CsvToListConverter(fieldDelimiter: ';'))
-          .toList();
+      final fileSize = await file.length();
+      if (fileSize == 0) {
+        return _ValidationResult.invalid("File is empty (0 bytes)");
+      }
+      
+      if (fileSize < 48) {
+        return _ValidationResult.invalid(
+          "File too small (${fileSize} bytes) - minimum 48 bytes required for valid DMP format"
+        );
+      }
+      
+      // Quick format validation - read first line to check file version
+      final firstBytes = await file.openRead(0, math.min(200, fileSize)).toList();
+      final firstChunk = utf8.decode(firstBytes.expand((x) => x).toList());
+      final firstLineEnd = firstChunk.indexOf('\n');
+      final firstLine = firstLineEnd > 0 ? firstChunk.substring(0, firstLineEnd) : firstChunk;
+      final fields = firstLine.split(';');
       
       if (fields.isEmpty) {
-        throw Exception("File appears to be empty or not a valid DMP file");
+        return _ValidationResult.invalid("Invalid CSV format - no fields found");
       }
       
-      if (fields[0].isEmpty) {
-        throw Exception("First row of DMP file is empty");
+      final version = _parseElementOptimized(fields.first);
+      if (version == null || version < 2 || version > 5) {
+        return _ValidationResult.invalid(
+          "Invalid DMP file version: ${fields.first}. Supported versions: 2-5"
+        );
       }
-
-      final transferBuffer = <int>[];
-      for (int i = 0; i < fields[0].length; i++) {
-        var element = fields[0][i];
+      
+      return _ValidationResult.valid();
+    } catch (e) {
+      return _ValidationResult.invalid("Validation failed: $e");
+    }
+  }
+  
+  /// Optimized integer parsing with early type checking
+  int? _parseElementOptimized(dynamic element) {
+    if (element == null || element == "") return null;
+    
+    // Fast path for integers
+    if (element is int) return element;
+    
+    // Optimized string parsing
+    if (element is String) {
+      if (element.isEmpty) return null;
+      return int.tryParse(element);
+    }
+    
+    // Fallback for other types
+    return int.tryParse(element.toString());
+  }
+  
+  /// Stream-based DMP file parsing with batching and progress reporting
+  Future<List<int>> parseDMPFileOptimized(
+    File file, {
+    void Function(double progress)? onProgress,
+  }) async {
+    const batchSize = 1000;
+    final fileSize = await file.length();
+    int processedBytes = 0;
+    
+    final transferBuffer = _bufferPool.acquire();
+    
+    try {
+      final stream = file.openRead()
+          .transform(utf8.decoder)
+          .transform(LineSplitter());
+      
+      await for (final line in stream) {
+        processedBytes += line.length + 1; // +1 for newline
         
-        if (element != null && element != "") {
-          try {
-            int value;
-            if (element is int) {
-              value = element;
-            } else if (element is String) {
-              value = int.parse(element);
-            } else {
-              value = int.parse(element.toString());
+        // Parse CSV line
+        final fields = line.split(';');
+        if (fields.isEmpty) continue;
+        
+        // Process in batches to avoid blocking UI
+        for (int start = 0; start < fields.length; start += batchSize) {
+          final end = math.min(start + batchSize, fields.length);
+          
+          for (int i = start; i < end; i++) {
+            final value = _parseElementOptimized(fields[i]);
+            if (value != null) {
+              transferBuffer.add(value);
             }
-            transferBuffer.add(value);
-          } catch (e) {
-            // Skip elements that can't be parsed as integers
+          }
+          
+          // Yield control back to UI thread after each batch
+          if (end - start >= batchSize) {
+            await Future.delayed(Duration.zero);
           }
         }
+        
+        // Report progress
+        onProgress?.call(processedBytes / fileSize);
+        
+        // Only process first line for DMP files (they're single-line CSV)
+        break;
       }
-
+      
       if (transferBuffer.isEmpty) {
         throw Exception("No valid numeric data found in DMP file");
       }
       
-      return transferBuffer;
+      // Create a copy since we're returning from the pool
+      final result = List<int>.from(transferBuffer);
+      return result;
       
     } catch (e) {
       rethrow;
+    } finally {
+      _bufferPool.release(transferBuffer);
     }
+  }
+  
+  /// Legacy method for backward compatibility
+  Future<List<int>> parseDMPFile(File file) async {
+    return parseDMPFileOptimized(file);
   }
 
   /// Save data as DMP file
@@ -379,4 +469,15 @@ class FileProcessingResult {
   }) => FileProcessingResult._(false, fileName, null, error);
 
   bool get hasData => data != null && data!.isNotEmpty;
+}
+
+/// Result of early file validation
+class _ValidationResult {
+  final bool isValid;
+  final String? error;
+  
+  const _ValidationResult._(this.isValid, this.error);
+  
+  factory _ValidationResult.valid() => const _ValidationResult._(true, null);
+  factory _ValidationResult.invalid(String error) => _ValidationResult._(false, error);
 }
