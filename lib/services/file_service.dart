@@ -10,47 +10,136 @@ import '../thexporter.dart';
 /// Service for handling file operations (import/export)
 class FileService {
   
-  /// Open and parse a DMP file
-  Future<FileResult> openDMPFile() async {
+  /// Open and parse DMP file(s) - supports both single and multiple selection
+  Future<MultiFileResult> openDMPFiles() async {
     try {
       FilePickerResult? result;
       
       if (Platform.isAndroid || Platform.isIOS) {
         result = await FilePicker.platform.pickFiles(
-          dialogTitle: "Open DMP",
+          dialogTitle: "Open DMP File(s)",
           type: FileType.any,
-          allowMultiple: false,
+          allowMultiple: true,
         );
       } else {
         result = await FilePicker.platform.pickFiles(
-          dialogTitle: "Open DMP",
+          dialogTitle: "Open DMP File(s) - Hold Ctrl/Cmd or Shift for multiple",
           type: FileType.custom,
           allowedExtensions: ["dmp"],
-          allowMultiple: false,
+          allowMultiple: true,
         );
       }
 
       if (result == null) {
-        return FileResult.cancelled();
+        return MultiFileResult.cancelled();
       }
 
-      final file = File(result.files.first.path!);
+      final fileResults = <FileProcessingResult>[];
+      
+      for (int i = 0; i < result.files.length; i++) {
+        final platformFile = result.files[i];
+        
+        if (platformFile.path == null) {
+          continue;
+        }
+        
+        try {
+          final file = File(platformFile.path!);
+          
+          // Check if file exists and has minimum size
+          if (!await file.exists()) {
+            fileResults.add(FileProcessingResult.error(
+              fileName: platformFile.name,
+              error: "File does not exist",
+            ));
+            continue;
+          }
+          
+          final fileSize = await file.length();
+          if (fileSize == 0) {
+            fileResults.add(FileProcessingResult.error(
+              fileName: platformFile.name,
+              error: "File is empty (0 bytes)",
+            ));
+            continue;
+          }
+          
+          if (fileSize < 48) {
+            fileResults.add(FileProcessingResult.error(
+              fileName: platformFile.name,
+              error: "File too small (${fileSize} bytes) - minimum 48 bytes required for valid DMP format",
+            ));
+            continue;
+          }
+          
+          final transferBuffer = await parseDMPFile(file);
+          
+          fileResults.add(FileProcessingResult.success(
+            fileName: platformFile.name,
+            data: transferBuffer,
+          ));
+        } catch (e) {
+          fileResults.add(FileProcessingResult.error(
+            fileName: platformFile.name,
+            error: "Failed to parse: $e",
+          ));
+        }
+      }
+
+      return MultiFileResult.success(fileResults);
+      
+    } catch (e) {
+      return MultiFileResult.error("Failed to open DMP files: $e");
+    }
+  }
+
+  /// Parse a single DMP file into transfer buffer
+  Future<List<int>> parseDMPFile(File file) async {
+    try {
       final input = file.openRead();
       
       final fields = await input
           .transform(utf8.decoder)
           .transform(const CsvToListConverter(fieldDelimiter: ';'))
           .toList();
-
-      final transferBuffer = <int>[];
-      for (var element in fields[0]) {
-        if (element != "") transferBuffer.add(element);
+      
+      if (fields.isEmpty) {
+        throw Exception("File appears to be empty or not a valid DMP file");
+      }
+      
+      if (fields[0].isEmpty) {
+        throw Exception("First row of DMP file is empty");
       }
 
-      return FileResult.success(transferBuffer);
+      final transferBuffer = <int>[];
+      for (int i = 0; i < fields[0].length; i++) {
+        var element = fields[0][i];
+        
+        if (element != null && element != "") {
+          try {
+            int value;
+            if (element is int) {
+              value = element;
+            } else if (element is String) {
+              value = int.parse(element);
+            } else {
+              value = int.parse(element.toString());
+            }
+            transferBuffer.add(value);
+          } catch (e) {
+            // Skip elements that can't be parsed as integers
+          }
+        }
+      }
+
+      if (transferBuffer.isEmpty) {
+        throw Exception("No valid numeric data found in DMP file");
+      }
+      
+      return transferBuffer;
       
     } catch (e) {
-      return FileResult.error("Failed to open DMP file: $e");
+      rethrow;
     }
   }
 
@@ -241,4 +330,53 @@ class FileResult {
 
   bool get hasData => data != null && data!.isNotEmpty;
   bool get isCancelled => !success && error == null;
+}
+
+/// Result of processing multiple files
+class MultiFileResult {
+  final bool success;
+  final List<FileProcessingResult>? results;
+  final String? error;
+
+  const MultiFileResult._(this.success, this.results, this.error);
+
+  factory MultiFileResult.success(List<FileProcessingResult> results) =>
+      MultiFileResult._(true, results, null);
+
+  factory MultiFileResult.error(String error) =>
+      MultiFileResult._(false, null, error);
+
+  factory MultiFileResult.cancelled() =>
+      MultiFileResult._(false, null, "Operation cancelled");
+
+  bool get hasResults => results != null && results!.isNotEmpty;
+  bool get isCancelled => !success && error == "Operation cancelled";
+  
+  List<FileProcessingResult> get successfulFiles => 
+      results?.where((r) => r.success).toList() ?? [];
+  
+  List<FileProcessingResult> get failedFiles => 
+      results?.where((r) => !r.success).toList() ?? [];
+}
+
+/// Result of processing a single file within a multi-file operation
+class FileProcessingResult {
+  final bool success;
+  final String fileName;
+  final List<int>? data;
+  final String? error;
+
+  const FileProcessingResult._(this.success, this.fileName, this.data, this.error);
+
+  factory FileProcessingResult.success({
+    required String fileName,
+    required List<int> data,
+  }) => FileProcessingResult._(true, fileName, data, null);
+
+  factory FileProcessingResult.error({
+    required String fileName,
+    required String error,
+  }) => FileProcessingResult._(false, fileName, null, error);
+
+  bool get hasData => data != null && data!.isNotEmpty;
 }

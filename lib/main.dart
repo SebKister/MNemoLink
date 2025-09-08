@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:dart_ping_ios/dart_ping_ios.dart';
+import 'package:desktop_drop/desktop_drop.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:network_info_plus/network_info_plus.dart';
@@ -128,6 +129,9 @@ class _MyHomePageState extends State<MyHomePage> {
   bool networkDeviceFound = false;
   bool scanningNetwork = false;
   String networkScanProgress = "";
+  
+  // Drag and drop
+  bool _isDragging = false;
   
   // CLI
   List<String> cliHistory = [""];
@@ -283,13 +287,90 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<void> _onOpenDMP() async {
-    final result = await _fileService.openDMPFile();
-    if (result.success && result.hasData) {
-      transferBuffer = result.data!;
-      setState(() {
-        dmpLoaded = transferBuffer.isNotEmpty;
-      });
-      await _analyzeTransferBuffer();
+    final result = await _fileService.openDMPFiles();
+    if (result.success && result.hasResults) {
+      await _processMultipleFiles(result);
+    }
+  }
+
+  Future<void> _processMultipleFiles(MultiFileResult result) async {
+    int processedCount = 0;
+    final successfulFiles = result.successfulFiles;
+    final failedFiles = result.failedFiles;
+
+    for (final fileResult in successfulFiles) {
+      if (fileResult.hasData) {
+        transferBuffer = fileResult.data!;
+        final dataResult = await _dataService.processTransferBuffer(transferBuffer, unitType);
+        
+        if (dataResult.success) {
+          setState(() {
+            sections.mergeSections(dataResult.sections);
+            dmpLoaded = true;
+          });
+          processedCount++;
+          
+          if (dataResult.brokenSegmentDetected) {
+            await _showBrokenSegmentWarning();
+          }
+        }
+      }
+    }
+
+    // Show summary message
+    String message = "Processed $processedCount files successfully";
+    if (failedFiles.isNotEmpty) {
+      message += "\n${failedFiles.length} files failed to load:";
+      for (final failed in failedFiles) {
+        message += "\n• ${failed.fileName}: ${failed.error}";
+      }
+    }
+    
+    if (mounted) {
+      if (failedFiles.isNotEmpty) {
+        _showErrorMessage(message);
+      } else {
+        _showMessage(message);
+      }
+    }
+  }
+
+  // Handle dropped files
+  Future<void> _onFilesDropped(List<String> filePaths) async {
+    final dmpFiles = filePaths.where((path) => path.toLowerCase().endsWith('.dmp')).toList();
+    
+    if (dmpFiles.isEmpty) {
+      _showErrorMessage("No DMP files found in dropped files");
+      return;
+    }
+
+    try {
+      final fileResults = <FileProcessingResult>[];
+      
+      for (final filePath in dmpFiles) {
+        try {
+          final file = File(filePath);
+          final fileName = file.path.split(Platform.pathSeparator).last;
+          final transferBuffer = await _fileService.parseDMPFile(file);
+          
+          fileResults.add(FileProcessingResult.success(
+            fileName: fileName,
+            data: transferBuffer,
+          ));
+        } catch (e) {
+          final fileName = filePath.split(Platform.pathSeparator).last;
+          fileResults.add(FileProcessingResult.error(
+            fileName: fileName,
+            error: "Failed to parse: $e",
+          ));
+        }
+      }
+
+      final result = MultiFileResult.success(fileResults);
+      await _processMultipleFiles(result);
+      
+    } catch (e) {
+      _showErrorMessage("Error processing dropped files: $e");
     }
   }
 
@@ -298,7 +379,7 @@ class _MyHomePageState extends State<MyHomePage> {
     
     if (result.success) {
       setState(() {
-        sections.sections = result.sections;
+        sections.mergeSections(result.sections);
       });
       
       if (result.brokenSegmentDetected) {
@@ -822,21 +903,88 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
         ],
       ),
-      body: (!connected && !dmpLoaded)
-          ? WelcomeScreen(
-              scanningNetwork: scanningNetwork,
-              networkDeviceFound: networkDeviceFound,
-              networkScanProgress: networkScanProgress,
-              ipController: ipController,
-              ipMNemo: ipMNemo,
-              onRefreshMnemo: _onRefreshMnemo,
-              onOpenDMP: _onOpenDMP,
-              onNetworkScan: _onNetworkScan,
-              onNetworkScanStop: _onNetworkScanStop,
-              onNetworkDMP: _onNetworkDMP,
-              onIPChanged: _onIPChanged,
-            )
-          : _buildMainInterface(),
+      body: _buildDragTarget(
+        (!connected && !dmpLoaded)
+            ? WelcomeScreen(
+                scanningNetwork: scanningNetwork,
+                networkDeviceFound: networkDeviceFound,
+                networkScanProgress: networkScanProgress,
+                ipController: ipController,
+                ipMNemo: ipMNemo,
+                onRefreshMnemo: _onRefreshMnemo,
+                onOpenDMP: _onOpenDMP,
+                onNetworkScan: _onNetworkScan,
+                onNetworkScanStop: _onNetworkScanStop,
+                onNetworkDMP: _onNetworkDMP,
+                onIPChanged: _onIPChanged,
+              )
+            : _buildMainInterface(),
+      ),
+    );
+  }
+
+  Widget _buildDragTarget(Widget child) {
+    // For desktop platforms, wrap with drag target
+    if (Platform.isAndroid || Platform.isIOS) {
+      return child;
+    }
+    
+    return DropTarget(
+      onDragDone: (details) async {
+        setState(() {
+          _isDragging = false;
+        });
+        
+        final files = details.files;
+        final dmpFiles = files
+            .where((file) => file.path.toLowerCase().endsWith('.dmp'))
+            .map((file) => file.path)
+            .toList();
+        
+        if (dmpFiles.isNotEmpty) {
+          await _onFilesDropped(dmpFiles);
+        }
+      },
+      onDragEntered: (details) {
+        setState(() {
+          _isDragging = true;
+        });
+      },
+      onDragExited: (details) {
+        setState(() {
+          _isDragging = false;
+        });
+      },
+      child: Stack(
+        children: [
+          child,
+          if (_isDragging)
+            Container(
+              color: Colors.blue.withOpacity(0.3),
+              child: const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.file_upload,
+                      size: 64,
+                      color: Colors.white,
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'Drop DMP files here to load them',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 

@@ -70,7 +70,7 @@ class DataToolbar extends StatelessWidget {
             onPressed: serialBusy ? null : onOpenDMP,
             icon: Icons.file_open,
             extension: 'DMP',
-            tooltip: "Open DMP file",
+            tooltip: "Open DMP file(s)\nHold Ctrl/Cmd or Shift to select multiple",
             size: 24,
             color: serialBusy ? Colors.black26 : Colors.black54,
             extensionColor: serialBusy ? Colors.black26 : Colors.black87,
