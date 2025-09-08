@@ -64,7 +64,7 @@ class DataProcessingService {
         sections, 
         brokenSegmentDetected: brokenSegmentDetected
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       if (kDebugMode) {
         debugPrint("Error processing transfer buffer: $e");
       }

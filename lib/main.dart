@@ -960,7 +960,7 @@ class _MyHomePageState extends State<MyHomePage> {
           child,
           if (_isDragging)
             Container(
-              color: Colors.blue.withOpacity(0.3),
+              color: Colors.blue.withValues(alpha: 0.3),
               child: const Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,

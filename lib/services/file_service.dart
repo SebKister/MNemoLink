@@ -2,7 +2,6 @@ import 'dart:io';
 import 'dart:convert';
 import 'dart:collection';
 import 'dart:math' as math;
-import 'package:csv/csv.dart';
 import 'package:file_picker/file_picker.dart';
 import '../models/models.dart';
 import '../excelexport.dart';
@@ -121,7 +120,7 @@ class FileService {
       
       if (fileSize < 48) {
         return _ValidationResult.invalid(
-          "File too small (${fileSize} bytes) - minimum 48 bytes required for valid DMP format"
+          "File too small ($fileSize bytes) - minimum 48 bytes required for valid DMP format"
         );
       }
       
