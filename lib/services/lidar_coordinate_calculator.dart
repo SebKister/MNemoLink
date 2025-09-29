@@ -71,10 +71,11 @@ class LidarCoordinateCalculator {
 
     for (int shotIndex = 0; shotIndex < section.shots.length - 1; shotIndex++) {
       final shot = section.shots[shotIndex];
-      if (!shot.hasLidarData() || shotIndex >= shotPositions.length) continue;
+      if (!shot.hasLidarData() || shotIndex + 1 >= shotPositions.length) continue;
 
       final lidarData = shot.lidarData!;
-      final shotPosition = shotPositions[shotIndex];
+      // Lidar measurements are taken at the arriving point (end) of the shot
+      final shotPosition = shotPositions[shotIndex + 1];
 
       for (final lidarPoint in lidarData.points) {
         final globalPoint = calculateGlobalCoordinates(
