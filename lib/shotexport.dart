@@ -116,14 +116,14 @@ mixin ShotExport {
       }
 
       final double length = shot.getCalculatedLength();
-      final double azimuthIn = (shot.getHeadingIn().toDouble()) / 10.0;
-      final double azimuthOut = (shot.getHeadingOut().toDouble()) / 10.0;
+      final double azimuthIn = shot.getHeadingIn();
+      final double azimuthOut = shot.getHeadingOut();
       final double azimuthMean = getAzimuthMean(azimuthIn, azimuthOut);
       final double azimuthDelta = getAzimuthDelta(azimuthIn, azimuthOut);
       final List<String> azimuthComments =
           getAzimuthComment(azimuthMean, azimuthDelta, azimuthIn, azimuthOut);
-      final double pitchIn = (shot.getPitchIn().toDouble()) / 10.0;
-      final double pitchOut = (shot.getPitchOut().toDouble()) / 10.0;
+      final double pitchIn = shot.getPitchIn();
+      final double pitchOut = shot.getPitchOut();
       final double depthIn = shot.getDepthIn();
       final double depthOut = shot.getDepthOut();
 

@@ -115,19 +115,19 @@ void writeRowOnSheet(Section section, Shot data, Sheet sheet, int rowNumber) {
   cell.cellStyle = cellStyleWithNumberFormatForNumber;
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = DoubleCellValue(data.headingIn / 10.0);
+  cell.value = DoubleCellValue(data.headingIn);
   cell.cellStyle = cellStyleWithNumberFormatForNumber;
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = DoubleCellValue(data.headingOut / 10.0);
+  cell.value = DoubleCellValue(data.headingOut);
   cell.cellStyle = cellStyleWithNumberFormatForNumber;
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = DoubleCellValue(data.pitchIn / 10.0);
+  cell.value = DoubleCellValue(data.pitchIn);
   cell.cellStyle = cellStyleWithNumberFormatForNumber;
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = DoubleCellValue(data.pitchOut / 10.0);
+  cell.value = DoubleCellValue(data.pitchOut);
   cell.cellStyle = cellStyleWithNumberFormatForNumber;
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
@@ -147,7 +147,7 @@ void writeRowOnSheet(Section section, Shot data, Sheet sheet, int rowNumber) {
   cell.cellStyle = cellStyleWithNumberFormatForNumber;
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));
-  cell.value = DoubleCellValue(data.temperature / 10.0);
+  cell.value = DoubleCellValue(data.temperature);
   cell.cellStyle = cellStyleWithNumberFormatForNumber;
 
   cell = sheet.cell(CellIndex.indexByString("${ls[index++]}$rowNumber"));

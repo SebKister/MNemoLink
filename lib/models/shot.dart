@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'enums.dart';
+import 'lidar_data.dart';
 
 /// Represents a single shot measurement in a cave survey
 class Shot {
@@ -9,11 +10,11 @@ class Shot {
   double depthIn;
   double depthOut;
   
-  // Compass readings (in degrees * 10)
-  int headingIn;
-  int headingOut;
-  int pitchIn;
-  int pitchOut;
+  // Compass readings (in degrees)
+  double headingIn;
+  double headingOut;
+  double pitchIn;
+  double pitchOut;
   
   // LRUD measurements (Left, Right, Up, Down)
   double left;
@@ -22,31 +23,35 @@ class Shot {
   double down;
   
   // Additional metadata
-  int temperature;
+  double temperature;
   int hr;  // Hour
-  int min; // Minute  
+  int min; // Minute
   int sec; // Second
   int markerIndex;
+
+  // Optional Lidar data (V6 format and later)
+  LidarData? lidarData;
 
   /// Default constructor
   Shot({
     this.typeShot = TypeShot.std,
     this.length = 0.0,
-    this.headingIn = 0,
-    this.headingOut = 0,
-    this.pitchIn = 0,
-    this.pitchOut = 0,
+    this.headingIn = 0.0,
+    this.headingOut = 0.0,
+    this.pitchIn = 0.0,
+    this.pitchOut = 0.0,
     this.depthIn = 0.0,
     this.depthOut = 0.0,
     this.left = 0.0,
     this.right = 0.0,
     this.up = 0.0,
     this.down = 0.0,
-    this.temperature = 0,
+    this.temperature = 0.0,
     this.hr = 0,
     this.min = 0,
     this.sec = 0,
     this.markerIndex = 0,
+    this.lidarData,
   });
 
   /// Creates a zero-valued shot
@@ -65,17 +70,17 @@ class Shot {
   double getDepthOut() => depthOut;
   void setDepthOut(double newDepthOut) => depthOut = newDepthOut;
   
-  int getHeadingIn() => headingIn;
-  void setHeadingIn(int newHeadingIn) => headingIn = newHeadingIn;
-  
-  int getHeadingOut() => headingOut;
-  void setHeadingOut(int newHeadingOut) => headingOut = newHeadingOut;
-  
-  int getPitchIn() => pitchIn;
-  void setPitchIn(int newPitchIn) => pitchIn = newPitchIn;
-  
-  int getPitchOut() => pitchOut;
-  void setPitchOut(int newPitchOut) => pitchOut = newPitchOut;
+  double getHeadingIn() => headingIn;
+  void setHeadingIn(double newHeadingIn) => headingIn = newHeadingIn;
+
+  double getHeadingOut() => headingOut;
+  void setHeadingOut(double newHeadingOut) => headingOut = newHeadingOut;
+
+  double getPitchIn() => pitchIn;
+  void setPitchIn(double newPitchIn) => pitchIn = newPitchIn;
+
+  double getPitchOut() => pitchOut;
+  void setPitchOut(double newPitchOut) => pitchOut = newPitchOut;
   
   double getLeft() => left;
   void setLeft(double newLeft) => left = newLeft;
@@ -89,8 +94,8 @@ class Shot {
   double getDown() => down;
   void setDown(double newDown) => down = newDown;
   
-  int getTemperature() => temperature;
-  void setTemperature(int newTemperature) => temperature = newTemperature;
+  double getTemperature() => temperature;
+  void setTemperature(double newTemperature) => temperature = newTemperature;
   
   int getHr() => hr;
   void setHr(int newHr) => hr = newHr;
@@ -118,8 +123,8 @@ class Shot {
     if (!hasProblematicLength()) return length;
     
     final depthChange = getDepthChange();
-    // Use average inclination from pitchIn and pitchOut (in degrees/10)
-    final avgPitch = (pitchIn + pitchOut) / 2.0 / 10.0; // Convert to degrees
+    // Use average inclination from pitchIn and pitchOut (already in degrees)
+    final avgPitch = (pitchIn + pitchOut) / 2.0;
     final radians = avgPitch * pi / 180.0; // Convert to radians
     
     // If inclination is near 90 degrees (vertical), use depth change as length
@@ -133,4 +138,34 @@ class Shot {
   
   /// Check if this shot uses calculated length (for display purposes)
   bool usesCalculatedLength() => hasProblematicLength();
+
+  /// Calculate true vertical displacement using pitch angles
+  /// This is used when depth sensor is unreliable (e.g., above water scenarios)
+  double getCalculatedVerticalDisplacement() {
+    final lengthToUse = hasProblematicLength() ? getCalculatedLength() : length;
+    final avgPitch = (pitchIn + pitchOut) / 2.0;
+    final pitchRadians = avgPitch * pi / 180.0;
+
+    return lengthToUse * sin(pitchRadians);
+  }
+
+  /// Get the best available vertical displacement
+  /// Uses depth sensor data when reliable, otherwise calculates from angles
+  double getBestVerticalDisplacement() {
+    final depthChange = depthOut - depthIn; // Preserve sign
+    final absDepthChange = depthChange.abs();
+    final lengthToUse = hasProblematicLength() ? getCalculatedLength() : length;
+
+    // If depth sensor reading is very small but we have significant length and pitch,
+    // prefer calculated displacement from angles
+    if (absDepthChange < 0.1 && lengthToUse > 0.5) {
+      return getCalculatedVerticalDisplacement();
+    } else {
+      // Use depth sensor reading
+      return depthChange;
+    }
+  }
+
+  /// Check if this shot has Lidar data
+  bool hasLidarData() => lidarData?.hasData ?? false;
 }

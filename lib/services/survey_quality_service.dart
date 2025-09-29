@@ -51,12 +51,12 @@ class SurveyQualityService {
     for (int i = 0; i < section.shots.length - 1; i++) { // Exclude EOC shot
       final shot = section.shots[i];
       
-      // Check heading consistency (angles are in degrees * 10)
-      final headingDiff = ((shot.headingOut - shot.headingIn).abs() / 10.0) % 360;
+      // Check heading consistency (angles are already in degrees)
+      final headingDiff = (shot.headingOut - shot.headingIn).abs() % 360;
       final normalizedHeadingDiff = headingDiff > 180 ? 360 - headingDiff : headingDiff;
       
       // Check pitch consistency
-      final pitchDiff = (shot.pitchOut - shot.pitchIn).abs() / 10.0;
+      final pitchDiff = (shot.pitchOut - shot.pitchIn).abs();
 
       // Track maximum discrepancies
       maxHeadingDiff = max(maxHeadingDiff, normalizedHeadingDiff);
@@ -158,8 +158,8 @@ class SurveyQualityService {
         // For valid shots, calculate length from inclination and depth change
         final depthChange = shot.getDepthChange();
         if (depthChange > 0 && shot.length > 0) {
-          // Use average inclination from pitchIn and pitchOut (in degrees/10)
-          final avgPitch = (shot.pitchIn + shot.pitchOut) / 2.0 / 10.0; // Convert to degrees
+          // Use average inclination from pitchIn and pitchOut (already in degrees)
+          final avgPitch = (shot.pitchIn + shot.pitchOut) / 2.0;
           final radians = avgPitch * pi / 180.0; // Convert to radians
           
           double calculatedLength;
