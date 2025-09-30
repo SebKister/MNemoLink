@@ -48,12 +48,13 @@ class MapSurvey {
 
       // Get the best vertical displacement (depth sensor or calculated from angles)
       final verticalDisplacement = shot.getBestVerticalDisplacement();
+      final adjustedHeading = (90-(shot.headingIn + shot.headingOut)/2);
 
       points.add(Point3d(
           points[i].x +
-              factecr * sin(-shot.headingOut * pi / 180.0),
+              factecr * cos(adjustedHeading * pi / 180.0),
           points[i].y +
-              factecr * cos(shot.headingOut * pi / 180.0),
+              factecr * sin(adjustedHeading * pi / 180.0),
           points[i].z + verticalDisplacement)); // Use calculated vertical displacement
     }
   }

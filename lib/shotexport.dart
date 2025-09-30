@@ -17,6 +17,246 @@ mixin ShotExport {
 
   String get extension;
 
+  /// Check if a section contains Lidar data (indicating dry cave survey)
+  bool hasDryCaveSurvey(Section section) {
+    return section.getShots().any((shot) => shot.hasLidarData());
+  }
+
+  /// Generate instrument configuration for survey type
+  void writeInstrumentConfig(
+    StringBuffer contents,
+    bool isDryCave,
+    String prefix, // '' for Therion, '*' for Survex
+  ) {
+    if (isDryCave) {
+      contents.write(newLine('${prefix}instrument compass "Jedeye"'));
+      contents.write(newLine('${prefix}instrument clino "Jedeye"'));
+      contents.write(newLine('${prefix}instrument tape "Jedeye"'));
+    } else {
+      contents.write(newLine('${prefix}instrument compass "MNemo V2"'));
+      contents.write(newLine('${prefix}instrument depth "MNemo V2"'));
+      contents.write(newLine('${prefix}instrument tape "MNemo V2"'));
+    }
+    contents.write('\n');
+
+    contents.write(newLine('${prefix}sd compass 1.5 degrees'));
+    contents.write(newLine('${prefix}sd tape 0.086 metres'));
+    if (!isDryCave) {
+      contents.write(newLine('${prefix}sd depth 0.1 metres'));
+    }
+    contents.write('\n');
+
+    if (!isDryCave) {
+      contents.write(newLine('${prefix}calibrate depth 0 -1'));
+      contents.write('\n');
+    }
+  }
+
+  /// Generate units configuration for survey type
+  void writeUnitsConfig(
+    StringBuffer contents,
+    bool isDryCave,
+    UnitType unitType,
+    String prefix, // '' for Therion, '*' for Survex
+  ) {
+    if (isDryCave) {
+      // Dry cave: no depth measurements
+      if (unitType == UnitType.metric) {
+        contents.write(newLine('${prefix}units tape metres'));
+      } else {
+        contents.write(newLine('${prefix}units tape feet'));
+      }
+      contents.write(newLine('${prefix}units clino deg'));
+    } else {
+      // Underwater survey: include depth
+      if (unitType == UnitType.metric) {
+        contents.write(newLine('${prefix}units tape depth metres'));
+      } else {
+        contents.write(newLine('${prefix}units tape depth feet'));
+      }
+    }
+    contents.write('\n');
+  }
+
+  /// Generate data format configuration for survey type
+  void writeDataConfig(
+    StringBuffer contents,
+    bool isDryCave,
+    String prefix, // '' for Therion, '*' for Survex
+    String commentPrefix, // '#' for Therion, ';' for Survex
+  ) {
+    if (isDryCave) {
+      // Dry cave data format
+      final dryDataFormat = [
+        '${prefix}data',
+        'normal',
+        'from',
+        'to',
+        'tape',
+        'compass',
+        'backcompass',
+        'clino',
+        'backclino',
+        'ignoreall'
+      ].join(' ');
+
+      final dryHeaderFormat = [
+        '$commentPrefix From',
+        'To',
+        'Length',
+        'AzIn',
+        '180-AzOut',
+        'PitchIn',
+        'PitchOut',
+        'AzMean',
+        'AzOut',
+        'AzDelta'
+      ].join('\t');
+
+      contents.write(newLine(dryDataFormat));
+      contents.write(newLine(dryHeaderFormat));
+    } else {
+      // Underwater data format
+      final underwaterDataFormat = [
+        '${prefix}data',
+        'diving',
+        'from',
+        'to',
+        'tape',
+        'compass',
+        'backcompass',
+        'fromdepth',
+        'todepth',
+        'ignoreall'
+      ].join(' ');
+
+      final underwaterHeaderFormat = [
+        '$commentPrefix From',
+        'To',
+        'Length',
+        'AzIn',
+        '180-AzOut',
+        'DepIn',
+        'DepOut',
+        'AzMean',
+        'AzOut',
+        'AzDelta',
+        'PitchIn',
+        'PitchOut'
+      ].join('\t');
+
+      contents.write(newLine(underwaterDataFormat));
+      contents.write(newLine(underwaterHeaderFormat));
+    }
+    contents.write('\n');
+  }
+
+  /// Format shot data line for export
+  String formatShotDataLine(
+    ExportShot exportShot,
+    bool isDryCave,
+    int paddingWidth,
+  ) {
+    final String fromStation = exportShot.from.padLeft(paddingWidth, '0');
+    final String toStation = exportShot.to.padLeft(paddingWidth, '0');
+
+    if (isDryCave) {
+      return [
+        fromStation,
+        toStation,
+        exportShot.length.toStringAsFixed(2),
+        exportShot.azimuthIn.toStringAsFixed(1),
+        exportShot.azimuthOut180.toStringAsFixed(1),
+        exportShot.pitchIn.toStringAsFixed(1),
+        exportShot.pitchOut.toStringAsFixed(1),
+        exportShot.azimuthMean.toStringAsFixed(1),
+        exportShot.azimuthOut.toStringAsFixed(1),
+        exportShot.azimuthDelta.toStringAsFixed(1),
+      ].join('\t');
+    } else {
+      return [
+        fromStation,
+        toStation,
+        exportShot.length.toStringAsFixed(2),
+        exportShot.azimuthIn.toStringAsFixed(1),
+        exportShot.azimuthOut180.toStringAsFixed(1),
+        exportShot.depthIn.toStringAsFixed(2),
+        exportShot.depthOut.toStringAsFixed(2),
+        exportShot.azimuthMean.toStringAsFixed(1),
+        exportShot.azimuthOut.toStringAsFixed(1),
+        exportShot.azimuthDelta.toStringAsFixed(1),
+        exportShot.pitchIn.toStringAsFixed(1),
+        exportShot.pitchOut.toStringAsFixed(1),
+      ].join('\t');
+    }
+  }
+
+  /// Process LRUD and Lidar data for an export shot
+  /// Returns a map with 'lrud' and 'lidar' StringBuffer contents
+  Map<String, StringBuffer> processLRUDAndLidarData(
+    ExportShot exportShot,
+    bool isDryCave,
+    int paddingWidth,
+    String commentPrefix,
+    String Function(String) stationNameFormatter,
+  ) {
+    final Map<String, StringBuffer> result = {
+      'lrud': StringBuffer(),
+      'lidar': StringBuffer(),
+    };
+
+    if (exportShot.lrudShots.isEmpty) return result;
+
+    final String stationName = stationNameFormatter(exportShot.to);
+
+    // Separate regular LRUD from Lidar data
+    final List<LRUDShot> regularLrudShots = exportShot.lrudShots
+        .where((shot) => shot.direction != LRUDDirection.lidar)
+        .toList();
+    final List<LRUDShot> lidarShots = exportShot.lrudShots
+        .where((shot) => shot.direction == LRUDDirection.lidar)
+        .toList();
+
+    // Process regular LRUD measurements
+    if (regularLrudShots.isNotEmpty) {
+      result['lrud']!.write(newLine('$commentPrefix LRUD for station $stationName'));
+      for (LRUDShot lrudShot in regularLrudShots) {
+        result['lrud']!.write(newLine(
+            '$commentPrefix ${enumToStringWithoutClassName(lrudShot.direction.toString())}'));
+
+        final lrudDataLine = [
+          stationName,
+          '-',
+          lrudShot.length.toStringAsFixed(2),
+          lrudShot.azimuth.toStringAsFixed(1),
+          lrudShot.clino.toStringAsFixed(1)
+        ].join('\t');
+
+        result['lrud']!.write(newLine(lrudDataLine));
+      }
+      result['lrud']!.write('\n');
+    }
+
+    // Process Lidar measurements
+    if (lidarShots.isNotEmpty && isDryCave) {
+      result['lidar']!.write(newLine('$commentPrefix Lidar measurements from station $stationName'));
+      for (LRUDShot lidarShot in lidarShots) {
+        final lidarDataLine = [
+          stationName,
+          '-',
+          lidarShot.length.toStringAsFixed(2),
+          lidarShot.azimuth.toStringAsFixed(1),
+          lidarShot.clino.toStringAsFixed(1)
+        ].join('\t');
+
+        result['lidar']!.write(newLine(lidarDataLine));
+      }
+      result['lidar']!.write('\n');
+    }
+
+    return result;
+  }
+
   double getAzimuthMean(double az1, double az2) {
     // Convert degrees to radians
     final double az1Rad = deg2rad(az1);
@@ -139,12 +379,13 @@ mixin ShotExport {
           depthOut: depthOut,
           azimuthMean: azimuthMean,
           azimuthDelta: azimuthDelta,
-          lurdLeft: shot.getLeft(),
-          lurdRight: shot.getRight(),
-          lurdUp: shot.getUp(),
-          lurdDown: shot.getDown(),
+          lrudLeft: shot.getLeft(),
+          lrudRight: shot.getRight(),
+          lrudUp: shot.getUp(),
+          lrudDown: shot.getDown(),
           azimuthComments: azimuthComments,
-          isCalculatedLength: shot.usesCalculatedLength());
+          isCalculatedLength: shot.usesCalculatedLength(),
+          lidarData: shot.lidarData);
 
       svxShots.add(svxShot);
 
@@ -189,7 +430,7 @@ class ExportShot {
   double depthOut;
   double azimuthMean;
   double azimuthDelta;
-  late List<LURDShot> lurdShots;
+  late List<LRUDShot> lrudShots;
   List<String> azimuthComments;
   bool isCalculatedLength;
 
@@ -205,54 +446,69 @@ class ExportShot {
     required this.depthOut,
     required this.azimuthMean,
     required this.azimuthDelta,
-    required double lurdLeft,
-    required double lurdRight,
-    required double lurdUp,
-    required double lurdDown,
+    required double lrudLeft,
+    required double lrudRight,
+    required double lrudUp,
+    required double lrudDown,
     required this.azimuthComments,
     required this.isCalculatedLength,
+    LidarData? lidarData,
   }) {
     azimuthOut180 = (azimuthOut + 180) % 360;
-    lurdShots = [];
-    if (!almostEqual(0.0, lurdLeft)) {
-      lurdShots.add(
-        LURDShot(
-          direction: LURDDirection.left,
-          length: lurdLeft,
+    lrudShots = [];
+    if (!almostEqual(0.0, lrudLeft)) {
+      lrudShots.add(
+        LRUDShot(
+          direction: LRUDDirection.left,
+          length: lrudLeft,
           azimuth: _addAngles(azimuthMean, -90.0),
           clino: 0.0,
         ),
       );
     }
-    if (!almostEqual(0.0, lurdRight)) {
-      lurdShots.add(
-        LURDShot(
-          direction: LURDDirection.right,
-          length: lurdRight,
+    if (!almostEqual(0.0, lrudRight)) {
+      lrudShots.add(
+        LRUDShot(
+          direction: LRUDDirection.right,
+          length: lrudRight,
           azimuth: _addAngles(azimuthMean, 90.0),
           clino: 0.0,
         ),
       );
     }
-    if (!almostEqual(0.0, lurdUp)) {
-      lurdShots.add(
-        LURDShot(
-          direction: LURDDirection.up,
-          length: lurdUp,
+    if (!almostEqual(0.0, lrudUp)) {
+      lrudShots.add(
+        LRUDShot(
+          direction: LRUDDirection.up,
+          length: lrudUp,
           azimuth: 0.0,
           clino: 90.0,
         ),
       );
     }
-    if (!almostEqual(0.0, lurdDown)) {
-      lurdShots.add(
-        LURDShot(
-          direction: LURDDirection.down,
-          length: lurdDown,
+    if (!almostEqual(0.0, lrudDown)) {
+      lrudShots.add(
+        LRUDShot(
+          direction: LRUDDirection.down,
+          length: lrudDown,
           azimuth: 0.0,
           clino: -90.0,
         ),
       );
+    }
+
+    // Process Lidar data as LRUD shots
+    if (lidarData != null && lidarData.hasData) {
+      for (final point in lidarData.points) {
+        lrudShots.add(
+          LRUDShot(
+            direction: LRUDDirection.lidar,
+            length: point.distance,
+            azimuth: point.yaw,
+            clino: point.pitch,
+          ),
+        );
+      }
     }
   }
 
@@ -279,13 +535,13 @@ String enumToStringWithoutClassName(dynamic enumValue) {
   return enumValue.toString().split('.').last;
 }
 
-class LURDShot {
-  LURDDirection direction;
+class LRUDShot {
+  LRUDDirection direction;
   double length;
   double azimuth;
   double clino;
 
-  LURDShot({
+  LRUDShot({
     required this.direction,
     required this.length,
     required this.azimuth,
@@ -293,4 +549,4 @@ class LURDShot {
   });
 }
 
-enum LURDDirection { left, right, up, down }
+enum LRUDDirection { left, right, up, down, lidar }
