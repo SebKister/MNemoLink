@@ -47,7 +47,7 @@ dependencies:
   intl: null
   loading_animation_widget: null
   network_info_plus: ^6.1.0
-  package_info_plus: null
+  package_info_plus: ^8.0.0
   path_provider: null
   shared_preferences: ^2.2.2
   slugify: null
