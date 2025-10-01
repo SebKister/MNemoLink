@@ -23,6 +23,10 @@ class DataProcessingService {
     UnitType unitType
   ) async {
     try {
+      if (transferBuffer.isEmpty) {
+        return DataProcessingResult.error("Transfer buffer is empty");
+      }
+      
       final sections = <Section>[];
       int cursor = 0;
       bool brokenSegmentDetected = false;
@@ -47,6 +51,11 @@ class DataProcessingService {
         }
         
         if (sectionResult.shouldStop) {
+          break;
+        }
+        
+        // Safety check to prevent infinite loops
+        if (cursor <= 0 || cursor >= transferBuffer.length) {
           break;
         }
       }
@@ -346,16 +355,25 @@ class DataProcessingService {
 
   /// Read a single byte from the buffer
   int _readByteFromBuffer(List<int> buffer, int address) {
-    return address < buffer.length ? buffer[address] : 0;
+    if (address < 0 || address >= buffer.length) {
+      return 0;
+    }
+    return buffer[address];
   }
 
   /// Read a 16-bit integer from the buffer (little endian)
   int _readIntFromBuffer(List<int> buffer, int address) {
-    if (address + 1 >= buffer.length) return 0;
+    if (address < 0 || address + 1 >= buffer.length) {
+      return 0;
+    }
     
-    final bytes = Uint8List.fromList([buffer[address], buffer[address + 1]]);
-    final byteData = ByteData.sublistView(bytes);
-    return byteData.getInt16(0);
+    try {
+      final bytes = Uint8List.fromList([buffer[address], buffer[address + 1]]);
+      final byteData = ByteData.sublistView(bytes);
+      return byteData.getInt16(0);
+    } catch (e) {
+      return 0;
+    }
   }
 }
 
