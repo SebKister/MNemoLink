@@ -56,75 +56,106 @@ String generateRandomString(int length) {
     return Card(
       elevation: 2,
       child: ListTile(
-        title: Text(
-          "${widget.section.name} - "
-          "dir: ${(widget.section.direction == SurveyDirection.surveyIn) ? "in" : "out"} - "
-          "shots: ${widget.section.shots.length - 1}"),
-        subtitle: Text(
-            "Length: ${widget.section.getLength().toStringAsFixed(2)}m - "
-            "Depth (start-(min/max)-end): "
-              "${widget.section.getDepthStart().toStringAsFixed(2)}-"
-              "(${widget.section.getDepthMin().toStringAsFixed(2)}/"
-              "${widget.section.getDepthMax().toStringAsFixed(2)})-"
-              "${widget.section.getDepthEnd().toStringAsFixed(2)}m"),
-        trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget> [
-              if (widget.section.getBrokenFlag()) 
-                const Tooltip(
-                  message: 'Recovered section', 
-                  child: Icon(
-                    Icons.fmd_bad, 
-                    color: Colors.orange,
-                  ),
-                ),
-              if (widget.section.hasProblematicShots()) ...[
-                const SizedBox(width: 6),
-                const Tooltip(
-                  message: 'Contains shots with calculated lengths',
-                  child: Icon(
-                    Icons.straighten,
-                    color: Colors.red,
-                  ),
-                ),
-              ],
-              const SizedBox(width: 6), 
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(DateFormat('yyyy-MM-dd HH:mm').format(widget.section.dateSurvey)),
-                  const SizedBox(height: 2),
-                  StarRatingWidget(
-                    quality: qualityService.scoreSurveySection(widget.section),
-                    size: 14.0,
-                  ),
-                ],
-              ),
-            ],            
-          ),
-        leading: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Checkbox(
-              value: widget.section.isSelected,
-              onChanged: (bool? value) {
-                if (value != null && widget.onSelectionChanged != null) {
-                  widget.onSelectionChanged!(widget.section, value);
-                }
-              },
-              activeColor: Colors.blue,
-            ),
-            WidgetZoom(
-              heroAnimationTag: generateRandomString(10),
-              zoomWidget: Container( 
-                  child: picture,
-              ),
-            ),
-          ],
-        ),
+        title: _buildTitle(),
+        subtitle: _buildSubtitle(),
+        trailing: _buildTrailing(),
+        leading: _buildLeading(),
       ),
     );
+  }
+
+  Widget _buildTitle() {
+    final direction = widget.section.direction == SurveyDirection.surveyIn ? "in" : "out";
+    final shotCount = widget.section.shots.length - 1;
+    return Text("${widget.section.name} - direction: $direction - shots: $shotCount");
+  }
+
+  Widget _buildSubtitle() {
+    final length = widget.section.getLength().toStringAsFixed(2);
+    final depthStart = widget.section.getDepthStart().toStringAsFixed(2);
+    final depthMin = widget.section.getDepthMin().toStringAsFixed(2);
+    final depthMax = widget.section.getDepthMax().toStringAsFixed(2);
+    final depthEnd = widget.section.getDepthEnd().toStringAsFixed(2);
+    
+    return Text(
+      "Length: ${length}m - Depth (start-(min/max)-end): "
+      "$depthStart-($depthMin/$depthMax)-${depthEnd}m"
+    );
+  }
+
+  Widget _buildTrailing() {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (widget.section.getBrokenFlag()) _buildBrokenIcon(),
+        if (widget.section.hasProblematicShots()) ...[
+          const SizedBox(width: 6),
+          _buildProblematicShotsIcon(),
+        ],
+        const SizedBox(width: 6),
+        _buildSectionInfo(),
+      ],
+    );
+  }
+
+  Widget _buildBrokenIcon() {
+    return const Tooltip(
+      message: 'Recovered section',
+      child: Icon(Icons.fmd_bad, color: Colors.orange),
+    );
+  }
+
+  Widget _buildProblematicShotsIcon() {
+    return const Tooltip(
+      message: 'Contains shots with calculated lengths',
+      child: Icon(Icons.straighten, color: Colors.red),
+    );
+  }
+
+  Widget _buildSectionInfo() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Text(DateFormat('yyyy-MM-dd HH:mm').format(widget.section.dateSurvey)),
+        const SizedBox(height: 2),
+        StarRatingWidget(
+          quality: qualityService.scoreSurveySection(widget.section),
+          size: 14.0,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLeading() {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _buildSelectionCheckbox(),
+        _buildPreviewImage(),
+      ],
+    );
+  }
+
+  Widget _buildSelectionCheckbox() {
+    return Checkbox(
+      value: widget.section.isSelected,
+      onChanged: _handleSelectionChange,
+      activeColor: Colors.blue,
+    );
+  }
+
+  Widget _buildPreviewImage() {
+    return WidgetZoom(
+      heroAnimationTag: generateRandomString(10),
+      zoomWidget: Container(child: picture),
+    );
+  }
+
+  void _handleSelectionChange(bool? value) {
+    if (value != null && widget.onSelectionChanged != null) {
+      widget.onSelectionChanged!(widget.section, value);
+    }
   }
 
   double _calculateOptimalGridSpacing(double maxExtent) {

@@ -33,6 +33,7 @@ dependencies:
   dart_numerics: ^0.0.6
   dart_ping: ^9.0.1
   dart_ping_ios: ^4.0.2
+  desktop_drop: ^0.4.4
   dio: null
   disks_desktop: ^1.0.1
   excel: ^4.0.0
