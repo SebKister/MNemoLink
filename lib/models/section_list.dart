@@ -43,14 +43,35 @@ class SectionList {
   /// Get only selected sections
   List<Section> get selectedSections => sections.where((section) => section.isSelected).toList();
   
+  /// Get selection statistics in a single pass for better performance
+  SelectionStats get selectionStats {
+    if (sections.isEmpty) return SelectionStats.empty();
+    
+    int selectedCount = 0;
+    for (final section in sections) {
+      if (section.isSelected) selectedCount++;
+    }
+    
+    return SelectionStats(
+      total: sections.length,
+      selected: selectedCount,
+    );
+  }
+  
   /// Check if all sections are selected
-  bool get allSelected => sections.isNotEmpty && sections.every((section) => section.isSelected);
+  bool get allSelected {
+    final stats = selectionStats;
+    return stats.total > 0 && stats.selected == stats.total;
+  }
   
   /// Check if no sections are selected
-  bool get noneSelected => sections.every((section) => !section.isSelected);
+  bool get noneSelected => selectionStats.selected == 0;
   
   /// Check if some sections are selected (for partial selection state)
-  bool get someSelected => sections.any((section) => section.isSelected) && !allSelected;
+  bool get someSelected {
+    final stats = selectionStats;
+    return stats.selected > 0 && stats.selected < stats.total;
+  }
   
   /// Select all sections
   void selectAll() {
@@ -66,12 +87,18 @@ class SectionList {
     }
   }
   
-  /// Toggle selection for all sections
+  /// Toggle selection for all sections (optimized)
   void toggleSelectAll() {
-    if (allSelected) {
-      deselectAll();
-    } else {
-      selectAll();
+    final shouldSelectAll = selectionStats.selected < sections.length;
+    for (final section in sections) {
+      section.isSelected = shouldSelectAll;
+    }
+  }
+  
+  /// Set selection state for multiple sections efficiently
+  void setSelectionForSections(List<Section> sectionsToUpdate, bool selected) {
+    for (final section in sectionsToUpdate) {
+      section.isSelected = selected;
     }
   }
 
@@ -194,4 +221,29 @@ class SectionList {
   /// Legacy getters/setters for compatibility with existing code
   List<Section> getSections() => sections;
   void setSections(List<Section> newSections) => sections = newSections;
+}
+
+/// Efficient statistics for section selection state
+class SelectionStats {
+  final int total;
+  final int selected;
+  
+  const SelectionStats({required this.total, required this.selected});
+  
+  const SelectionStats.empty() : total = 0, selected = 0;
+  
+  /// Get number of unselected sections
+  int get unselected => total - selected;
+  
+  /// Check if all are selected
+  bool get allSelected => total > 0 && selected == total;
+  
+  /// Check if none are selected
+  bool get noneSelected => selected == 0;
+  
+  /// Check if some are selected
+  bool get someSelected => selected > 0 && selected < total;
+  
+  @override
+  String toString() => 'SelectionStats(selected: $selected, total: $total)';
 }
