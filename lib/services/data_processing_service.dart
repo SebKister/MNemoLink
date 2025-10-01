@@ -414,6 +414,15 @@ class DataProcessingService {
     return byteData.getInt16(0);
   }
 
+  /// Read a 16-bit integer from the buffer (inverted endian)
+  int _readInvIntFromBuffer(List<int> buffer, int address) {
+    if (address + 1 >= buffer.length) return 0;
+
+    final bytes = Uint8List.fromList([buffer[address + 1], buffer[address]]);
+    final byteData = ByteData.sublistView(bytes);
+    return byteData.getInt16(0);
+  }
+
   int _readUInt16FromBuffer(List<int> buffer, int address) {
     if (address + 1 >= buffer.length) return 0;
 
@@ -491,7 +500,7 @@ class DataProcessingService {
       final yaw = _readUInt16FromBuffer(transferBuffer, cursor) / 100.0;
       cursor += 2;
 
-      final pitch = _readIntFromBuffer(transferBuffer, cursor) / 100.0;
+      final pitch = _readInvIntFromBuffer(transferBuffer, cursor) / 100.0;
       cursor += 2;
 
       final distance = _readUInt16FromBuffer(transferBuffer, cursor) * conversionFactor / 100.0;
@@ -530,8 +539,8 @@ class DataProcessingService {
       final (normalizedMinPitch, normalizedMaxPitch) = _normalizeAngleRange(minPitch, maxPitch);
       
       debugPrint("DataProcessingService: Lidar shot statistics - ${lidarPoints.length} points: "
-          "Yaw(${normalizedMinYaw.toStringAsFixed(1)}°-${normalizedMaxYaw.toStringAsFixed(1)}°), "
-          "Pitch(${normalizedMinPitch.toStringAsFixed(1)}°-${normalizedMaxPitch.toStringAsFixed(1)}°), "
+          "Yaw(${normalizedMinYaw.toStringAsFixed(1)}° - ${normalizedMaxYaw.toStringAsFixed(1)}°), "
+          "Pitch(${normalizedMinPitch.toStringAsFixed(1)}° - ${normalizedMaxPitch.toStringAsFixed(1)}°), "
           "Distance(${minDistance}m-${maxDistance}m)");
     }
 
@@ -542,33 +551,28 @@ class DataProcessingService {
   /// For example: -5° to +5° instead of 355° to 5°
   /// Returns a tuple of (minAngle, maxAngle) in degrees, always with min <= max
   (double, double) _normalizeAngleRange(double minAngleDegrees, double maxAngleDegrees) {
-    // Normalize angles to 0-360 range first
+    // Normalize angles to 0-360 range
     double normalizedMin = minAngleDegrees % 360.0;
     double normalizedMax = maxAngleDegrees % 360.0;
-    
-    // Handle negative angles
+
     if (normalizedMin < 0) normalizedMin += 360.0;
     if (normalizedMax < 0) normalizedMax += 360.0;
-    
-    // Handle the case where the range crosses 0°/360° boundary
-    if (normalizedMax - normalizedMin > 180.0) {
-      // Range crosses the 0°/360° boundary
-      // Try both representations and choose the one with smaller absolute values
-      final double range1 = normalizedMax - normalizedMin;
-      final double range2 = (normalizedMax - 360.0) - normalizedMin;
-      
-      // If the second representation gives a smaller range, use it
-      if (range2.abs() < range1) {
-        final double adjustedMax = normalizedMax - 360.0;
-        // Ensure min <= max for the adjusted values
-        return adjustedMax <= normalizedMin ? (adjustedMax, normalizedMin) : (normalizedMin, adjustedMax);
-      } else {
-        // Ensure min <= max
-        return normalizedMin <= normalizedMax ? (normalizedMin, normalizedMax) : (normalizedMax, normalizedMin);
-      }
+
+    // Calculate direct span (clockwise from min to max)
+    final double directSpan = normalizedMax >= normalizedMin ?
+        normalizedMax - normalizedMin :
+        normalizedMin - normalizedMax + 360.0;
+
+    // If direct span is <= 180°, use it; otherwise use boundary-crossing representation
+    if (directSpan <= 180.0) {
+      return normalizedMin <= normalizedMax ?
+          (normalizedMin, normalizedMax) :
+          (normalizedMax, normalizedMin);
     } else {
-      // Range doesn't cross the boundary, ensure min <= max
-      return normalizedMin <= normalizedMax ? (normalizedMin, normalizedMax) : (normalizedMax, normalizedMin);
+      // Use boundary-crossing representation (shorter path across 0°)
+      return normalizedMax >= normalizedMin ?
+          (normalizedMin, normalizedMax - 360.0) :
+          (normalizedMin - 360.0, normalizedMax);
     }
   }
 
