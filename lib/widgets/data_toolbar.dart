@@ -125,17 +125,7 @@ class DataToolbar extends StatelessWidget {
     );
   }
 
-  Widget _buildInputActions() {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (hasSections) _buildSelectAllButton(),
-        _buildClearDataButton(),
-        _buildReadDataButton(),
-        _buildOpenDMPButton(),
-      ],
-    );
-  }
+}
 
   Widget _buildSelectAllButton() {
     return IconButton(
@@ -172,15 +162,7 @@ class DataToolbar extends StatelessWidget {
       extensionColor: serialBusy ? Colors.black26 : Colors.black87,
     );
   }
-
-  List<Widget> _buildExportActions() {
-    return [
-      _buildSaveDMPButton(),
-      _buildExportExcelButton(),
-      _buildExportSurvexButton(),
-      _buildExportTherionButton(),
-    ];
-  }
+  
 
   Widget _buildSaveDMPButton() {
     return _buildExportFileIcon(
