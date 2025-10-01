@@ -5,11 +5,12 @@ class THExporter with ShotExport {
   @override
   String get extension => '.th';
 
+
   @override
   Future<String> getContents(Section section, ExportShots exportShots,
       String surveyName, UnitType unitType) async {
     StringBuffer contents = StringBuffer(newLine('encoding UTF-8'));
-    StringBuffer lurdContents = StringBuffer();
+    StringBuffer lrudContents = StringBuffer();
 
     contents.write('\n');
 
@@ -33,35 +34,18 @@ class THExporter with ShotExport {
     contents.write(newLine('#explo-team ""'));
     contents.write('\n');
 
-    contents.write(newLine('instrument compass "MNemo V2"'));
-    contents.write(newLine('instrument depth "MNemo V2"'));
-    contents.write(newLine('instrument tape "MNemo V2"'));
-    contents.write('\n');
+    final bool isDryCave = hasDryCaveSurvey(section);
 
-    contents.write(newLine('sd compass 1.5 degrees'));
-    contents.write(newLine('sd depth 0.1 metres'));
-    contents.write(newLine('sd tape 0.086 metres'));
-    contents.write('\n');
-
-    contents.write(newLine('calibrate depth 0 -1'));
-    contents.write('\n');
-
-    // Unit handling
-    if (unitType == UnitType.metric) {
-      contents.write(newLine('units tape depth metres'));
-    } else {
-      contents.write(newLine('units tape depth feet'));
-    }
-    contents.write('\n');
-
-    // Main topo data
-    contents.write(newLine(
-        'data diving from to tape compass backcompass fromdepth todepth ignoreall'));
-    contents.write(newLine(
-        '# From\tTo\tLength\tAzIn\t180-AzOut\tDepIn\tDepOut\tAzMean\tAzOut\tAzDelta\tPitchIn\tPitchOut'));
-    contents.write('\n');
+    // Write configuration using shared methods
+    writeInstrumentConfig(contents, isDryCave, '');
+    writeUnitsConfig(contents, isDryCave, unitType, '');
+    writeDataConfig(contents, isDryCave, '', '#');
 
     increasePrefix();
+
+    // Calculate padding width for station names based on total number of stations
+    final int paddingWidth = isDryCave ? (exportShots.shots.length + 1).toString().length : 0;
+
     bool firstLine = true;
     for (ExportShot exportShot in exportShots.shots) {
       if (exportShot.azimuthComments.isNotEmpty || exportShot.isCalculatedLength) {
@@ -79,30 +63,30 @@ class THExporter with ShotExport {
       }
 
       // Formatting the measurement line
-      contents.write(newLine(
-          '${exportShot.from}\t${exportShot.to}\t${exportShot.length.toStringAsFixed(2)}\t${exportShot.azimuthIn.toStringAsFixed(1)}\t${exportShot.azimuthOut180.toStringAsFixed(1)}\t${exportShot.depthIn.toStringAsFixed(2)}\t${exportShot.depthOut.toStringAsFixed(2)}\t${exportShot.azimuthMean.toStringAsFixed(1)}\t${exportShot.azimuthOut.toStringAsFixed(1)}\t${exportShot.azimuthDelta.toStringAsFixed(1)}\t${exportShot.pitchIn.toStringAsFixed(1)}\t${exportShot.pitchOut.toStringAsFixed(1)}'));
+      contents.write(newLine(formatShotDataLine(exportShot, isDryCave, paddingWidth)));
 
-      if (exportShot.lurdShots.isNotEmpty) {
-        lurdContents.write(newLine('# LURD for station ${exportShot.to}'));
-        for (LURDShot lurdShot in exportShot.lurdShots) {
-          lurdContents.write(newLine(
-              '# ${enumToStringWithoutClassName(lurdShot.direction.toString())}'));
-          lurdContents.write(newLine(
-              '${exportShot.to}\t-\t${lurdShot.length.toStringAsFixed(2)}\t${lurdShot.azimuth.toStringAsFixed(1)}\t${lurdShot.clino.toStringAsFixed(1)}'));
-        }
-        lurdContents.write('\n');
-      }
+      final Map<String, StringBuffer> lrudData = processLRUDAndLidarData(
+        exportShot,
+        isDryCave,
+        paddingWidth,
+        '#',
+        (stationTo) => stationTo.padLeft(paddingWidth, '0'),
+      );
+
+      lrudContents.write(lrudData['lrud']!.toString());
+      lrudContents.write(lrudData['lidar']!.toString());
 
       firstLine = false;
     }
     contents.write('\n');
 
-    if (lurdContents.isNotEmpty) {
-      contents.write(newLine('# LURD measurements'));
+    if (lrudContents.isNotEmpty) {
+      contents.write(newLine('# LRUD measurements'));
       contents.write(newLine('data normal from to tape compass clino'));
       contents.write('\n');
-      contents.write(lurdContents.toString());
+      contents.write(lrudContents.toString());
     }
+
 
     decreasePrefix();
 

@@ -35,22 +35,27 @@ class MapSurvey {
       isProblematicShot.add(shot.hasProblematicLength());
       
       // Calculate horizontal distance using corrected length
-      final depthChange = (shot.depthOut - shot.depthIn).abs();
+      final depthChange = shot.depthOut - shot.depthIn; // Preserve sign for direction
+      final absDepthChange = depthChange.abs();
       double factecr;
-      
-      if (lengthToUse <= depthChange) {
+
+      if (lengthToUse <= absDepthChange) {
         // For vertical or near-vertical shots, use minimal horizontal distance
         factecr = 0.1;
       } else {
-        factecr = sqrt(pow(lengthToUse, 2) - pow(depthChange, 2));
+        factecr = sqrt(pow(lengthToUse, 2) - pow(absDepthChange, 2));
       }
-      
+
+      // Get the best vertical displacement (depth sensor or calculated from angles)
+      final verticalDisplacement = shot.getBestVerticalDisplacement();
+      final adjustedHeading = (90-(shot.headingIn + shot.headingOut)/2);
+
       points.add(Point3d(
           points[i].x +
-              factecr * sin(-shot.headingOut / 3600.0 * 2.0 * pi),
+              factecr * cos(adjustedHeading * pi / 180.0),
           points[i].y +
-              factecr * cos(shot.headingOut / 3600.0 * 2.0 * pi), 
-          max(shot.depthOut, i < section.shots.length-1 ? section.shots[i+1].depthIn : shot.depthOut)));
+              factecr * sin(adjustedHeading * pi / 180.0),
+          points[i].z + verticalDisplacement)); // Use calculated vertical displacement
     }
   }
 

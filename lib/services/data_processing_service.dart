@@ -17,9 +17,14 @@ class DataProcessingService {
   static const int _shotEndValueB = 25;
   static const int _shotEndValueC = 35;
 
+  // V6 format Lidar data constants
+  static const int _lidarStartValueA = 32;
+  static const int _lidarStartValueB = 33;
+  static const int _lidarStartValueC = 34;
+
   /// Process raw binary transfer buffer into survey sections
   Future<DataProcessingResult> processTransferBuffer(
-    List<int> transferBuffer, 
+    List<int> transferBuffer,
     UnitType unitType
   ) async {
     try {
@@ -30,26 +35,26 @@ class DataProcessingService {
       final sections = <Section>[];
       int cursor = 0;
       bool brokenSegmentDetected = false;
-      
+
       final conversionFactor = unitType == UnitType.metric ? 1.0 : 3.28084;
 
       while (cursor < transferBuffer.length - 2) {
         final sectionResult = await _processSection(
-          transferBuffer, 
-          cursor, 
+          transferBuffer,
+          cursor,
           conversionFactor
         );
-        
+
         if (sectionResult.section != null) {
           sections.add(sectionResult.section!);
         }
-        
+
         cursor = sectionResult.newCursor;
-        
+
         if (sectionResult.brokenSegment) {
           brokenSegmentDetected = true;
         }
-        
+
         if (sectionResult.shouldStop) {
           break;
         }
@@ -61,7 +66,7 @@ class DataProcessingService {
       }
 
       return DataProcessingResult.success(
-        sections, 
+        sections,
         brokenSegmentDetected: brokenSegmentDetected
       );
     } catch (e) {
@@ -88,7 +93,7 @@ class DataProcessingService {
 
     // Find file version
     int fileVersion = 0;
-    while (fileVersion != 2 && fileVersion != 3 && fileVersion != 4 && fileVersion != 5) {
+    while (fileVersion != 2 && fileVersion != 3 && fileVersion != 4 && fileVersion != 5 && fileVersion != 6) {
       if (cursor >= transferBuffer.length) {
         return _SectionProcessingResult(null, cursor, false, true);
       }
@@ -203,9 +208,6 @@ class DataProcessingService {
     int cursor = startCursor;
     final shot = Shot.zero();
 
-    if (kDebugMode) {
-      debugPrint("DataProcessingService: Processing shot at cursor $cursor");
-    }
 
     // Validate shot start magic bytes for version 5+
     if (fileVersion >= 5) {
@@ -246,31 +248,72 @@ class DataProcessingService {
     
     shot.typeShot = TypeShot.values[typeShot];
 
+  // This is handling broken sample file I got. Might not be needed in final version. 
+    if (kDebugMode && shot.typeShot == TypeShot.eoc) {
+      debugPrint("DataProcessingService: EOC shot detected, cursor at $cursor");
+      if (cursor + 20 < transferBuffer.length) {
+        debugPrint("DataProcessingService: Next 20 bytes after type: ${transferBuffer.sublist(cursor, cursor + 20)}");
+      }
+    }
+
+    // For EOC shots, only skip the 9 zero bytes and don't read shot fields
+    if (shot.typeShot == TypeShot.eoc) {
+      cursor += 9; // Skip the 9 zero bytes in EOC data
+      if (kDebugMode) {
+        debugPrint("DataProcessingService: EOC shot - skipped 9 zero bytes, cursor at $cursor");
+      }
+
+      // Some V6 files incorrectly have Lidar data after EOC shots - skip it
+      if (fileVersion >= 6) {
+        if (cursor + 2 < transferBuffer.length &&
+            transferBuffer[cursor] == _lidarStartValueA &&
+            transferBuffer[cursor + 1] == _lidarStartValueB &&
+            transferBuffer[cursor + 2] == _lidarStartValueC) {
+          if (kDebugMode) {
+            debugPrint("DataProcessingService: Skipping invalid Lidar data after EOC shot at position $cursor");
+          }
+          cursor += 3; // Skip Lidar magic bytes
+
+          if (cursor + 1 < transferBuffer.length) {
+            final lidarLength = _readIntFromBuffer(transferBuffer, cursor);
+            cursor += 2;
+            cursor += lidarLength; // Skip Lidar data
+
+            if (kDebugMode) {
+              debugPrint("DataProcessingService: Skipped $lidarLength bytes of Lidar data, cursor now at $cursor");
+            }
+          }
+        }
+      }
+
+      return _ShotProcessingResult(shot, cursor, false);
+    }
+
     // Read shot data (need at least 16 bytes for basic shot data)
     if (cursor + 15 >= transferBuffer.length) {
       shot.typeShot = TypeShot.eoc;
       return _ShotProcessingResult(shot, cursor, true);
     }
 
-    shot.headingIn = _readIntFromBuffer(transferBuffer, cursor);
+    shot.headingIn = _readIntFromBuffer(transferBuffer, cursor) / 10.0;
     cursor += 2;
-    
-    shot.headingOut = _readIntFromBuffer(transferBuffer, cursor);
+
+    shot.headingOut = _readIntFromBuffer(transferBuffer, cursor) / 10.0;
     cursor += 2;
-    
+
     shot.length = _readIntFromBuffer(transferBuffer, cursor) * conversionFactor / 100.0;
     cursor += 2;
-    
+
     shot.depthIn = _readIntFromBuffer(transferBuffer, cursor) * conversionFactor / 100.0;
     cursor += 2;
-    
+
     shot.depthOut = _readIntFromBuffer(transferBuffer, cursor) * conversionFactor / 100.0;
     cursor += 2;
-    
-    shot.pitchIn = _readIntFromBuffer(transferBuffer, cursor);
+
+    shot.pitchIn = _readIntFromBuffer(transferBuffer, cursor) / 10.0;
     cursor += 2;
-    
-    shot.pitchOut = _readIntFromBuffer(transferBuffer, cursor);
+
+    shot.pitchOut = _readIntFromBuffer(transferBuffer, cursor) / 10.0;
     cursor += 2;
 
     if (kDebugMode) {
@@ -281,13 +324,14 @@ class DataProcessingService {
           "pitch=${shot.pitchIn}/${shot.pitchOut}");
     }
 
+
     // Read LRUD data for version 4+
     if (fileVersion >= 4) {
       if (cursor + 7 >= transferBuffer.length) {
         shot.typeShot = TypeShot.eoc;
         return _ShotProcessingResult(shot, cursor, true);
       }
-      
+
       shot.left = _readIntFromBuffer(transferBuffer, cursor) * conversionFactor / 100.0;
       cursor += 2;
       shot.right = _readIntFromBuffer(transferBuffer, cursor) * conversionFactor / 100.0;
@@ -296,7 +340,7 @@ class DataProcessingService {
       cursor += 2;
       shot.down = _readIntFromBuffer(transferBuffer, cursor) * conversionFactor / 100.0;
       cursor += 2;
-      
+
       if (kDebugMode) {
         debugPrint("DataProcessingService: LRUD: ${shot.left} ${shot.right} ${shot.up} ${shot.down}");
       }
@@ -308,13 +352,14 @@ class DataProcessingService {
         shot.typeShot = TypeShot.eoc;
         return _ShotProcessingResult(shot, cursor, true);
       }
-      
-      shot.temperature = _readIntFromBuffer(transferBuffer, cursor);
+
+      shot.temperature = _readIntFromBuffer(transferBuffer, cursor) / 10.0;
       cursor += 2;
+
       shot.hr = _readByteFromBuffer(transferBuffer, cursor++);
       shot.min = _readByteFromBuffer(transferBuffer, cursor++);
       shot.sec = _readByteFromBuffer(transferBuffer, cursor++);
-      
+
       if (kDebugMode) {
         debugPrint("DataProcessingService: Temperature=${shot.temperature}, "
             "Time=${shot.hr}:${shot.min}:${shot.sec}");
@@ -326,7 +371,7 @@ class DataProcessingService {
       shot.typeShot = TypeShot.eoc;
       return _ShotProcessingResult(shot, cursor, true);
     }
-    
+
     shot.markerIndex = _readByteFromBuffer(transferBuffer, cursor++);
 
     // Validate shot end magic bytes for version 5+
@@ -335,18 +380,29 @@ class DataProcessingService {
         shot.typeShot = TypeShot.eoc;
         return _ShotProcessingResult(shot, cursor, true);
       }
-      
+
       final checkByteA = _readByteFromBuffer(transferBuffer, cursor++);
       final checkByteB = _readByteFromBuffer(transferBuffer, cursor++);
       final checkByteC = _readByteFromBuffer(transferBuffer, cursor++);
-      
+
       if (checkByteA != _shotEndValueA ||
           checkByteB != _shotEndValueB ||
           checkByteC != _shotEndValueC) {
         if (kDebugMode) {
           debugPrint("DataProcessingService: Invalid shot end magic bytes");
-        }
+                  }
         return _ShotProcessingResult(shot, cursor - 3, true);
+      }
+    }
+
+    // Process optional Lidar data for V6 format (but not for EOC shots)
+    if (fileVersion >= 6 && shot.typeShot != TypeShot.eoc) {
+      final lidarResult = await _processLidarData(transferBuffer, cursor, conversionFactor);
+      shot.lidarData = lidarResult.lidarData;
+      cursor = lidarResult.newCursor;
+
+      if (lidarResult.brokenSegment) {
+        return _ShotProcessingResult(shot, cursor, true);
       }
     }
 
@@ -363,18 +419,177 @@ class DataProcessingService {
 
   /// Read a 16-bit integer from the buffer (little endian)
   int _readIntFromBuffer(List<int> buffer, int address) {
-    if (address < 0 || address + 1 >= buffer.length) {
-      return 0;
+
+    if (address + 1 >= buffer.length) return 0;
+
+    final bytes = Uint8List.fromList([buffer[address], buffer[address + 1]]);
+    final byteData = ByteData.sublistView(bytes);
+    return byteData.getInt16(0);
+
+  }
+
+  /// Read a 16-bit integer from the buffer (inverted endian)
+  int _readInvIntFromBuffer(List<int> buffer, int address) {
+    if (address + 1 >= buffer.length) return 0;
+
+    final bytes = Uint8List.fromList([buffer[address + 1], buffer[address]]);
+    final byteData = ByteData.sublistView(bytes);
+    return byteData.getInt16(0);
+  }
+
+  int _readUInt16FromBuffer(List<int> buffer, int address) {
+    if (address + 1 >= buffer.length) return 0;
+
+    // notice the order of the bytes is reversed for uint16
+    final bytes = Uint8List.fromList([buffer[address + 1 ], buffer[address]]);
+    final byteData = ByteData.sublistView(bytes);
+    return byteData.getUint16(0);
+  }
+
+
+  /// Process optional Lidar data from V6 format
+  Future<_LidarProcessingResult> _processLidarData(
+    List<int> transferBuffer,
+    int startCursor,
+    double conversionFactor,
+  ) async {
+    int cursor = startCursor;
+
+    // Check if there's enough space for Lidar header (3 magic bytes + 2 length bytes)
+    if (cursor + 4 >= transferBuffer.length) {
+      if (kDebugMode) {
+        debugPrint("DataProcessingService: No space for Lidar header, skipping");
+      }
+      return _LidarProcessingResult(null, cursor, false);
     }
-    
-    try {
-      final bytes = Uint8List.fromList([buffer[address], buffer[address + 1]]);
-      final byteData = ByteData.sublistView(bytes);
-      return byteData.getInt16(0);
-    } catch (e) {
-      return 0;
+
+    // Check for Lidar start magic bytes
+    final checkByteA = _readByteFromBuffer(transferBuffer, cursor);
+    final checkByteB = _readByteFromBuffer(transferBuffer, cursor + 1);
+    final checkByteC = _readByteFromBuffer(transferBuffer, cursor + 2);
+
+    if (checkByteA != _lidarStartValueA ||
+        checkByteB != _lidarStartValueB ||
+        checkByteC != _lidarStartValueC) {
+      if (kDebugMode) {
+        debugPrint("DataProcessingService: No Lidar magic bytes found, skipping");
+      }
+      return _LidarProcessingResult(null, cursor, false);
+    }
+
+    cursor += 3; // Skip magic bytes
+
+    // Read data length
+    final dataLength = _readIntFromBuffer(transferBuffer, cursor);
+    cursor += 2;
+
+    // Validate data length and buffer space
+    if (dataLength == 0 || cursor + dataLength > transferBuffer.length) {
+      if (kDebugMode) {
+        debugPrint("DataProcessingService: Invalid Lidar data length or insufficient buffer");
+      }
+      return _LidarProcessingResult(null, cursor, true);
+    }
+
+    // Each Lidar point is 6 bytes (2 bytes each for YAW, PITCH, DISTANCE)
+    if (dataLength % 6 != 0) {
+      if (kDebugMode) {
+        debugPrint("DataProcessingService: Invalid Lidar data length (not divisible by 6)");
+      }
+      return _LidarProcessingResult(null, cursor + dataLength, true);
+    }
+
+    final pointCount = dataLength ~/ 6;
+    final lidarPoints = <LidarPoint>[];
+
+    // Track statistics for debug output
+    double minYaw = 0, maxYaw = 0;
+    double minPitch = 0, maxPitch = 0;
+    double minDistance = 0, maxDistance = 0;
+    bool firstPoint = true;
+
+    // Read each Lidar point
+    for (int i = 0; i < pointCount; i++) {
+
+      final yaw = _readUInt16FromBuffer(transferBuffer, cursor) / 100.0;
+      cursor += 2;
+
+      final pitch = _readInvIntFromBuffer(transferBuffer, cursor) / 100.0;
+      cursor += 2;
+
+      final distance = _readUInt16FromBuffer(transferBuffer, cursor) * conversionFactor / 100.0;
+      cursor += 2;
+
+      // Update statistics
+      if (kDebugMode) {
+
+        if (firstPoint) {
+          minYaw = maxYaw = yaw;
+          minPitch = maxPitch = pitch;
+          minDistance = maxDistance = distance;
+          firstPoint = false;
+        } else {
+          if (yaw < minYaw) minYaw = yaw;
+          if (yaw > maxYaw) maxYaw = yaw;
+          if (pitch < minPitch) minPitch = pitch;
+          if (pitch > maxPitch) maxPitch = pitch;
+          if (distance < minDistance) minDistance = distance;
+          if (distance > maxDistance) maxDistance = distance;
+        }
+      }
+
+      lidarPoints.add(LidarPoint(
+        yaw: yaw,
+        pitch: pitch,
+        distance: distance,
+      ));
+    }
+
+    final lidarData = LidarData(points: lidarPoints);
+
+    if (kDebugMode && lidarPoints.isNotEmpty) {
+      // Normalize angle ranges for better representation
+      final (normalizedMinYaw, normalizedMaxYaw) = _normalizeAngleRange(minYaw, maxYaw);
+      final (normalizedMinPitch, normalizedMaxPitch) = _normalizeAngleRange(minPitch, maxPitch);
+      
+      debugPrint("DataProcessingService: Lidar shot statistics - ${lidarPoints.length} points: "
+          "Yaw(${normalizedMinYaw.toStringAsFixed(1)}° - ${normalizedMaxYaw.toStringAsFixed(1)}°), "
+          "Pitch(${normalizedMinPitch.toStringAsFixed(1)}° - ${normalizedMaxPitch.toStringAsFixed(1)}°), "
+          "Distance(${minDistance}m-${maxDistance}m)");
+    }
+
+    return _LidarProcessingResult(lidarData, cursor, false);
+  }
+
+  /// Normalize angle range to show the most logical representation
+  /// For example: -5° to +5° instead of 355° to 5°
+  /// Returns a tuple of (minAngle, maxAngle) in degrees, always with min <= max
+  (double, double) _normalizeAngleRange(double minAngleDegrees, double maxAngleDegrees) {
+    // Normalize angles to 0-360 range
+    double normalizedMin = minAngleDegrees % 360.0;
+    double normalizedMax = maxAngleDegrees % 360.0;
+
+    if (normalizedMin < 0) normalizedMin += 360.0;
+    if (normalizedMax < 0) normalizedMax += 360.0;
+
+    // Calculate direct span (clockwise from min to max)
+    final double directSpan = normalizedMax >= normalizedMin ?
+        normalizedMax - normalizedMin :
+        normalizedMin - normalizedMax + 360.0;
+
+    // If direct span is <= 180°, use it; otherwise use boundary-crossing representation
+    if (directSpan <= 180.0) {
+      return normalizedMin <= normalizedMax ?
+          (normalizedMin, normalizedMax) :
+          (normalizedMax, normalizedMin);
+    } else {
+      // Use boundary-crossing representation (shorter path across 0°)
+      return normalizedMax >= normalizedMin ?
+          (normalizedMin, normalizedMax - 360.0) :
+          (normalizedMin - 360.0, normalizedMax);
     }
   }
+
 }
 
 /// Result of data processing operation
@@ -420,4 +635,13 @@ class _ShotProcessingResult {
   final bool brokenSegment;
 
   _ShotProcessingResult(this.shot, this.newCursor, this.brokenSegment);
+}
+
+/// Internal result for Lidar data processing
+class _LidarProcessingResult {
+  final LidarData? lidarData;
+  final int newCursor;
+  final bool brokenSegment;
+
+  _LidarProcessingResult(this.lidarData, this.newCursor, this.brokenSegment);
 }
