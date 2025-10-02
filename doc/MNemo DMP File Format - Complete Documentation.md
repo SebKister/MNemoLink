@@ -9,8 +9,9 @@ The DMP (Data Memory Package) file format is the native binary format used by MN
 The DMP format has evolved through several versions:
 - **Version 2**: Basic format with core measurements
 - **Version 3**: Added temperature and timestamp data
-- **Version 4**: Added LRUD (Left/Right/Up/Down) passage measurements  
+- **Version 4**: Added LRUD (Left/Right/Up/Down) passage measurements
 - **Version 5**: Added magic byte validation for data integrity (firmware 2.6.0+)
+- **Version 6**: Enhanced format for dry caving devices with optional Lidar data
 
 ## File Structure
 
@@ -29,7 +30,7 @@ DMP files have **NO GLOBAL HEADER** and consist of multiple sections, each conta
 
 | Offset | Size | Field | Description |
 |--------|------|-------|-------------|
-| 0 | 1 | File Version | Format version (2, 3, 4, or 5) |
+| 0 | 1 | File Version | Format version (2, 3, 4, 5, or 6) |
 | 1 | 1 | Magic Byte A | 68 (0x44) - Version 5+ only |
 | 2 | 1 | Magic Byte B | 89 (0x59) - Version 5+ only |
 | 3 | 1 | Magic Byte C | 101 (0x65) - Version 5+ only |
@@ -93,6 +94,35 @@ DMP files have **NO GLOBAL HEADER** and consist of multiple sections, each conta
 | 33 | 1 | End Magic B | 25 (0x19) - Version 5+ only |
 | 34 | 1 | End Magic C | 35 (0x23) - Version 5+ only |
 
+### Optional Lidar Data (Variable Length) - Version 6 only
+
+**Important**: Lidar data uses **big-endian** byte order (MSB first), unlike all other DMP fields.
+
+After the shot record's end magic bytes (and only if version 6), an optional Lidar data block may be present:
+
+| Offset | Size | Field | Description |
+|--------|------|-------|-------------|
+| 0 | 1 | Lidar Magic A | 32 (0x20) - VOLSTART_VALA |
+| 1 | 1 | Lidar Magic B | 33 (0x21) - VOLSTART_VALB |
+| 2 | 1 | Lidar Magic C | 34 (0x22) - VOLSTART_VALC |
+| 3 | 2 | Data Length | Total bytes of Lidar data (little-endian, must be divisible by 6) |
+
+**Point Cloud Data**: Repeat for DataLength/6 triplet entries:
+
+| Offset | Size | Field | Description |
+|--------|------|-------|-------------|
+| 0 | 2 | Yaw | Azimuth angle in 1/100th degree (0-35999, **big-endian**) |
+| 2 | 2 | Pitch | Inclination angle in 1/100th degree (signed, **big-endian**) |
+| 4 | 2 | Distance | Range measurement in centimeters (**big-endian**) |
+
+**Lidar Data Notes:**
+- Lidar magic bytes (32, 33, 34) mark the start of optional 3D point cloud data
+- Data length field is little-endian (LSB first), consistent with other DMP fields
+- Each point's yaw/pitch/distance values are big-endian (MSB first) - **different from rest of file**
+- Yaw: 0 = magnetic north, increasing clockwise, range 0.00° to 359.99°
+- Pitch: positive = up, negative = down, range -90.00° to +90.00°
+- Distance: measurement range in cm (e.g., 250 = 2.50m)
+
 ## Shot Types
 
 | Value | Enum | Description |
@@ -130,11 +160,12 @@ Each section ends with a special shot record containing:
 
 1. **Start at file beginning** (no global header)
 2. **For each section:**
-   - Scan for valid file version byte (2, 3, 4, or 5)
+   - Scan for valid file version byte (2, 3, 4, 5, or 6)
    - Validate magic bytes if version 5+
    - Read section metadata (date, name, direction)
    - Process shots until EOC type found
    - Validate shot magic bytes if version 5+
+   - If version 6, check for optional Lidar data after each shot
 3. **Continue until end of file**
 
 ## Error Handling
@@ -157,12 +188,15 @@ A shot is considered problematic if:
 
 ## Version Compatibility
 
-| Feature | Version 2 | Version 3 | Version 4 | Version 5 |
-|---------|-----------|-----------|-----------|-----------|
-| Core measurements | ✓ | ✓ | ✓ | ✓ |
-| Temperature/Time | ✗ | ✓ | ✓ | ✓ |
-| LRUD data | ✗ | ✗ | ✓ | ✓ |
-| Magic byte validation | ✗ | ✗ | ✗ | ✓ |
+| Feature | Version 2 | Version 3 | Version 4 | Version 5 | Version 6 |
+|---------|-----------|-----------|-----------|-----------|-----------|
+| Core measurements | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Temperature/Time | ✗ | ✓ | ✓ | ✓ | ✓ |
+| LRUD data | ✗ | ✗ | ✓ | ✓ | ✓ |
+| Magic byte validation | ✗ | ✗ | ✗ | ✓ | ✓ |
+| Lidar point cloud data | ✗ | ✗ | ✗ | ✗ | ✓ |
+
+**Version 6 Compatibility Note**: Version 6 is fully backward compatible with Version 5 for all non-Lidar fields. Parsers that ignore the optional Lidar data can treat Version 6 files as Version 5 files.
 
 ## Implementation Notes
 
@@ -170,7 +204,9 @@ A shot is considered problematic if:
 - Always validate buffer bounds before reading
 - Handle corrupted data gracefully
 - Support version detection and appropriate field parsing
-- Implement little-endian integer reading
+- Implement little-endian integer reading for all standard fields
+- Implement big-endian integer reading for Lidar data (version 6 only)
+- Check for Lidar magic bytes (32, 33, 34) after each shot in version 6 files
 - Preserve original data for re-export
 
 ### Memory Layout
@@ -209,7 +245,7 @@ The DMP format can be converted to standard cave surveying formats:
 39 43 4D 02 68 01 70 01 2C 01 90 01 94 01 F4 00 E8 00
 │  │  │  │  │     │     │     │     │     │     │     └─ LRUD data...
 │  │  │  │  │     │     │     │     │     │     └─ Pitch OUT: 40.0°
-│  │  │  │  │     │     │     │     │     └─ Pitch IN: 40.4°  
+│  │  │  │  │     │     │     │     │     └─ Pitch IN: 40.4°
 │  │  │  │  │     │     │     │     └─ Depth OUT: 4.00m
 │  │  │  │  │     │     │     └─ Depth IN: 3.68m
 │  │  │  │  │     │     └─ Length: 3.00m
@@ -220,5 +256,33 @@ The DMP format can be converted to standard cave surveying formats:
 │  └─ Magic B: 67
 └─ Magic A: 57
 ```
+
+### Version 6 Shot with Lidar Data
+```
+[Standard 35-byte shot record - same as Version 5]
+39 43 4D 02 68 01 70 01 2C 01 90 01 94 01 F4 00 E8 00
+64 00 C8 00 32 00 64 00 14 00 0A 0E 1A 2B 01 5F 19 23
+
+[Optional Lidar data block]
+20 21 22 0C 00 2E E0 00 64 01 F4 5A F0 FF 9C 03 20
+│  │  │  │     │        │        │        └──────┴─ Point 2...
+│  │  │  │     │        │        └─ Distance: 500 (5.00m, big-endian: 0x01F4)
+│  │  │  │     │        └─ Pitch: 100 (1.00°, big-endian: 0x0064)
+│  │  │  │     └─ Yaw: 57344 (270.00°, big-endian: 0xE000 = 57344/100 = 573.44° wraps to 213.44°)
+│  │  │  └─ Data Length: 12 bytes (little-endian: 0x000C = 12) = 2 points × 6 bytes
+│  │  └─ Lidar Magic C: 34 (VOLSTART_VALC)
+│  └─ Lidar Magic B: 33 (VOLSTART_VALB)
+└─ Lidar Magic A: 32 (VOLSTART_VALA)
+
+Point breakdown:
+  Point 1: Yaw=270.00° (West), Pitch=1.00° (slightly up), Distance=5.00m
+  Point 2: Yaw=232.80°, Pitch=-2.40° (slightly down), Distance=8.00m
+```
+
+**Note on Endianness in Example:**
+- Standard shot fields: little-endian (LSB first)
+- Lidar data length: little-endian (0C 00 = 12)
+- Lidar point data: big-endian (MSB first)
+  - Example: 0x2EE0 (big-endian) = 12000 decimal = 120.00°
 
 This documentation provides complete technical details for implementing DMP file parsers and ensuring compatibility with MNemo v2 devices across all firmware versions.

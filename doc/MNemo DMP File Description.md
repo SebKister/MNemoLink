@@ -228,14 +228,14 @@
     DataLength MSB;
 
     # Repeat for DataLength/6 triplet entries:
-    YAW LSB;    # (uint16_t) 1/100th of degree to magnetic north (0 = north)
-    YAW MSB;
+    YAW MSB;    # (uint16_t) 1/100th of degree to magnetic north (0 = north)
+    YAW LSB;    # Important: Big-endian
 
-    PITCH LSB;  # (int16_t) 1/100th of degree
-    PITCH MSB;
+    PITCH MSB;  # (int16_t) 1/100th of degree
+    PITCH LSB;  # Important: Big-endian
 
-    DISTANCE LSB; # (uint16_t) cm
-    DISTANCE MSB;
+    DISTANCE MSB; # (uint16_t) cm
+    DISTANCE LSB; # Important: Big-endian
 
 **[Section Termination]** _(35 Bytes)_
 
