@@ -136,9 +136,9 @@ class FileService {
       }
       
       final version = _parseElementOptimized(fields.first);
-      if (version == null || version < 2 || version > 5) {
+      if (version == null || version < 2 || version > 6) {
         return _ValidationResult.invalid(
-          "Invalid DMP file version: ${fields.first}. Supported versions: 2-5"
+          "Invalid DMP file version: ${fields.first}. Supported versions: 2-6"
         );
       }
       
