@@ -66,7 +66,7 @@ class _MyHomePageState extends State<MyHomePage> {
   // Services
   late final DeviceCommunicationService _deviceService;
   late final NetworkService _networkService;
-  late final DataProcessingService _dataService;
+  late final DmpDecoderService _dmpDecoder;
   late final FileService _fileService;
   late final FirmwareUpdateService _firmwareService;
   
@@ -176,7 +176,7 @@ class _MyHomePageState extends State<MyHomePage> {
     // Initialize services
     _deviceService = DeviceCommunicationService();
     _networkService = NetworkService();
-    _dataService = DataProcessingService();
+    _dmpDecoder = DmpDecoderService();
     _fileService = FileService();
     _firmwareService = FirmwareUpdateService(_deviceService);
     
@@ -301,7 +301,7 @@ class _MyHomePageState extends State<MyHomePage> {
     for (final fileResult in successfulFiles) {
       if (fileResult.hasData) {
         transferBuffer = fileResult.data!;
-        final dataResult = await _dataService.processTransferBuffer(transferBuffer, unitType);
+        final dataResult = await _dmpDecoder.processTransferBuffer(transferBuffer, unitType);
         
         if (dataResult.success) {
           setState(() {
@@ -375,7 +375,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<void> _analyzeTransferBuffer() async {
-    final result = await _dataService.processTransferBuffer(transferBuffer, unitType);
+    final result = await _dmpDecoder.processTransferBuffer(transferBuffer, unitType);
     
     if (result.success) {
       setState(() {
@@ -533,7 +533,48 @@ class _MyHomePageState extends State<MyHomePage> {
 
   // Export handlers
   Future<void> _onSaveDMP() async {
-    await _handleExportOperation(() => _fileService.saveDMPFileFromSections(sections, unitType));
+    try {
+      final result = await _fileService.saveDMPFileFromSections(sections, unitType);
+
+      if (result.needsChoice && result.versionAnalysis != null && mounted) {
+        // Show dialog for mixed version handling
+        final choice = await MixedVersionDialog.show(context, result.versionAnalysis!);
+
+        if (choice == MixedVersionChoice.cancel) {
+          return;
+        }
+
+        // Get file path
+        final filePath = await _fileService.getSaveFilePathPublic("DMP", "dmp");
+        if (filePath == null) {
+          return;
+        }
+
+        FileResult finalResult;
+        if (choice == MixedVersionChoice.separate) {
+          finalResult = await _fileService.saveDMPFileSeparate(result.versionAnalysis!, filePath);
+        } else {
+          finalResult = await _fileService.saveDMPFileAsV6(sections.selectedSections, filePath);
+        }
+
+        if (finalResult.success && mounted) {
+          _showMessage(finalResult.message ?? 'Export completed successfully');
+        } else if (!finalResult.success && mounted) {
+          _showErrorMessage(finalResult.error ?? 'Export failed');
+        }
+      } else {
+        // Normal result handling
+        if (result.success && mounted) {
+          _showMessage(result.message ?? 'Export completed successfully');
+        } else if (!result.success && mounted) {
+          _showErrorMessage(result.error ?? 'Export failed');
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        _showErrorMessage('Export failed: $e');
+      }
+    }
   }
 
   Future<void> _onExportXLS() async {
