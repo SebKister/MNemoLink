@@ -95,6 +95,11 @@ class DmpEncoderService {
     for (final shot in section.shots) {
       _encodeShotToBuffer(shot, version, buffer);
     }
+
+    // Ensure section ends with an EOC shot (broken sections might not have one)
+    if (section.shots.isEmpty || section.shots.last.typeShot != TypeShot.eoc) {
+      _encodeShotToBuffer(Shot.zero()..typeShot = TypeShot.eoc, version, buffer);
+    }
   }
 
   /// Encode a single shot to the buffer
@@ -108,15 +113,6 @@ class DmpEncoderService {
 
     // Shot type
     buffer.add(shot.typeShot.index);
-
-    // For EOC shots, write minimal data
-    if (shot.typeShot == TypeShot.eoc) {
-      // 9 zero bytes for measurements (heading, length, depth, pitch)
-      for (int i = 0; i < 9; i++) {
-        buffer.add(0);
-      }
-      return;
-    }
 
     // Core measurements (14 bytes)
     _writeInt16(buffer, (shot.headingIn * 10).round());
@@ -166,29 +162,29 @@ class DmpEncoderService {
     buffer.add(DmpConstants.lidarStartMagicB);
     buffer.add(DmpConstants.lidarStartMagicC);
 
-    // Data length (little-endian)
+    // Data length
     final dataLength = lidarData.points.length * 6;
     _writeInt16(buffer, dataLength);
 
     // Lidar points (big-endian for yaw/pitch/distance)
     for (final point in lidarData.points) {
-      _writeUInt16BigEndian(buffer, (point.yaw * 100).round());
-      _writeInt16BigEndian(buffer, (point.pitch * 100).round());
-      _writeUInt16BigEndian(buffer, (point.distance * 100).round());
+      _writeUInt16Inverted(buffer, (point.yaw * 100).round());
+      _writeInt16Inverted(buffer, (point.pitch * 100).round());
+      _writeUInt16Inverted(buffer, (point.distance * 100).round());
     }
   }
 
-  /// Write a 16-bit signed integer to buffer (little-endian)
+  /// Write a 16-bit signed integer to buffer (LSB;MSB - DMP format default)
   void _writeInt16(List<int> buffer, int value) {
     final bytes = Uint8List(2);
     final byteData = ByteData.sublistView(bytes);
-    byteData.setInt16(0, value, Endian.little);
-    buffer.add(bytes[1]);
+    byteData.setInt16(0, value, Endian.big);
     buffer.add(bytes[0]);
+    buffer.add(bytes[1]);
   }
 
-  /// Write a 16-bit unsigned integer to buffer (big-endian) for Lidar data
-  void _writeUInt16BigEndian(List<int> buffer, int value) {
+  /// Write a 16-bit unsigned integer to buffer (MSB; LSB - for Lidar data)
+  void _writeUInt16Inverted(List<int> buffer, int value) {
     final bytes = Uint8List(2);
     final byteData = ByteData.sublistView(bytes);
     byteData.setUint16(0, value, Endian.big);
@@ -196,8 +192,8 @@ class DmpEncoderService {
     buffer.add(bytes[0]);
   }
 
-  /// Write a 16-bit signed integer to buffer (big-endian) for Lidar data
-  void _writeInt16BigEndian(List<int> buffer, int value) {
+  /// Write a 16-bit signed integer to buffer (MSB; LSB - for Lidar data)
+  void _writeInt16Inverted(List<int> buffer, int value) {
     final bytes = Uint8List(2);
     final byteData = ByteData.sublistView(bytes);
     byteData.setInt16(0, value, Endian.big);

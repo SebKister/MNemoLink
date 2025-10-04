@@ -637,13 +637,13 @@ class DmpDecoderService {
 
     // Read each Lidar point (big-endian for Lidar data)
     for (int i = 0; i < pointCount; i++) {
-      final yaw = _readUInt16BigEndian(transferBuffer, cursor) / 100.0;
+      final yaw = _readUInt16Inverted(transferBuffer, cursor) / 100.0;
       cursor += 2;
 
-      final pitch = _readInt16BigEndian(transferBuffer, cursor) / 100.0;
+      final pitch = _readInt16Inverted(transferBuffer, cursor) / 100.0;
       cursor += 2;
 
-      final distance = _readUInt16BigEndian(transferBuffer, cursor) * conversionFactor / 100.0;
+      final distance = _readUInt16Inverted(transferBuffer, cursor) * conversionFactor / 100.0;
       cursor += 2;
 
       lidarPoints.add(LidarPoint(
@@ -670,31 +670,31 @@ class DmpDecoderService {
     return buffer[address];
   }
 
-  /// Read a 16-bit signed integer from the buffer (little-endian)
+  /// Read a 16-bit signed integer from the buffer (LSB; MSB - default format)
   int _readInt16(List<int> buffer, int address) {
     if (address + 1 >= buffer.length) return 0;
 
     final bytes = Uint8List.fromList([buffer[address], buffer[address + 1]]);
     final byteData = ByteData.sublistView(bytes);
-    return byteData.getInt16(0);
+    return byteData.getInt16(0, Endian.big);
   }
 
-  /// Read a 16-bit unsigned integer from buffer (big-endian) - for Lidar data
-  int _readUInt16BigEndian(List<int> buffer, int address) {
+  /// Read a 16-bit unsigned integer from buffer (MSB; LSB - for Lidar data)
+  int _readUInt16Inverted(List<int> buffer, int address) {
     if (address + 1 >= buffer.length) return 0;
 
-    final bytes = Uint8List.fromList([buffer[address], buffer[address + 1]]);
+    final bytes = Uint8List.fromList([buffer[address + 1], buffer[address]]);
     final byteData = ByteData.sublistView(bytes);
-    return byteData.getUint16(0);
+    return byteData.getUint16(0, Endian.big);
   }
 
-  /// Read a 16-bit signed integer from buffer (big-endian) - for Lidar data
-  int _readInt16BigEndian(List<int> buffer, int address) {
+  /// Read a 16-bit signed integer from buffer (MSB; LSB - for Lidar data)
+  int _readInt16Inverted(List<int> buffer, int address) {
     if (address + 1 >= buffer.length) return 0;
 
-    final bytes = Uint8List.fromList([buffer[address], buffer[address + 1]]);
+    final bytes = Uint8List.fromList([buffer[address + 1], buffer[address]]);
     final byteData = ByteData.sublistView(bytes);
-    return byteData.getInt16(0);
+    return byteData.getInt16(0, Endian.big);
   }
 }
 
